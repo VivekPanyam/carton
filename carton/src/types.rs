@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+pub use carton_macros::for_each_carton_type;
 use serde::{Serialize, Deserialize};
 
 /// TODO: this structure actually serializes and deserializes the tensors
@@ -125,36 +126,27 @@ pub enum Dimension {
     Any,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum TensorType {
-    Float,
-    Double,
-    String,
 
-    I8,
-    I16,
-    I32,
-    I64,
-
-    U8,
-    U16,
-    U32,
-    U64,
+for_each_carton_type! {
+    #[derive(Debug, Serialize, Deserialize)]
+    pub enum TensorType {
+        $($CartonType,)*
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Tensor {
-    Float(ndarray::ArrayD::<f32>),
-    Double(ndarray::ArrayD::<f64>),
-    String(ndarray::ArrayD::<String>),
+for_each_carton_type! {
+    #[derive(Debug, Serialize, Deserialize)]
+    pub enum Tensor {
+        $($CartonType(ndarray::ArrayD::<$RustType>),)*
+    }
+}
 
-    I8(ndarray::ArrayD::<i8>),
-    I16(ndarray::ArrayD::<i16>),
-    I32(ndarray::ArrayD::<i32>),
-    I64(ndarray::ArrayD::<i64>),
-
-    U8(ndarray::ArrayD::<u8>),
-    U16(ndarray::ArrayD::<u16>),
-    U32(ndarray::ArrayD::<u32>),
-    U64(ndarray::ArrayD::<u64>),
+for_each_carton_type! {
+    $(
+        impl From<ndarray::ArrayD<$RustType>> for Tensor {
+            fn from(item: ndarray::ArrayD<$RustType>) -> Self {
+                Tensor::$CartonType(item)
+            }
+        }
+    )*
 }

@@ -45,6 +45,7 @@ name = "carton"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "carton-macros",
  "clap",
  "dashmap",
  "ndarray",
@@ -61,6 +62,15 @@ dependencies = [
  "numpy",
  "pyo3",
  "pyo3-asyncio",
+]
+
+[[package]]
+name = "carton-macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

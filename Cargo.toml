@@ -2,5 +2,6 @@
 members = [
     "carton",
     "carton-bindings-py",
+    "carton-macros",
     "carton-runner-noop",
 ]
