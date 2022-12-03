@@ -2,6 +2,7 @@
 members = [
     "carton",
     "carton-bindings-py",
+    "carton-bindings-nodejs",
     "carton-macros",
     "carton-runner-noop",
 ]

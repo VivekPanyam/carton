@@ -1,0 +1,21 @@
+[package]
+name = "carton-bindings-nodejs"
+version = "0.1.0"
+edition = "2021"
+exclude = ["js/carton_native.node"]
+
+[lib]
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+carton = { path = "../carton" }
+tokio = { version = "1", features = ["full"] }
+once_cell = "1.16.0"
+ndarray = { version = "0.15", features = ["serde"] }
+
+[dependencies.neon]
+version = "0.10"
+default-features = false
+features = ["napi-6", "promise-api", "channel-api"]

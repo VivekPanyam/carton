@@ -1,0 +1,19 @@
+{
+  "name": "carton",
+  "version": "0.1.0",
+  "description": "",
+  "main": "js/index.js",
+  "scripts": {
+    "build": "cargo-cp-artifact -ac carton-bindings-nodejs js/carton_native.node -- cargo build --message-format=json-render-diagnostics",
+    "build-debug": "npm run build --",
+    "build-release": "npm run build -- --release",
+    "install": "npm run build-release",
+    "test": "cargo test"
+  },
+  "author": "",
+  "devDependencies": {
+    "cargo-cp-artifact": "^0.1",
+    "@stdlib/ndarray": "0.0.13",
+    "ndarray": "1.0.19"
+  }
+}
