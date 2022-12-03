@@ -1,9 +1,8 @@
 [package]
-name = "carton-runner-torchscript"
+name = "carton-runner-noop"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 carton = { path = "../carton" }
 tokio = { version = "1", features = ["full"] }
-cxx = "1.0"

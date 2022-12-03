@@ -5,7 +5,7 @@ async fn main() {
     let (mut incoming, outgoing) = init_runner().await;
 
     while let Some(item) = incoming.recv().await {
-        println!("{:#?}", &item);
+        println!("Got item: {:#?}", &item);
 
         match item.data {
             RPCRequestData::Load {
@@ -23,9 +23,19 @@ async fn main() {
                     data: RPCResponseData::Load { name: "model_name".to_string(), runner: "torchscript".to_string(), inputs: Vec::new(), outputs: Vec::new() }
                 }).await.unwrap();
             },
-            RPCRequestData::Seal { tensors } => todo!(),
-            RPCRequestData::InferWithTensors { tensors } => todo!(),
-            RPCRequestData::InferWithHandle { handle } => todo!(),
+            RPCRequestData::Seal { tensors } => {
+
+            },
+            RPCRequestData::InferWithTensors { tensors } => {
+                // Let's just return the input tensors for now
+                outgoing.send(RPCResponse {
+                    id: item.id,
+                    data: RPCResponseData::Infer { tensors }
+                }).await.unwrap();
+            },
+            RPCRequestData::InferWithHandle { handle } => {
+
+            },
         }
 
     }
