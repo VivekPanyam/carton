@@ -1,8 +1,8 @@
 [workspace]
 members = [
-    "carton",
-    "carton-bindings-py",
-    "carton-bindings-nodejs",
-    "carton-macros",
-    "carton-runner-noop",
+    "source/carton",
+    "source/carton-bindings-py",
+    "source/carton-bindings-nodejs",
+    "source/carton-macros",
+    "source/carton-runner-noop",
 ]
