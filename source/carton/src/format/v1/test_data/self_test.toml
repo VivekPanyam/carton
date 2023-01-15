@@ -1,0 +1,14 @@
+spec_version = 1
+
+[runner]
+runner_name = "something"
+required_framework_version = "=1.2.3"
+runner_compat_version = 2
+
+[[input]]
+name = "x"
+dtype = "float32"
+shape = "*"
+
+[[self_test]]
+inputs = { x = "@tensor_data/something"}

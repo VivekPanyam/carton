@@ -1,0 +1,43 @@
+# Tests a bunch of shapes and ways of specifying them
+spec_version = 1
+
+[runner]
+runner_name = "something"
+required_framework_version = "=1.2.3"
+runner_compat_version = 2
+
+[[input]]
+name = "A"
+dtype = "float32"
+shape = "*"
+
+[[input]]
+name = "B"
+dtype = "float32"
+shape = "some_symbol"
+
+[[input]]
+name = "C"
+dtype = "float32"
+shape = ["*"]
+
+[[input]]
+name = "D"
+dtype = "float32"
+shape = ["some_symbol"]
+
+[[input]]
+name = "E"
+dtype = "float32"
+shape = []
+
+[[input]]
+name = "F"
+dtype = "float32"
+shape = ["batch_size", 3, 512, 512]
+
+[[input]]
+name = "G"
+dtype = "float32"
+shape = ["*", "*", "*"]
+

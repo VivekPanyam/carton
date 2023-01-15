@@ -1,0 +1,7 @@
+# A minimal config file
+spec_version = 1
+
+[runner]
+runner_name = "something"
+required_framework_version = "=1.2.3"
+runner_compat_version = 2
