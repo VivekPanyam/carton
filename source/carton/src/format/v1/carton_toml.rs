@@ -1,6 +1,6 @@
 //! This module handles parsing a carton.toml file
 //! See `docs/specification/format.md` for more details
-use std::{collections::HashMap, marker::PhantomData};
+use std::{collections::HashMap, marker::PhantomData, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use serde::{de::Visitor, Deserialize, Serialize};
@@ -20,7 +20,7 @@ pub struct CartonToml {
     /// A list of platforms this model supports
     /// If empty, all platforms are okay
     /// These are target triples
-    required_platforms: Option<Vec<String>>,
+    required_platforms: Option<Vec<Triple>>,
 
     /// A list of inputs for the model
     /// Can be empty
@@ -40,6 +40,31 @@ pub struct CartonToml {
 
     /// Information about the runner to use
     runner: RunnerInfo,
+}
+
+#[derive(Debug, PartialEq)]
+struct Triple(target_lexicon::Triple);
+
+impl Serialize for Triple {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.0.to_string().as_ref())
+    }
+}
+
+impl<'de> Deserialize<'de> for Triple {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let raw = String::deserialize(deserializer)?;
+        let inner = target_lexicon::Triple::from_str(raw.as_str())
+            .map_err(|_| serde::de::Error::custom("invalid target triple"))?;
+
+        Ok(Self(inner))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
