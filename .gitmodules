@@ -1,0 +1,3 @@
+[submodule "source/zipfs"]
+	path = source/zipfs
+	url = git@github.com:VivekPanyam/ZipFS.git

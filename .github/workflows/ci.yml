@@ -18,7 +18,11 @@ jobs:
         os:
           - ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
       - run: cargo build --verbose
       - run: cargo test --verbose
   build_wasm:
@@ -30,6 +34,10 @@ jobs:
           - wasm32-wasi
           - wasm32-unknown-unknown
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
       - run: rustup target add ${{ matrix.target }}
       - run: cargo build -p carton --verbose --target ${{ matrix.target }}
