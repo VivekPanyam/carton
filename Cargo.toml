@@ -5,4 +5,5 @@ members = [
     "source/carton-bindings-nodejs",
     "source/carton-macros",
     "source/carton-runner-noop",
+    "source/anywhere",
 ]
