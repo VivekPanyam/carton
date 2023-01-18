@@ -23,3 +23,5 @@ bytes = "1.3.0"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 nvml-wrapper = "0.8.0"
+walkdir = "2.3.2"
+futures = "0.3"
