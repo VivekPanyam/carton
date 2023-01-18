@@ -64,24 +64,26 @@ impl Device {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    pub fn maybe_from_str(s: &str) -> Self {
+    pub fn maybe_from_str(s: &str) -> crate::error::Result<Self> {
         // Check if it's an index
+
+        use crate::error::CartonError;
         if let Ok(index) = s.parse::<u32>() {
-            return Self::maybe_from_index(index)
+            return Ok(Self::maybe_from_index(index))
         }
 
         // Check if it's a cpu
         if s.to_lowercase() == "cpu" {
-            return Device::CPU
+            return Ok(Device::CPU)
         }
 
         // Check if it's a UUID
         if s.starts_with("GPU-") || s.starts_with("MIG-GPU-") {
-            return Device::GPU { uuid: Some(s.to_string())}
+            return Ok(Device::GPU { uuid: Some(s.to_string())})
         }
 
         // TODO: return an error
-        panic!("Invalid format for device. Expected `cpu`, a device index, or a UUID")
+        Err(CartonError::InvalidDeviceFormat(s.to_string()))
 
     }
 
@@ -90,7 +92,6 @@ impl Device {
         if let Some(nvml) = NVML.as_ref() {
             if let Ok(device) = nvml.device_by_index(i) {
                 if let Ok(uuid) = device.uuid() {
-                    // TODO: don't unwrap
                     return Self::GPU { uuid: Some(uuid) }
                 }
             }

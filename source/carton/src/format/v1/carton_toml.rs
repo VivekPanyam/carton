@@ -384,9 +384,8 @@ impl Serialize for Dimension {
     }
 }
 
-pub async fn parse(data: &[u8]) -> CartonToml {
-    // TODO: handle errors correctly
-    toml::from_slice(data).unwrap()
+pub(crate) async fn parse(data: &[u8]) -> crate::error::Result<CartonToml> {
+    Ok(toml::from_slice(data)?)
 }
 
 #[cfg(test)]

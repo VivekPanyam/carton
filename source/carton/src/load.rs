@@ -11,6 +11,7 @@ use url::{ParseError, Url};
 use zipfs::{GetReader, ZipFS};
 
 use crate::{
+    error::CartonError,
     http::HTTPFile,
     types::{CartonInfo, Device, LoadOpts},
 };
@@ -33,7 +34,7 @@ pub(crate) async fn load(url_or_path: &str, opts: LoadOpts) -> ReturnType {
 }
 
 /// The return type of `load`
-pub(crate) type ReturnType = (CartonInfo, Runner);
+pub(crate) type ReturnType = crate::error::Result<(CartonInfo, Runner)>;
 
 /// All the versions of the runner interface that we support
 pub(crate) enum Runner {
@@ -51,7 +52,7 @@ async fn fetch(url: &str, opts: LoadOpts) -> ReturnType {
     match url {
         #[cfg(not(target_family = "wasm"))]
         LocatorWithProtocol::LocalFilePath(path) => {
-            if tokio::fs::metadata(&path.0).await.unwrap().is_dir() {
+            if tokio::fs::metadata(&path.0).await?.is_dir() {
                 // This is a local directory (or a symlink to one)
                 // Skip directly to step 3
                 maybe_resolve_links(lunchbox::LocalFS::with_base_dir(path.0).unwrap(), opts).await
@@ -114,8 +115,8 @@ where
 {
     // First, figure out which format version this is
     // Currently, there's only one so we always pass through to it
-    let toml = fs.read("/carton.toml").await.unwrap();
-    let config = crate::format::v1::carton_toml::parse(&toml).await;
+    let toml = fs.read("/carton.toml").await?;
+    let config = crate::format::v1::carton_toml::parse(&toml).await?;
 
     // CartonInfo is currently just CartonToml from v1 of the format
     let mut info = config;
@@ -126,7 +127,11 @@ where
     }
 
     if let Some(v) = opts.override_required_framework_version {
-        info.runner.required_framework_version = VersionReq::parse(&v).unwrap();
+        info.runner.required_framework_version = VersionReq::parse(&v).map_err(|_| {
+            CartonError::Other(
+                "`override_required_framework_version` was not a valid semver version range",
+            )
+        })?;
     }
 
     if let Some(v) = opts.override_runner_opts {
@@ -143,7 +148,7 @@ where
 
     let runner = discover_or_get_runner_and_launch(fs, &info, opts.visible_device).await;
 
-    (info, runner)
+    Ok((info, runner))
 }
 
 // Step 5: Figure out what runner to use (or get it if necessary) and launch the runner
@@ -286,6 +291,6 @@ impl GetReader for protocol::HttpURL {
     type R = crate::http::HTTPFile;
 
     async fn get(&self) -> Self::R {
-        HTTPFile::new(CLIENT.clone(), self.0.clone()).await
+        HTTPFile::new(CLIENT.clone(), self.0.clone()).await.unwrap()
     }
 }

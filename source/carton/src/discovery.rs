@@ -58,8 +58,8 @@ pub async fn discover_runners() -> Vec<RunnerInfo> {
 
     // Read all the configs
     let futs = runner_tomls.into_iter().map(|path| async move {
-        let data = tokio::fs::read(&path).await.unwrap();
-        let mut config: Config = toml::from_slice(&data).unwrap();
+        let data = tokio::fs::read(&path).await?;
+        let mut config: Config = toml::from_slice(&data)?;
 
         // This is safe because the last component is "runner.toml"
         let parent = path.parent().unwrap();
@@ -74,13 +74,14 @@ pub async fn discover_runners() -> Vec<RunnerInfo> {
                 .to_owned();
         }
 
-        config
+        Ok::<_, crate::error::CartonError>(config)
     });
 
     // Join and flatten
     futures::future::join_all(futs)
         .await
         .into_iter()
+        .filter_map(|item| item.ok()) // Ignore parse errors. TODO: log
         .flat_map(|config| config.runner)
         .collect()
 }

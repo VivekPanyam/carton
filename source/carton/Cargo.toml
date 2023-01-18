@@ -23,6 +23,7 @@ zipfs = { path = "../zipfs" }
 url = "2.3.1"
 async-trait = "0.1"
 runner_interface_v1 = { package = "carton-runner-interface", path = "../carton-runner-interface" }
+thiserror = "1"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 nvml-wrapper = "0.8.0"

@@ -51,7 +51,7 @@ fn load(mut cx: FunctionContext) -> JsResult<JsPromise> {
         override_runner_name,
         override_required_framework_version,
         override_runner_opts: None,
-        visible_device: Device::maybe_from_str(&visible_device),
+        visible_device: Device::maybe_from_str(&visible_device).or_else(|err| cx.throw_error(err.to_string()))?,
     };
 
     let rt = runtime(&mut cx)?;
@@ -67,7 +67,7 @@ fn load(mut cx: FunctionContext) -> JsResult<JsPromise> {
 
         // This runs on the JS main thread
         deferred.settle_with(&channel, move |mut cx| {
-            // let carton = carton.or_else(|err| cx.throw_error(err))?;
+            let carton = carton.or_else(|err| cx.throw_error(err.to_string()))?;
 
             // let model_name = cx.string(&carton.model_name);
             // let model_runner = cx.string(&carton.model_runner);
@@ -179,7 +179,7 @@ impl CartonWrapper {
 
             // This runs on the JS main thread
             deferred.settle_with(&channel, move |mut cx| {
-                let res = res.or_else(|err| cx.throw_error(err))?;
+                let res = res.or_else(|err| cx.throw_error(err.to_string()))?;
 
                 // Convert the outputs
                 let out = cx.empty_object();

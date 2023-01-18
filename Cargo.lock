@@ -145,6 +145,7 @@ dependencies = [
  "serde",
  "target-lexicon",
  "tempfile",
+ "thiserror",
  "tokio",
  "toml",
  "url",

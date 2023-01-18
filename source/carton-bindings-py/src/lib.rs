@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use carton_core::types::{Tensor, LoadOpts, Device, RunnerOpt};
 use numpy::{PyArrayDyn, ToPyArray};
-use pyo3::{prelude::*, types::PyDict};
+use pyo3::{prelude::*, types::PyDict, exceptions::PyValueError};
 
 #[derive(FromPyObject)]
 enum SupportedTensorType<'py> {
@@ -224,9 +224,12 @@ fn load(py: Python,
                     (k, v.into())
                 }).collect()
             }),
-            visible_device: Device::maybe_from_str(&visible_device)
+            // TODO: use something more specific than ValueError
+            visible_device: Device::maybe_from_str(&visible_device).map_err(|e| PyValueError::new_err(e.to_string()))?
         };
-        let inner = carton_core::Carton::load(path, opts).await;
+
+        // TODO: use something more specific than ValueError
+        let inner = carton_core::Carton::load(path, opts).await.map_err(|e| PyValueError::new_err(e.to_string()))?;
         Ok(Carton { inner: Arc::new(inner) })
     })
 }

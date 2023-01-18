@@ -1,5 +1,5 @@
 use std::{pin::Pin, task::Poll};
-
+use crate::error::{CartonError, Result};
 use tokio::io::{AsyncRead, AsyncSeek};
 
 /// HTTPFile implements [`AsyncRead`] and [`AsyncSeek`] on top of HTTP requests.
@@ -24,26 +24,24 @@ pub struct HTTPFile {
 }
 
 impl HTTPFile {
-    pub async fn new(client: reqwest::Client, url: String) -> HTTPFile {
-        let res = client.head(&url).send().await.unwrap();
+    pub async fn new(client: reqwest::Client, url: String) -> Result<HTTPFile> {
+        let res = client.head(&url).send().await?;
 
         // TODO: maybe lazily fetch this
+        // TODO: include the URL in the error messages below
         let file_len = res
             .headers()
-            .get(reqwest::header::CONTENT_LENGTH)
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .parse()
-            .unwrap();
+            .get(reqwest::header::CONTENT_LENGTH).ok_or(CartonError::Other("Tried to fetch a URL that didn't have a content length"))?
+            .to_str().map_err(|_| CartonError::Other("Tried to fetch a URL with an invalid content length."))?
+            .parse().map_err(|_| CartonError::Other("Tried to fetch a URL with an invalid content length."))?;
 
-        Self {
+        Ok(Self {
             client,
             url,
             file_len,
             seek_pos: 0,
             curr_request: None,
-        }
+        })
     }
 }
 
