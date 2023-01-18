@@ -16,7 +16,7 @@ pub struct HTTPFile {
     seek_pos: u64,
 
     /// The current request we're waiting on (if any)
-    curr_request: Option<Pin<Box<dyn std::future::Future<Output = bytes::Bytes> + Send + Sync>>>,
+    curr_request: Option<Pin<Box<dyn std::future::Future<Output = bytes::Bytes>>>>,
 }
 
 impl HTTPFile {

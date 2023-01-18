@@ -44,6 +44,7 @@ pub enum Device {
     },
 }
 
+#[cfg(not(target_family = "wasm"))]
 lazy_static! {
     static ref NVML: Option<nvml_wrapper::Nvml> = {
         nvml_wrapper::Nvml::init().ok()
@@ -51,6 +52,16 @@ lazy_static! {
 }
 
 impl Device {
+    #[cfg(target_family = "wasm")]
+    pub fn maybe_from_str(s: &str) -> Self {
+        if s.to_lowercase() == "cpu" {
+            Device::CPU
+        } else {
+            Device::GPU { uuid: None }
+        }
+    }
+
+    #[cfg(not(target_family = "wasm"))]
     pub fn maybe_from_str(s: &str) -> Self {
         // Check if it's an index
         if let Ok(index) = s.parse::<u32>() {
@@ -71,6 +82,8 @@ impl Device {
         panic!("Invalid format for device. Expected `cpu`, a device index, or a UUID")
 
     }
+
+    #[cfg(not(target_family = "wasm"))]
     fn maybe_from_index(i: u32) -> Self {
         if let Some(nvml) = NVML.as_ref() {
             if let Ok(device) = nvml.device_by_index(i) {
