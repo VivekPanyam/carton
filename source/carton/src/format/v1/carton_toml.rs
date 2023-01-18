@@ -12,10 +12,10 @@ pub struct CartonToml {
     spec_version: u64,
 
     /// The name of the model
-    model_name: Option<String>,
+    pub model_name: Option<String>,
 
     /// The model description
-    model_description: Option<String>,
+    pub model_description: Option<String>,
 
     /// A list of platforms this model supports
     /// If empty, all platforms are okay
@@ -24,11 +24,11 @@ pub struct CartonToml {
 
     /// A list of inputs for the model
     /// Can be empty
-    input: Option<Vec<TensorSpec>>,
+    pub input: Option<Vec<TensorSpec>>,
 
     /// A list of outputs for the model
     /// Can be empty
-    output: Option<Vec<TensorSpec>>,
+    pub output: Option<Vec<TensorSpec>>,
 
     /// Test data
     /// Can be empty
@@ -39,7 +39,7 @@ pub struct CartonToml {
     example: Option<Vec<Example>>,
 
     /// Information about the runner to use
-    runner: RunnerInfo,
+    pub runner: RunnerInfo,
 }
 
 #[derive(Debug, PartialEq)]
@@ -70,11 +70,11 @@ impl<'de> Deserialize<'de> for Triple {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct RunnerInfo {
-    runner_name: String,
-    required_framework_version: semver::VersionReq,
-    runner_compat_version: u64,
+    pub runner_name: String,
+    pub required_framework_version: semver::VersionReq,
+    pub runner_compat_version: u64,
 
-    opts: Option<HashMap<String, RunnerOpt>>,
+    pub opts: Option<HashMap<String, RunnerOpt>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]

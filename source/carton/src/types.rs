@@ -1,148 +1,142 @@
-use std::collections::HashMap;
 pub use carton_macros::for_each_carton_type;
-use serde::{Serialize, Deserialize};
+use uuid::Uuid;
+use std::collections::HashMap;
+use lazy_static::lazy_static;
 
-/// TODO: this structure actually serializes and deserializes the tensors
-/// to send back and forth. They should be put in shared memory
+/// An opaque handle returned by `seal`
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct SealHandle(u64);
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RPCRequest {
-    pub id: RpcId,
+/// Options provided when loading a Carton
+pub struct LoadOpts {
+    /// Override the runner to use
+    /// If not overridden, this is fetched from the carton metadata
+    pub override_runner_name: Option<String>,
 
-    pub data: RPCRequestData,
+    /// Override the framework_version to use
+    /// If not overridden, this is fetched from the carton metadata
+    pub override_required_framework_version: Option<String>,
+
+    /// Options to pass to the runner. These are runner-specific (e.g.
+    /// PyTorch, TensorFlow, etc).
+    ///
+    /// Overrides are merged with the options set in the carton metadata
+    /// Sometimes used to configure thread-pool sizes, etc.
+    /// See the documentation for more info
+    pub override_runner_opts: Option<HashMap<String, RunnerOpt>>,
+
+    /// The device that is visible to this model.
+    /// Note: a visible device does not necessarily mean that the model
+    /// will use that device; it is up to the model to actually use it
+    /// (e.g. by moving itself to GPU if it sees one available)
+    pub visible_device: Device,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RPCResponse {
-    pub id: RpcId,
+/// The types of options that can be passed to runners
+pub type RunnerOpt = crate::format::v1::carton_toml::RunnerOpt;
 
-    pub data: RPCResponseData,
-}
-
-pub type RpcId = u64;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum RPCRequestData {
-    Load {
-        /// The path to the model to load
-        path: String,
-
-        /// The runner to load the model with
-        runner: Option<String>,
-
-        /// The runner version to use
-        runner_version: Option<String>,
-
-        /// The options to pass to the runner
-        runner_opts: Option<String>,
-
-        /// The device that is visible to the runner
-        visible_device: Device,
-    },
-
-    Seal {
-        tensors: HashMap<String, Tensor>
-    },
-
-    InferWithTensors {
-        tensors: HashMap<String, Tensor>
-    },
-
-    InferWithHandle {
-        handle: SealHandle
-    },
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum RPCResponseData {
-    Load {
-        name: String,
-        
-        runner: String,
-
-        inputs: Vec<TensorSpec>,
-
-        outputs: Vec<TensorSpec>,
-    },
-
-    Seal {
-        handle: SealHandle
-    },
-
-    Infer {
-        tensors: HashMap<String, Tensor>
-    },
-
-    /// Something went wrong
-    Error {
-        e: String,
-    }
-
-}
-
-/// TODO: newtype?
-pub type SealHandle = u64;
-
-pub struct Schema {
-    schema_type: SchemaType
-}
-
-pub enum SchemaType {
-    /// We don't know what the schema for this model looks like
-    Unknown,
-
-    /// A schema was provided when the carton was generated
-    UserProvided,
-
-    /// Extracted from the model
-    /// Generally, these schemas won't be as precise as user-specified ones
-    FromModel,
-
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+/// Supported device types
 pub enum Device {
     CPU,
     GPU {
         /// The UUID of the specified device
-        uuid: Option<String>
+        uuid: Option<Uuid>,
+    },
+}
+
+lazy_static! {
+    static ref NVML: Option<nvml_wrapper::Nvml> = {
+        nvml_wrapper::Nvml::init().ok()
+    };
+}
+
+impl Device {
+    pub fn maybe_from_str(s: &str) -> Self {
+        // Check if it's an index
+        if let Ok(index) = s.parse::<u32>() {
+            return Self::maybe_from_index(index)
+        }
+
+        // Check if it's a cpu
+        if s.to_lowercase() == "cpu" {
+            return Device::CPU
+        }
+
+        // Check if it's a UUID
+        if let Ok(u) = uuid::Uuid::try_parse(s) {
+            return Device::GPU { uuid: Some(u)}
+        }
+
+        // TODO: return an error
+        panic!("Invalid format for device. Expected `cpu`, a device index, or a UUID")
+
+    }
+    fn maybe_from_index(i: u32) -> Self {
+        if let Some(nvml) = NVML.as_ref() {
+            if let Ok(device) = nvml.device_by_index(i) {
+                if let Ok(uuid) = device.uuid() {
+                    // TODO: don't unwrap
+                    return Self::GPU { uuid: Some(Uuid::try_parse(&uuid).unwrap()) }
+                }
+            }
+        }
+
+        // Fall back to CPU
+        // TODO: warn or throw an error
+        Device::CPU
     }
 }
 
-// TODO handle scalars
+/// Options that can be specified when packing a model
+// TODO: add options so we can fill everything in carton.toml
+pub struct PackOpts {
+    /// The name of the model
+    model_name: Option<String>,
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TensorSpec {
-    pub name: String,
-    pub dims: Vec<Dimension>,
-    pub tensor_type: TensorType
+    /// The model description
+    model_description: Option<String>,
+
+    /// A list of platforms this model supports
+    /// If empty or unspecified, all platforms are okay
+    required_platforms: Option<Vec<target_lexicon::Triple>>,
+
+    /// The name of the runner to use
+    runner_name: String,
+
+    /// The required framework version range to run the model with
+    /// This is a semver version range. See https://docs.rs/semver/1.0.16/semver/struct.VersionReq.html
+    /// for format details.
+    /// For example `=1.2.4`, means exactly version `1.2.4`
+    required_framework_version_range: semver::VersionReq,
+
+    /// Don't set this unless you know what you're doing
+    runner_compat_version: Option<u64>,
+
+    /// Options to pass to the runner. These are runner-specific (e.g.
+    /// PyTorch, TensorFlow, etc).
+    ///
+    /// Sometimes used to configure thread-pool sizes, etc.
+    /// See the documentation for more info
+    opts: Option<HashMap<String, RunnerOpt>>,
 }
 
-/// A dimension can be either a fixed value, a symbol, or any value
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Dimension {
-    Value { value: u64 },
-    Symbol { symbol: String},
-    Any,
-}
-
+// Directly expose everything in the carton.toml for now
+// TODO: have an intermediate type
+pub type CartonInfo = crate::format::v1::carton_toml::CartonToml;
 
 for_each_carton_type! {
-    #[derive(Debug, Serialize, Deserialize)]
-    pub enum TensorType {
-        $($CartonType,)*
-    }
-}
-
-for_each_carton_type! {
-    #[derive(Debug, Serialize, Deserialize)]
+    /// The core tensor type
     pub enum Tensor {
         $($CartonType(ndarray::ArrayD::<$RustType>),)*
+
+        // A Nested Tensor / Ragged Tensor
+        // NestedTensor(Vec<Tensor>)
     }
 }
 
 for_each_carton_type! {
     $(
+        /// Implement conversions from ndarray types
         impl From<ndarray::ArrayD<$RustType>> for Tensor {
             fn from(item: ndarray::ArrayD<$RustType>) -> Self {
                 Tensor::$CartonType(item)

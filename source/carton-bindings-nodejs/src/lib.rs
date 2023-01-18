@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use carton::{
-    client::Carton,
-    types::{for_each_carton_type, Tensor},
+    Carton,
+    types::{for_each_carton_type, Tensor, LoadOpts, Device},
 };
 use ndarray::ShapeBuilder;
 use neon::{prelude::*, types::buffer::TypedArray};
@@ -30,18 +30,29 @@ fn load(mut cx: FunctionContext) -> JsResult<JsPromise> {
     let path = load_opts
         .get::<JsString, _, _>(&mut cx, "path")?
         .value(&mut cx);
-    let runner = load_opts
-        .get_opt::<JsString, _, _>(&mut cx, "runner")?
+    let override_runner_name = load_opts
+        .get_opt::<JsString, _, _>(&mut cx, "override_runner_name")?
         .map(|item| item.value(&mut cx));
-    let runner_version = load_opts
-        .get_opt::<JsString, _, _>(&mut cx, "runner_version")?
+    let override_required_framework_version = load_opts
+        .get_opt::<JsString, _, _>(&mut cx, "override_required_framework_version")?
         .map(|item| item.value(&mut cx));
-    let runner_opts = load_opts
-        .get_opt::<JsString, _, _>(&mut cx, "runner_opts")?
-        .map(|item| item.value(&mut cx));
+
+    // TODO: handle load options
+    // let override_runner_opts = load_opts
+    //     .get_opt::<JsString, _, _>(&mut cx, "override_runner_opts")?
+    //     .map(|item| item.value(&mut cx));
+
+
     let visible_device = load_opts
         .get::<JsString, _, _>(&mut cx, "visible_device")?
         .value(&mut cx);
+
+    let opts = LoadOpts {
+        override_runner_name,
+        override_required_framework_version,
+        override_runner_opts: None,
+        visible_device: Device::maybe_from_str(&visible_device),
+    };
 
     let rt = runtime(&mut cx)?;
     let channel = cx.channel();
@@ -52,21 +63,21 @@ fn load(mut cx: FunctionContext) -> JsResult<JsPromise> {
     // Spawn a task to create a new client
     rt.spawn(async move {
         // Load the model
-        let carton = Carton::new(path, runner, runner_version, runner_opts, visible_device).await;
+        let carton = Carton::load(path, opts).await;
 
         // This runs on the JS main thread
         deferred.settle_with(&channel, move |mut cx| {
-            let carton = carton.or_else(|err| cx.throw_error(err))?;
+            // let carton = carton.or_else(|err| cx.throw_error(err))?;
 
-            let model_name = cx.string(&carton.model_name);
-            let model_runner = cx.string(&carton.model_runner);
+            // let model_name = cx.string(&carton.model_name);
+            // let model_runner = cx.string(&carton.model_runner);
 
             let handle = cx.boxed(CartonWrapper(Arc::new(carton)));
 
             let out = cx.empty_object();
             out.set(&mut cx, "handle", handle)?;
-            out.set(&mut cx, "name", model_name)?;
-            out.set(&mut cx, "runner", model_runner)?;
+            // out.set(&mut cx, "name", model_name)?;
+            // out.set(&mut cx, "runner", model_runner)?;
 
             Ok(out)
         });

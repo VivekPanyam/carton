@@ -19,3 +19,6 @@ chrono = {version = "0.4.23", features = ["serde"]}
 toml = "0.5"
 semver = {version = "1.0.16", features = ["serde"]}
 target-lexicon = "0.12.5"
+nvml-wrapper = "0.8.0"
+lazy_static = "1.4.0"
+uuid = {version = "1.2.2"}

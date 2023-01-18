@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use carton_core::types::{Tensor, SealHandle};
+use carton_core::types::{Tensor, LoadOpts, Device, RunnerOpt};
 use numpy::{PyArrayDyn, ToPyArray};
 use pyo3::{prelude::*, types::PyDict};
 
@@ -23,21 +23,27 @@ enum SupportedTensorType<'py> {
 }
 
 #[pyclass]
+#[derive(Clone)]
+struct SealHandle {
+    inner: carton_core::types::SealHandle
+}
+
+#[pyclass]
 struct Carton {
-    pub inner: Arc<carton_core::client::Carton>
+    inner: Arc<carton_core::Carton>
 }
 // TODO do we need with_gil?
 
 #[pymethods]
 impl Carton {
     #[getter]
-    fn name(&self) -> PyResult<&str> {
-        Ok(&self.inner.model_name)
+    fn name(&self) -> PyResult<Option<&String>> {
+        Ok(self.inner.get_info().model_name.as_ref())
     }
 
     #[getter]
     fn runner(&self) -> PyResult<&str> {
-        Ok(&self.inner.model_runner)
+        Ok(&self.inner.get_info().runner.runner_name)
     }
 
     fn seal<'a>(&self, py: Python<'a>, tensors: &PyDict) -> PyResult<&'a PyAny> {
@@ -70,7 +76,8 @@ impl Carton {
 
         let inner = self.inner.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            Ok(inner.seal(transformed).await.unwrap())
+            let out = inner.seal(transformed).await.unwrap();
+            Ok(SealHandle { inner: out })
         })
     }
 
@@ -143,7 +150,7 @@ impl Carton {
     fn infer_with_handle<'a>(&self, py: Python<'a>, handle: SealHandle) -> PyResult<&'a PyAny> {
         let inner = self.inner.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
-            let out = inner.infer_with_handle(handle).await.unwrap();
+            let out = inner.infer_with_handle(handle.inner).await.unwrap();
 
             let mut transformed: HashMap<String, PyObject> = HashMap::new();
 
@@ -178,12 +185,48 @@ impl Carton {
 
 }
 
+#[derive(FromPyObject)]
+enum PyRunnerOpt {
+    Integer(i64),
+    Double(f64),
+    String(String),
+    Boolean(bool),
+
+    // TODO: datetime
+    // Date(DateTime<Utc>),
+}
+
+impl From<PyRunnerOpt> for RunnerOpt {
+    fn from(value: PyRunnerOpt) -> Self {
+        match value {
+            PyRunnerOpt::Integer(v) => Self::Integer(v),
+            PyRunnerOpt::Double(v) => Self::Double(v),
+            PyRunnerOpt::String(v) => Self::String(v),
+            PyRunnerOpt::Boolean(v) => Self::Boolean(v),
+        }
+    }
+}
+
 /// Loads a model
 #[pyfunction]
-fn load(py: Python, path: String, runner: Option<String>, runner_version: Option<String>, runner_opts: Option<String>, visible_device: String) -> PyResult<&PyAny> {
-    pyo3_asyncio::tokio::future_into_py(py, async {
-
-        let inner = carton_core::client::Carton::new(path, runner, runner_version, runner_opts, visible_device).await.unwrap();
+fn load(py: Python,
+        path: String,
+        override_runner_name: Option<String>,
+        override_required_framework_version: Option<String>,
+        override_runner_opts: Option<HashMap<String, PyRunnerOpt>>,
+        visible_device: String) -> PyResult<&PyAny> {
+    pyo3_asyncio::tokio::future_into_py(py, async move {
+        let opts = LoadOpts {
+            override_runner_name,
+            override_required_framework_version,
+            override_runner_opts: override_runner_opts.map(|opts| {
+                opts.into_iter().map(|(k, v)| {
+                    (k, v.into())
+                }).collect()
+            }),
+            visible_device: Device::maybe_from_str(&visible_device)
+        };
+        let inner = carton_core::Carton::load(path, opts).await;
         Ok(Carton { inner: Arc::new(inner) })
     })
 }
