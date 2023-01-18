@@ -13,11 +13,11 @@ carton-macros = { path = "../carton-macros" }
 ndarray = { version = "0.15", features = ["serde"] }
 anywhere = { path = "../anywhere" }
 lunchbox = { version = "0.1", features = ["serde"], default-features = false }
-clap = { version = "4.0.29", features = ["derive"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 # This version is pinned because we don't want to accidentally break our transport
 sendfd = {version = "=0.4.3", features = ["tokio"]}
+clap = { version = "4.0.29", features = ["derive"] }
 tokio = { version = "1", features = ["io-util", "sync", "rt", "net", "process", "macros"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]

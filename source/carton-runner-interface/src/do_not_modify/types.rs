@@ -154,6 +154,8 @@ pub enum Device {
     CPU,
     GPU {
         /// The UUID of the specified device
+        /// This must include the `GPU-` or `MIG-GPU-` prefix
+        /// See https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#env-vars
         uuid: Option<String>
     }
 }

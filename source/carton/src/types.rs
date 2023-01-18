@@ -1,5 +1,4 @@
 pub use carton_macros::for_each_carton_type;
-use uuid::Uuid;
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
@@ -36,11 +35,14 @@ pub struct LoadOpts {
 pub type RunnerOpt = crate::format::v1::carton_toml::RunnerOpt;
 
 /// Supported device types
+#[derive(Debug)]
 pub enum Device {
     CPU,
     GPU {
         /// The UUID of the specified device
-        uuid: Option<Uuid>,
+        /// This must include the `GPU-` or `MIG-GPU-` prefix
+        /// See https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#env-vars
+        uuid: Option<String>,
     },
 }
 
@@ -74,8 +76,8 @@ impl Device {
         }
 
         // Check if it's a UUID
-        if let Ok(u) = uuid::Uuid::try_parse(s) {
-            return Device::GPU { uuid: Some(u)}
+        if s.starts_with("GPU-") || s.starts_with("MIG-GPU-") {
+            return Device::GPU { uuid: Some(s.to_string())}
         }
 
         // TODO: return an error
@@ -89,7 +91,7 @@ impl Device {
             if let Ok(device) = nvml.device_by_index(i) {
                 if let Ok(uuid) = device.uuid() {
                     // TODO: don't unwrap
-                    return Self::GPU { uuid: Some(Uuid::try_parse(&uuid).unwrap()) }
+                    return Self::GPU { uuid: Some(uuid) }
                 }
             }
         }

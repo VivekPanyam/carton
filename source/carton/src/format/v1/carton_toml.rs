@@ -384,6 +384,11 @@ impl Serialize for Dimension {
     }
 }
 
+pub async fn parse(data: &[u8]) -> CartonToml {
+    // TODO: handle errors correctly
+    toml::from_slice(data).unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, str::FromStr};
