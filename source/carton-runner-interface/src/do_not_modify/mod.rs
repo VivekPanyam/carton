@@ -1,5 +1,5 @@
 mod framed;
-pub(crate) mod types;
+pub mod types;
 
 if_not_wasm! {
     pub(crate) mod comms;

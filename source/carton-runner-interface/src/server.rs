@@ -2,12 +2,12 @@ use std::path::{Path, PathBuf};
 
 use anywhere::types::{AnywhereFS, ReadOnlyFS, ReadWriteFS};
 use clap::Parser;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, error::SendError};
 
 use crate::{
     do_not_modify::comms::Comms,
     do_not_modify::types::{FsToken, RPCRequest, RPCResponse, ChannelId},
-    multiplexer::Multiplexer,
+    multiplexer::Multiplexer, types::{RPCRequestData, RPCResponseData},
 };
 
 pub struct Server {
@@ -16,6 +16,9 @@ pub struct Server {
         anywhere::transport::serde::RequestMessageType,
         anywhere::transport::serde::ResponseMessageType,
     >,
+
+    outgoing: mpsc::Sender<RPCResponse>,
+    incoming: mpsc::Receiver<RPCRequest>,
 }
 
 impl Server {
@@ -26,19 +29,22 @@ impl Server {
         let (tx, rx) = comms.get_channel(ChannelId::FileSystem).await;
         let fs_multiplexer = Multiplexer::new(tx, rx).await;
 
+        let (tx, rx) = comms.get_channel(ChannelId::Rpc).await;
+
         Server {
             comms,
             fs_multiplexer,
+            incoming: rx,
+            outgoing: tx,
         }
     }
 
-    /// This can only be called ONCE
-    pub async fn get_queues(&self) -> (mpsc::Sender<RPCResponse>, mpsc::Receiver<RPCRequest>) {
-        // Set up RPC handling
-        // Get the rpc channel
-        let (tx, rx) = self.comms.get_channel(ChannelId::Rpc).await;
+    pub async fn get_next_request(&mut self) -> Option<RPCRequest> {
+        self.incoming.recv().await
+    }
 
-        (tx, rx)
+    pub async fn send_response_for_request(&self, req_id: u64, res: RPCResponseData) -> Result<(), SendError<RPCResponseData>> {
+        self.outgoing.send(RPCResponse { id: req_id, data: res }).await.map_err(|e| SendError(e.0.data))
     }
 
     pub async fn get_writable_filesystem(&self, token: FsToken) -> std::io::Result<ReadWriteFS> {

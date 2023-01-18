@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-carton = { path = "../carton" }
+carton-runner-interface = { path = "../carton-runner-interface" }
 tokio = { version = "1", features = ["full"] }

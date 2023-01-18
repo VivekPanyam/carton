@@ -5,7 +5,6 @@ use serde::{Serialize, Deserialize};
 use super::comms::Comms;
 
 #[derive(Debug, Serialize, Deserialize)]
-#[non_exhaustive]
 pub struct RPCRequest {
     pub id: RpcId,
 
@@ -13,7 +12,6 @@ pub struct RPCRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[non_exhaustive]
 pub struct RPCResponse {
     pub id: RpcId,
 
@@ -34,7 +32,6 @@ pub struct FsToken(pub(crate) StreamID);
 // Individual channels/streams to avoid head of line blocking
 #[allow(non_camel_case_types)]
 #[repr(u8)]
-#[non_exhaustive]
 pub(crate) enum ChannelId {
     Rpc = 0,
     FileSystem,
@@ -57,7 +54,6 @@ pub(crate) struct FdId(pub(crate) u64);
 // (from the perspective of a runner)
 
 #[derive(Debug, Serialize, Deserialize)]
-#[non_exhaustive]
 pub enum RPCRequestData {
     Load {
         /// This filesystem points to a folder that is of the same structure as the output of `Pack` (for a particular runner)
@@ -107,7 +103,6 @@ pub enum RPCRequestData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[non_exhaustive]
 pub enum RPCResponseData {
     Load {
         name: String,
@@ -146,6 +141,12 @@ pub enum RPCResponseData {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct SealHandle(u64);
+
+impl SealHandle {
+    pub fn new(v: u64) -> Self {
+        SealHandle(v)
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[non_exhaustive]
