@@ -15,16 +15,14 @@ anywhere = { path = "../anywhere" }
 lunchbox = { version = "0.1", features = ["serde"], default-features = false }
 clap = { version = "4.0.29", features = ["derive"] }
 
-# Because of the way cargo does feature unification, we unfortunately have to mark this as optional and enable it
-# as a default feature
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
 # This version is pinned because we don't want to accidentally break our transport
-sendfd = {version = "=0.4.3", features = ["tokio"], optional = true}
+sendfd = {version = "=0.4.3", features = ["tokio"]}
+tokio = { version = "1", features = ["io-util", "sync", "rt", "net", "process", "macros"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
+tokio = { version = "1", features = ["io-util", "sync", "rt"] }
 wasm-bindgen = "0.2"
 wasm-streams = "0.3.0"
 js-sys = "0.3.60"
 wasm-bindgen-futures = "0.4.33"
-
-[features]
-default = ["tokio/net", "tokio/process", "tokio/macros", "dep:sendfd"]
