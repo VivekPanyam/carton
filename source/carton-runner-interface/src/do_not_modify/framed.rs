@@ -8,20 +8,7 @@ use tokio::{
     sync::mpsc,
 };
 
-if_not_wasm! {
-    use tokio::spawn as do_spawn;
-
-    /// `Send` if not on wasm
-    use Send as MaybeSend;
-}
-
-if_wasm! {
-    use tokio::task::spawn_local as do_spawn;
-
-    /// `Send` if not on wasm
-    pub trait MaybeSend {}
-    impl <T> MaybeSend for T {}
-}
+use crate::{MaybeSend, do_spawn};
 
 /// Send and recv length-prefixed serialized structs on an [`AsyncRead`] and [`AsyncWrite`] pair
 pub(crate) async fn framed_transport<T, U, R, W>(

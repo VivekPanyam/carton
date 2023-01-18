@@ -14,12 +14,15 @@
 //! You can use the transports in [`transports`] on their own or on top of an rpc framework (like tarpc)
 
 use std::io::SeekFrom;
+use std::pin::Pin;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 use dashmap::DashMap;
 use lunchbox::path::PathBuf;
 use lunchbox::types::HasFileType;
+use lunchbox::types::MaybeSend;
+use lunchbox::types::MaybeSync;
 use lunchbox::types::Metadata;
 use lunchbox::types::OpenOptions;
 use lunchbox::types::Permissions;
@@ -95,7 +98,12 @@ impl AnywhereRPCClient {
 //     }
 // }
 
-pub type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
+
+#[cfg(target_family = "wasm")]
+pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + 'a>>;
+
+#[cfg(not(target_family = "wasm"))]
+pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
 
 macro_rules! maybe_add_args {
     ($context:ident, with_server_context) => { $context };
@@ -141,7 +149,7 @@ macro_rules! autoimpl {
                 }
 
                 // impl "Maybe" for "Allow" when T meets the required traits and is allowed
-                impl <'a, T: $( $required_traits + )+> [<Maybe $section_name>]<ServerContext<T>> for [< Allow $section_name >]<'a, T, true> where T::FileType: Send + Sync $( + $( $filetype_required_traits + )+ )?
+                impl <'a, T: $( $required_traits + )+> [<Maybe $section_name>]<ServerContext<T>> for [< Allow $section_name >]<'a, T, true> where T::FileType: MaybeSend + MaybeSync $( + $( $filetype_required_traits + )+ )?
                 {
                     $(
                         fn $fn_name <'b, 'c: 'b> ( &'b self, context: &'c ServerContext<T>,  $($arg_name: $arg_type),* ) -> BoxFuture<'b, std::io::Result<$res_type>> {
@@ -226,7 +234,7 @@ macro_rules! autoimpl {
                 fs: &'a T
             }
 
-            impl<'a, T: HasFileType, $( const [<ALLOW_ $section_name:snake:upper>] : bool),+> ServerBuilder<'a, T, $( [<ALLOW_ $section_name:snake:upper>] ),+> where T::FileType: Send + Sync {
+            impl<'a, T: HasFileType, $( const [<ALLOW_ $section_name:snake:upper>] : bool),+> ServerBuilder<'a, T, $( [<ALLOW_ $section_name:snake:upper>] ),+> where T::FileType: MaybeSend + MaybeSync {
                 pub(crate) fn new(fs: &'a T) -> Self {
                     Self { fs }
                 }
@@ -305,12 +313,12 @@ macro_rules! autoimpl {
     };
 }
 
-pub struct ServerContext<T: HasFileType> where T::FileType: Send + Sync {
+pub struct ServerContext<T: HasFileType> where T::FileType: MaybeSend + MaybeSync {
     pub(crate) open_files: DashMap<FileHandle, T::FileType>,
     pub(crate) file_handle_counter: AtomicU64,
 }
 
-impl<T: HasFileType> ServerContext<T> where T::FileType: Send + Sync {
+impl<T: HasFileType> ServerContext<T> where T::FileType: MaybeSend + MaybeSync {
     fn new() -> Self {
         Self {
             open_files: Default::default(),

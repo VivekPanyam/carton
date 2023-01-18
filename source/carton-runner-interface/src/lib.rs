@@ -27,5 +27,20 @@ if_not_wasm! {
     pub mod server;
 }
 
+if_not_wasm! {
+    pub(crate) use tokio::spawn as do_spawn;
+
+    /// `Send` if not on wasm
+    pub(crate) use Send as MaybeSend;
+}
+
+if_wasm! {
+    pub(crate) use tokio::task::spawn_local as do_spawn;
+
+    /// `Send` if not on wasm
+    pub(crate) trait MaybeSend {}
+    impl <T> MaybeSend for T {}
+}
+
 pub use runner::Runner;
 pub use do_not_modify::types;

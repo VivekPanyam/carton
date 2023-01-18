@@ -6,16 +6,17 @@ use crate::{
 };
 use async_trait::async_trait;
 use lunchbox::{
-    types::{Metadata, OpenOptions, Permissions, ReadableFile, WritableFile},
+    types::{Metadata, OpenOptions, Permissions, ReadableFile, WritableFile, MaybeSync, MaybeSend},
     ReadableFileSystem, WritableFileSystem,
 };
 use tokio::io::{AsyncReadExt, AsyncSeek, AsyncSeekExt, AsyncWriteExt};
 
 // This lets us do file operations "on" the filesystem directly using a token
-#[async_trait]
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
 pub(crate) trait ReadableFileOps: ReadableFileSystem
 where
-    Self::FileType: Send + Sync + ReadableFile + Unpin,
+    Self::FileType: MaybeSend + MaybeSync + ReadableFile + Unpin,
 {
     // File IO
     async fn read_bytes(
@@ -86,8 +87,9 @@ impl<T: ReadableFileSystem> ReadableFileOps for T where
 {
 }
 
-#[async_trait]
-pub(crate) trait WritableFileOps: WritableFileSystem where Self::FileType: Send + Sync + WritableFile + Unpin {
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
+pub(crate) trait WritableFileOps: WritableFileSystem where Self::FileType: MaybeSend + MaybeSync + WritableFile + Unpin {
     // File IO
     async fn write_data(&self, context: &ServerContext<Self>, handle: FileHandle, buf: Vec<u8>) -> std::io::Result<usize> {
         let mut item = context.open_files.get_mut(&handle).unwrap();
@@ -155,12 +157,13 @@ pub(crate) trait WritableFileOps: WritableFileSystem where Self::FileType: Send 
     }
 }
 
-impl <T: WritableFileSystem> WritableFileOps for T where T::FileType: Send + Sync + WritableFile + Unpin {}
+impl <T: WritableFileSystem> WritableFileOps for T where T::FileType: MaybeSend + MaybeSync + WritableFile + Unpin {}
 
-#[async_trait]
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
 pub(crate) trait SeekableFileOps: ReadableFileSystem
 where
-    Self::FileType: Send + Sync + AsyncSeek + Unpin,
+    Self::FileType: MaybeSend + MaybeSync + AsyncSeek + Unpin,
 {
     // File IO
     async fn seek(
@@ -174,4 +177,4 @@ where
     }
 }
 
-impl<T: ReadableFileSystem> SeekableFileOps for T where T::FileType: Send + Sync + AsyncSeek + Unpin {}
+impl<T: ReadableFileSystem> SeekableFileOps for T where T::FileType: MaybeSend + MaybeSync + AsyncSeek + Unpin {}

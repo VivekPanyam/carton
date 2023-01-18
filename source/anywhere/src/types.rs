@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::FutureExt;
 use lunchbox::{
     path::PathBuf,
-    types::{HasFileType, Metadata, OpenOptions, PathType, Permissions, ReadDir, ReadDirPoller},
+    types::{HasFileType, Metadata, OpenOptions, PathType, Permissions, ReadDir, ReadDirPoller, MaybeSend},
 };
 
 use std::{io::Result, pin::Pin, sync::Arc};
@@ -90,7 +90,8 @@ impl<const W: bool, const S: bool> AsyncRead for AnywhereFile<W, S> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
 impl<const W: bool, const S: bool> lunchbox::types::ReadableFile for AnywhereFile<W, S> {
     async fn metadata(&self) -> Result<Metadata> {
         self.client.file_metadata(self.handle).await
@@ -131,7 +132,8 @@ impl<const S: bool> AsyncWrite for AnywhereFile<true, S> {
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
 impl<const S: bool> lunchbox::types::WritableFile for AnywhereFile<true, S> {
     async fn sync_all(&self) -> Result<()> {
         self.client.file_sync_all(self.handle).await
@@ -188,7 +190,8 @@ impl<const W: bool, const S: bool> HasFileType for AnywhereFS<W, S> {
     type FileType = AnywhereFile<W, S>;
 }
 
-#[async_trait]
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
 impl<const W: bool, const S: bool> lunchbox::ReadableFileSystem for AnywhereFS<W, S> {
     // Open a file
     async fn open(&self, path: impl PathType) -> Result<Self::FileType> {
@@ -242,7 +245,8 @@ impl<const W: bool, const S: bool> ReadDirPoller<AnywhereFS<W, S>> for AnywhereF
     }
 }
 
-#[async_trait]
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
 impl<const S: bool> lunchbox::WritableFileSystem for AnywhereFS<true, S> {
     // Create a file
     async fn create(&self, path: impl PathType) -> Result<Self::FileType> {
@@ -298,7 +302,7 @@ impl<const S: bool> lunchbox::WritableFileSystem for AnywhereFS<true, S> {
         self.client.symlink(src.convert(), dst.convert()).await
     }
 
-    async fn write(&self, path: impl PathType, contents: impl AsRef<[u8]> + Send) -> Result<()> {
+    async fn write(&self, path: impl PathType, contents: impl AsRef<[u8]> + MaybeSend) -> Result<()> {
         self.client.write(path.convert(), contents.convert()).await
     }
 }
@@ -313,7 +317,7 @@ impl<T: PathType> TypeConversion<lunchbox::path::PathBuf> for T {
     }
 }
 
-impl<T: AsRef<[u8]> + Send> TypeConversion<Vec<u8>> for T {
+impl<T: AsRef<[u8]>> TypeConversion<Vec<u8>> for T {
     fn convert(self) -> Vec<u8> {
         self.as_ref().to_vec()
     }

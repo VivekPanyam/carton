@@ -5,6 +5,7 @@ use dashmap::DashMap;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
+    do_spawn,
     do_not_modify::comms::OwnedComms,
     do_not_modify::types::{
         FsToken, RPCRequest, RPCRequestData, RPCResponse, RPCResponseData, RpcId, ChannelId,
@@ -77,7 +78,7 @@ impl Client {
         let (tx, rx, id) = self.fs_multiplexer.get_new_stream().await;
 
         // Serve the filesystem
-        tokio::spawn(async move {
+        do_spawn(async move {
             fs.build_server()
                 .allow_read()
                 .disallow_write()

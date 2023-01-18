@@ -16,7 +16,11 @@ pub struct HTTPFile {
     seek_pos: u64,
 
     /// The current request we're waiting on (if any)
+    #[cfg(target_family = "wasm")]
     curr_request: Option<Pin<Box<dyn std::future::Future<Output = bytes::Bytes>>>>,
+
+    #[cfg(not(target_family = "wasm"))]
+    curr_request: Option<Pin<Box<dyn std::future::Future<Output = bytes::Bytes> + Send + Sync>>>,
 }
 
 impl HTTPFile {
