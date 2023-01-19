@@ -160,31 +160,6 @@ pub enum Device {
     }
 }
 
-// TODO handle scalars
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TensorSpec {
-    pub name: String,
-    pub dims: Vec<Dimension>,
-    pub tensor_type: TensorType
-}
-
-/// A dimension can be either a fixed value, a symbol, or any value
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Dimension {
-    Value { value: u64 },
-    Symbol { symbol: String},
-    Any,
-}
-
-
-for_each_carton_type! {
-    #[derive(Debug, Serialize, Deserialize)]
-    pub enum TensorType {
-        $($CartonType,)*
-    }
-}
-
 for_each_carton_type! {
     /// TODO: We should to manually implement serialization and not depend on ndarray's serialization
     /// staying the same. Or just pin to a specific ndarray version
