@@ -83,7 +83,7 @@ where
 }
 
 impl<T: ReadableFileSystem> ReadableFileOps for T where
-    T::FileType: Send + Sync + ReadableFile + Unpin
+    T::FileType: MaybeSend + MaybeSync + ReadableFile + Unpin
 {
 }
 

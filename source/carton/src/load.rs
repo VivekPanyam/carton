@@ -157,7 +157,8 @@ async fn discover_or_get_runner_and_launch<T>(
     visible_device: Device,
 ) -> Runner
 where
-    T: lunchbox::ReadableFileSystem,
+    T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
+    T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
 {
     // TODO: maybe we want to just do this once at startup or cache it?
     let local_runners = crate::discovery::discover_runners().await;

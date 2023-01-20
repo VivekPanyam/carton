@@ -6,6 +6,8 @@ use crate::{
     do_not_modify::types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
 };
 
+use lunchbox::types::{MaybeSend, MaybeSync};
+
 pub struct Runner {
     client: Client,
 }
@@ -57,7 +59,14 @@ impl Runner {
         Ok(Self { client })
     }
 
-    pub async fn load<T: lunchbox::ReadableFileSystem>(&self, _fs: &Arc<T>) {
+    pub async fn load<T>(&self, fs: &Arc<T>)
+    where
+        T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
+        T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+    {
+        // Serve the filesystem
+        let token = self.client.serve_readonly_fs(fs.clone()).await;
+
         // match client
         //     .do_rpc(RPCRequestData::Load {
         //         path,

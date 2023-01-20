@@ -329,7 +329,7 @@ impl<T: HasFileType> ServerContext<T> where T::FileType: MaybeSend + MaybeSync {
 
 autoimpl! {
     // The following methods need a readable filesystem
-    SECTION: Read requires ReadableFileSystem, ReadableFileOps, Sync; filetype requires ReadableFile, Unpin
+    SECTION: Read requires ReadableFileSystem, ReadableFileOps, MaybeSync; filetype requires ReadableFile, Unpin
     {
         // // Get filesystem capabilities given a token
         // async fn get_fs_type() -> std::io::Result<Capabilities>;
@@ -358,7 +358,7 @@ autoimpl! {
     }
 
     // The following methods need a writable filesystem
-    SECTION: Write requires WritableFileSystem, WritableFileOps, Sync; filetype requires WritableFile, Unpin
+    SECTION: Write requires WritableFileSystem, WritableFileOps, MaybeSync; filetype requires WritableFile, Unpin
     {
         // File IO
         #[with_server_context]
@@ -403,7 +403,7 @@ autoimpl! {
     }
 
     // // The following methods need a seekable filesystem
-    SECTION: Seek requires SeekableFileOps, Sync; filetype requires AsyncSeek, Unpin
+    SECTION: Seek requires SeekableFileOps, MaybeSync; filetype requires AsyncSeek, Unpin
     {
         // File IO
         #[with_server_context]

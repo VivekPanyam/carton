@@ -1,14 +1,19 @@
 use std::collections::HashMap;
 
-use crate::types::{CartonInfo, LoadOpts, PackOpts, SealHandle, Tensor};
+use crate::{types::{CartonInfo, LoadOpts, PackOpts, SealHandle, Tensor}, load::Runner};
 use crate::error::Result;
 
-pub struct Carton {}
+pub struct Carton {
+    info: CartonInfo,
+    runner: Runner,
+}
 
 impl Carton {
     /// Load a carton given a url, path, etc and options
     pub async fn load(url_or_path: String, opts: LoadOpts) -> Result<Self> {
-        todo!()
+        let (info, runner) = crate::load::load(&url_or_path, opts).await?;
+
+        Ok(Self { info, runner })
     }
 
     /// Infer using a set of inputs.
@@ -54,7 +59,7 @@ impl Carton {
 
     /// Get info for the loaded model
     pub fn get_info(&self) -> &CartonInfo {
-        todo!()
+        &self.info
     }
 
     /// Get info for a model
