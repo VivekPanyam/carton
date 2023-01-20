@@ -231,27 +231,6 @@ where
     }
 }
 
-impl From<Device> for runner_interface_v1::types::Device {
-    fn from(value: Device) -> Self {
-        match value {
-            Device::CPU => Self::CPU,
-            Device::GPU { uuid } => Self::GPU { uuid },
-        }
-    }
-}
-
-impl From<crate::types::RunnerOpt> for runner_interface_v1::types::RunnerOpt {
-    fn from(value: crate::types::RunnerOpt) -> Self {
-        match value {
-            crate::info::RunnerOpt::Integer(v) => Self::Integer(v),
-            crate::info::RunnerOpt::Double(v) => Self::Double(v),
-            crate::info::RunnerOpt::String(v) => Self::String(v),
-            crate::info::RunnerOpt::Boolean(v) => Self::Boolean(v),
-            crate::info::RunnerOpt::Date(v) => Self::Date(v),
-        }
-    }
-}
-
 // No discovery for wasm - just launch a runner and return
 #[cfg(target_family = "wasm")]
 async fn discover_or_get_runner_and_launch<T>(

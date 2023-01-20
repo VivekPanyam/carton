@@ -1,7 +1,13 @@
 use std::collections::HashMap;
 
-use crate::{types::{CartonInfo, LoadOpts, PackOpts, SealHandle, Tensor}, load::Runner, info::CartonInfoWithExtras};
 use crate::error::Result;
+use crate::{
+    conversion_utils::convert_map,
+    error::CartonError,
+    info::CartonInfoWithExtras,
+    load::Runner,
+    types::{CartonInfo, LoadOpts, PackOpts, SealHandle, Tensor},
+};
 
 pub struct Carton {
     info: CartonInfoWithExtras,
@@ -13,7 +19,10 @@ impl Carton {
     pub async fn load(url_or_path: String, opts: LoadOpts) -> Result<Self> {
         let (info, runner) = crate::load::load(&url_or_path, opts).await?;
 
-        Ok(Self { info, runner: runner.unwrap() })
+        Ok(Self {
+            info,
+            runner: runner.unwrap(),
+        })
     }
 
     /// Infer using a set of inputs.
@@ -22,11 +31,14 @@ impl Carton {
         &self,
         tensors: HashMap<String, Tensor>,
     ) -> Result<HashMap<String, Tensor>> {
-        // Seal
-        let handle = self.seal(tensors).await?;
-
-        // Run inference
-        self.infer_with_handle(handle).await
+        match &self.runner {
+            Runner::V1(runner) => Ok(convert_map(
+                runner
+                    .infer_with_inputs(convert_map(tensors))
+                    .await
+                    .map_err(|e| CartonError::ErrorFromRunner(e))?,
+            )),
+        }
     }
 
     /// "Seal" a set of inputs that will be used for inference.
@@ -38,10 +50,7 @@ impl Carton {
 
     /// Infer using a handle from `seal`.
     /// This approach can make inference pipelines more efficient vs just using `infer_with_inputs`
-    pub async fn infer_with_handle(
-        &self,
-        handle: SealHandle,
-    ) -> Result<HashMap<String, Tensor>> {
+    pub async fn infer_with_handle(&self, handle: SealHandle) -> Result<HashMap<String, Tensor>> {
         todo!()
     }
 
@@ -53,7 +62,11 @@ impl Carton {
     /// Pack a carton given a path and options
     /// Functionally equivalent to `pack` followed by `load`, but implemented in a more
     /// optimized way
-    pub async fn load_unpacked(path: String, pack_opts: PackOpts, load_opts: LoadOpts) -> Result<Self> {
+    pub async fn load_unpacked(
+        path: String,
+        pack_opts: PackOpts,
+        load_opts: LoadOpts,
+    ) -> Result<Self> {
         todo!()
     }
 

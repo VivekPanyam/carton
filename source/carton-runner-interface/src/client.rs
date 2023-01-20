@@ -8,9 +8,9 @@ use lunchbox::types::{MaybeSend, MaybeSync};
 use crate::{
     do_spawn,
     do_not_modify::comms::OwnedComms,
-    do_not_modify::types::{
+    do_not_modify::{types::{
         FsToken, RPCRequest, RPCRequestData, RPCResponse, RPCResponseData, RpcId, ChannelId,
-    },
+    }, comms::Comms},
     multiplexer::Multiplexer,
 };
 
@@ -114,5 +114,9 @@ impl Client {
             Ok(v) => v.data,
             Err(_) => panic!("The sender dropped!"),
         }
+    }
+
+    pub(crate) fn get_comms(&self) -> &Comms {
+        &self.comms
     }
 }
