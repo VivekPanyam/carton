@@ -4,7 +4,7 @@ use crate::{
     client::Client,
     do_not_modify::comms::OwnedComms,
     do_not_modify::types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
-    types::RunnerOpt,
+    types::{RunnerOpt, Handle},
 };
 
 use lunchbox::types::{MaybeSend, MaybeSync};
@@ -102,20 +102,36 @@ impl Runner {
     //     }
     // }
 
-    // pub async fn infer_with_inputs(
-    //     &self,
-    //     tensors: HashMap<String, Tensor>,
-    // ) -> Result<HashMap<String, Tensor>, String> {
-    //     match self
-    //         .client
-    //         .do_rpc(RPCRequestData::InferWithTensors { tensors })
-    //         .await
-    //     {
-    //         RPCResponseData::Infer { tensors } => Ok(tensors),
-    //         RPCResponseData::Error { e } => Err(e),
-    //         _ => panic!("Unexpected RPC response type!"),
-    //     }
-    // }
+    pub async fn infer_with_inputs(
+        &self,
+        tensors_orig: HashMap<String, Tensor>,
+    ) -> Result<HashMap<String, Tensor>, String> {
+
+        // Wrap each tensor in a handle (this possibly sends the fd for backing SHM chunks to the other process)
+        let comms = self.client.get_comms();
+        let mut tensors = HashMap::new();
+        for (k,v) in tensors_orig.into_iter() {
+            tensors.insert(k, Handle::new(v, comms).await);
+        }
+
+        match self
+            .client
+            .do_rpc(RPCRequestData::InferWithTensors { tensors })
+            .await
+        {
+            RPCResponseData::Infer { tensors } => {
+                let mut out = HashMap::new();
+                for (k, v) in tensors.into_iter() {
+                    out.insert(k, v.into_inner(comms).await);
+                }
+
+
+                Ok(out)
+            },
+            RPCResponseData::Error { e } => Err(e),
+            _ => panic!("Unexpected RPC response type!"),
+        }
+    }
 
     // pub async fn infer_with_handle(
     //     &self,

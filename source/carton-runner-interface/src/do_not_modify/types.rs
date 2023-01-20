@@ -145,7 +145,7 @@ pub enum RunnerOpt {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
-pub struct SealHandle(u64);
+pub struct SealHandle(pub(crate) u64);
 
 impl SealHandle {
     pub fn new(v: u64) -> Self {
@@ -164,7 +164,7 @@ pub enum Device {
         uuid: Option<String>
     }
 }
-
+// TODO: pin the version of carton-macros so we don't accidentally change the types on the wire
 for_each_carton_type! {
     /// TODO: We should to manually implement serialization and not depend on ndarray's serialization
     /// staying the same. Or just pin to a specific ndarray version
@@ -196,8 +196,12 @@ if_wasm! {
     }
 
     impl Handle<Tensor> {
-        fn new(inner: Tensor, runner: &Comms) -> Self {
+        pub(crate) async fn new(inner: Tensor, runner: &Comms) -> Self {
             Self { inner }
+        }
+
+        pub(crate) async fn into_inner(self, comms: &Comms) -> Tensor {
+            self.inner
         }
     }
 }
@@ -218,11 +222,16 @@ if_not_wasm! {
 
 #[cfg(not(target_family = "wasm"))]
 impl Handle<Tensor> {
-    async fn new(t: Tensor, comms: &Comms) -> Self {
+    pub(crate) async fn new(t: Tensor, comms: &Comms) -> Self {
         // Actually build or get the shared memory region backing the tensor
 
         // let fd_id = runner.send_fd(fd).await;
 
+        todo!()
+    }
+
+    pub(crate) async fn into_inner(self, comms: &Comms) -> Tensor {
+        // Get the referenced shared memory chunk and make a tensor
         todo!()
     }
 }

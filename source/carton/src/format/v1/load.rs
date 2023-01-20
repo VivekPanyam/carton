@@ -9,6 +9,7 @@ use lunchbox::types::{MaybeSend, MaybeSync, ReadableFile};
 use lunchbox::ReadableFileSystem;
 use sha2::{Sha256, Digest};
 
+use crate::conversion_utils::{convert_opt_vec, convert_vec, convert_opt_map};
 use crate::error::Result;
 use crate::info::{PossiblyLoaded, CartonInfoWithExtras};
 use crate::types::CartonInfo;
@@ -128,34 +129,6 @@ where
     {
         item.map(|v| v.convert(fs))
     }
-}
-
-fn convert_vec<T, U>(v: Vec<T>) -> Vec<U>
-where
-    U: From<T>,
-{
-    v.into_iter().map(|v| v.into()).collect()
-}
-
-fn convert_map<T, U>(v: HashMap<String, T>) -> HashMap<String, U>
-where
-    U: From<T>,
-{
-    v.into_iter().map(|(k, v)| (k, v.into())).collect()
-}
-
-fn convert_opt_vec<T, U>(v: Option<Vec<T>>) -> Option<Vec<U>>
-where
-    U: From<T>,
-{
-    v.map(|item| convert_vec(item))
-}
-
-fn convert_opt_map<T, U>(v: Option<HashMap<String, T>>) -> Option<HashMap<String, U>>
-where
-    U: From<T>,
-{
-    v.map(|item| convert_map(item))
 }
 
 impl ConvertFrom<super::carton_toml::TensorReference> for PossiblyLoaded<crate::types::Tensor> {
