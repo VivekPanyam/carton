@@ -133,6 +133,48 @@ impl Runner {
         }
     }
 
+    pub async fn seal(
+        &self,
+        tensors_orig: HashMap<String, Tensor>,
+    ) -> Result<u64, String> {
+        // Wrap each tensor in a handle (this possibly sends the fd for backing SHM chunks to the other process)
+        let comms = self.client.get_comms();
+        let mut tensors = HashMap::new();
+        for (k,v) in tensors_orig.into_iter() {
+            tensors.insert(k, Handle::new(v, comms).await);
+        }
+
+        match self.client.do_rpc(RPCRequestData::Seal { tensors }).await {
+            RPCResponseData::Seal { handle } => Ok(handle.0),
+            RPCResponseData::Error { e } => Err(e),
+            _ => panic!("Unexpected RPC response type!"),
+        }
+    }
+
+    pub async fn infer_with_handle(
+        &self,
+        handle: u64
+    ) -> Result<HashMap<String, Tensor>, String> {
+        let comms = self.client.get_comms();
+
+        match self
+            .client
+            .do_rpc(RPCRequestData::InferWithHandle { handle: SealHandle(handle) })
+            .await
+        {
+            RPCResponseData::Infer { tensors } => {
+                let mut out = HashMap::new();
+                for (k, v) in tensors.into_iter() {
+                    out.insert(k, v.into_inner(comms).await);
+                }
+
+                Ok(out)
+            },
+            RPCResponseData::Error { e } => Err(e),
+            _ => panic!("Unexpected RPC response type!"),
+        }
+    }
+
     // pub async fn infer_with_handle(
     //     &self,
     //     handle: SealHandle,

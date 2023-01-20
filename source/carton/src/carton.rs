@@ -45,13 +45,27 @@ impl Carton {
     /// This lets carton start processing tensors (e.g. moving them to the correct devices) before
     /// actually running inference and can lead to more efficient pipelines.
     pub async fn seal(&self, tensors: HashMap<String, Tensor>) -> Result<SealHandle> {
-        todo!()
+        match &self.runner {
+            Runner::V1(runner) => Ok(SealHandle(
+                runner
+                    .seal(convert_map(tensors))
+                    .await
+                    .map_err(|e| CartonError::ErrorFromRunner(e))?,
+            )),
+        }
     }
 
     /// Infer using a handle from `seal`.
     /// This approach can make inference pipelines more efficient vs just using `infer_with_inputs`
     pub async fn infer_with_handle(&self, handle: SealHandle) -> Result<HashMap<String, Tensor>> {
-        todo!()
+        match &self.runner {
+            Runner::V1(runner) => Ok(convert_map(
+                runner
+                    .infer_with_handle(handle.0)
+                    .await
+                    .map_err(|e| CartonError::ErrorFromRunner(e))?,
+            )),
+        }
     }
 
     /// Pack a carton given a path and options
