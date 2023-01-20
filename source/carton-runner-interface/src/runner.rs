@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     client::Client,
@@ -57,7 +57,7 @@ impl Runner {
         Ok(Self { client })
     }
 
-    pub async fn load(&self, _fs: impl lunchbox::ReadableFileSystem) {
+    pub async fn load<T: lunchbox::ReadableFileSystem>(&self, _fs: &Arc<T>) {
         // match client
         //     .do_rpc(RPCRequestData::Load {
         //         path,

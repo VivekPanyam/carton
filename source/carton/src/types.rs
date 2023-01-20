@@ -32,7 +32,7 @@ pub struct LoadOpts {
 }
 
 /// The types of options that can be passed to runners
-pub type RunnerOpt = crate::format::v1::carton_toml::RunnerOpt;
+pub type RunnerOpt = crate::info::RunnerOpt;
 
 /// Supported device types
 #[derive(Debug)]
@@ -104,41 +104,11 @@ impl Device {
 }
 
 /// Options that can be specified when packing a model
-// TODO: add options so we can fill everything in carton.toml
-pub struct PackOpts {
-    /// The name of the model
-    model_name: Option<String>,
-
-    /// The model description
-    model_description: Option<String>,
-
-    /// A list of platforms this model supports
-    /// If empty or unspecified, all platforms are okay
-    required_platforms: Option<Vec<target_lexicon::Triple>>,
-
-    /// The name of the runner to use
-    runner_name: String,
-
-    /// The required framework version range to run the model with
-    /// This is a semver version range. See https://docs.rs/semver/1.0.16/semver/struct.VersionReq.html
-    /// for format details.
-    /// For example `=1.2.4`, means exactly version `1.2.4`
-    required_framework_version_range: semver::VersionReq,
-
-    /// Don't set this unless you know what you're doing
-    runner_compat_version: Option<u64>,
-
-    /// Options to pass to the runner. These are runner-specific (e.g.
-    /// PyTorch, TensorFlow, etc).
-    ///
-    /// Sometimes used to configure thread-pool sizes, etc.
-    /// See the documentation for more info
-    opts: Option<HashMap<String, RunnerOpt>>,
-}
+pub type PackOpts = CartonInfo;
 
 // Directly expose everything in the carton.toml for now
 // TODO: have an intermediate type
-pub type CartonInfo = crate::format::v1::carton_toml::CartonToml;
+pub type CartonInfo = crate::info::CartonInfo;
 
 for_each_carton_type! {
     /// The core tensor type
