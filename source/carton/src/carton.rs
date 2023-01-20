@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{types::{CartonInfo, LoadOpts, PackOpts, SealHandle, Tensor}, load::Runner};
+use crate::{types::{CartonInfo, LoadOpts, PackOpts, SealHandle, Tensor}, load::Runner, info::CartonInfoWithExtras};
 use crate::error::Result;
 
 pub struct Carton {
-    info: CartonInfo,
+    info: CartonInfoWithExtras,
     runner: Runner,
 }
 
@@ -59,12 +59,12 @@ impl Carton {
 
     /// Get info for the loaded model
     pub fn get_info(&self) -> &CartonInfo {
-        &self.info
+        &self.info.info
     }
 
     /// Get info for a model
     pub async fn get_model_info(url_or_path: String) -> Result<CartonInfo> {
-        crate::load::get_carton_info(&url_or_path).await
+        Ok(crate::load::get_carton_info(&url_or_path).await?.info)
     }
 
     /// Allocate a tensor
