@@ -12,38 +12,38 @@ pub struct CartonToml {
     spec_version: u64,
 
     /// The name of the model
-    pub model_name: Option<String>,
+    pub(crate) model_name: Option<String>,
 
     /// The model description
-    pub model_description: Option<String>,
+    pub(crate) model_description: Option<String>,
 
     /// A list of platforms this model supports
     /// If empty, all platforms are okay
     /// These are target triples
-    required_platforms: Option<Vec<Triple>>,
+    pub(crate) required_platforms: Option<Vec<Triple>>,
 
     /// A list of inputs for the model
     /// Can be empty
-    pub input: Option<Vec<TensorSpec>>,
+    pub(crate) input: Option<Vec<TensorSpec>>,
 
     /// A list of outputs for the model
     /// Can be empty
-    pub output: Option<Vec<TensorSpec>>,
+    pub(crate) output: Option<Vec<TensorSpec>>,
 
     /// Test data
     /// Can be empty
-    self_test: Option<Vec<SelfTest>>,
+    pub(crate) self_test: Option<Vec<SelfTest>>,
 
     /// Examples
     /// Can be empty
-    example: Option<Vec<Example>>,
+    pub(crate) example: Option<Vec<Example>>,
 
     /// Information about the runner to use
-    pub runner: RunnerInfo,
+    pub(crate) runner: RunnerInfo,
 }
 
 #[derive(Debug, PartialEq)]
-struct Triple(target_lexicon::Triple);
+pub(crate) struct Triple(pub(crate) target_lexicon::Triple);
 
 impl Serialize for Triple {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -91,12 +91,12 @@ pub enum RunnerOpt {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct SelfTest {
-    name: Option<String>,
-    description: Option<String>,
-    inputs: HashMap<String, TensorReference>,
+    pub(crate) name: Option<String>,
+    pub(crate) description: Option<String>,
+    pub(crate) inputs: HashMap<String, TensorReference>,
 
     // Can be empty
-    expected_out: Option<HashMap<String, TensorReference>>,
+    pub(crate) expected_out: Option<HashMap<String, TensorReference>>,
 }
 
 struct RequiredPrefixVisitor<'a, T> {
@@ -136,7 +136,7 @@ impl<'a, 'de, T: From<String>> Visitor<'de> for RequiredPrefixVisitor<'a, T> {
 /// References a tensor in @tensor_data
 /// Must be a string that starts with `@tensor_data/`
 #[derive(Debug, PartialEq)]
-pub struct TensorReference(String);
+pub struct TensorReference(pub(crate) String);
 
 impl Serialize for TensorReference {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -168,10 +168,10 @@ impl From<String> for TensorReference {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct Example {
-    name: Option<String>,
-    description: Option<String>,
-    inputs: HashMap<String, TensorOrMiscReference>,
-    sample_out: HashMap<String, TensorOrMiscReference>,
+    pub(crate) name: Option<String>,
+    pub(crate) description: Option<String>,
+    pub(crate) inputs: HashMap<String, TensorOrMiscReference>,
+    pub(crate) sample_out: HashMap<String, TensorOrMiscReference>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -184,7 +184,7 @@ pub enum TensorOrMiscReference {
 /// References a file in @misc
 /// Must be a string that starts with `@misc/`
 #[derive(Debug, PartialEq)]
-pub struct MiscFileReference(String);
+pub struct MiscFileReference(pub(crate) String);
 
 impl Serialize for MiscFileReference {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -216,19 +216,19 @@ impl From<String> for MiscFileReference {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 pub struct TensorSpec {
-    name: String,
+    pub(crate) name: String,
 
     /// The datatype
-    dtype: DataType,
+    pub(crate) dtype: DataType,
 
     /// Tensor shape
-    shape: Shape,
+    pub(crate) shape: Shape,
 
     /// Optional description
-    description: Option<String>,
+    pub(crate) description: Option<String>,
 
     /// Optional internal name
-    internal_name: Option<String>,
+    pub(crate) internal_name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]

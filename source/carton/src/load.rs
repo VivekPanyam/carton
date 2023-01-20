@@ -1,5 +1,7 @@
 //! This module handles loading a carton
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use lunchbox::{
@@ -55,7 +57,7 @@ async fn fetch(url: &str, opts: LoadOpts) -> ReturnType {
             if tokio::fs::metadata(&path.0).await?.is_dir() {
                 // This is a local directory (or a symlink to one)
                 // Skip directly to step 3
-                maybe_resolve_links(lunchbox::LocalFS::with_base_dir(path.0).unwrap(), opts).await
+                maybe_resolve_links(&Arc::new(lunchbox::LocalFS::with_base_dir(path.0).unwrap()), opts).await
             } else {
                 // This is a file (or a symlink to one)
                 unwrap_container(path, opts).await
@@ -76,19 +78,19 @@ where
     // We currently only support zip so there isn't a whole lot to do here
     let zip = ZipFS::new(item).await;
 
-    maybe_resolve_links(zip, opts).await
+    maybe_resolve_links(&Arc::new(zip), opts).await
 }
 
 /// Step 3: Resolve links (and call into step 4)
-async fn maybe_resolve_links<T>(fs: T, opts: LoadOpts) -> ReturnType
+async fn maybe_resolve_links<T>(fs: &Arc<T>, opts: LoadOpts) -> ReturnType
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
 {
     // Basically an overlay filesystem using the `LINKS` file and `MANIFEST` to decide where
     // to direct operations (if necessary)
-    let has_manifest = PathBuf::from("/MANIFEST").exists(&fs).await;
-    let has_links = PathBuf::from("/LINKS").exists(&fs).await;
+    let has_manifest = PathBuf::from("/MANIFEST").exists(fs.as_ref()).await;
+    let has_links = PathBuf::from("/LINKS").exists(fs.as_ref()).await;
 
     if !has_manifest {
         // Not a valid carton
@@ -108,18 +110,14 @@ where
 }
 
 /// Step 4: Load carton info from the resolved fs (and call into step 5)
-async fn load_carton<T>(fs: T, opts: LoadOpts) -> ReturnType
+async fn load_carton<T>(fs: &Arc<T>, opts: LoadOpts) -> ReturnType
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
 {
     // First, figure out which format version this is
     // Currently, there's only one so we always pass through to it
-    let toml = fs.read("/carton.toml").await?;
-    let config = crate::format::v1::carton_toml::parse(&toml).await?;
-
-    // CartonInfo is currently just CartonToml from v1 of the format
-    let mut info = config;
+    let mut info = crate::format::v1::load(fs).await?;
 
     // Merge in load opts
     if let Some(v) = opts.override_runner_name {
@@ -154,7 +152,7 @@ where
 // Step 5: Figure out what runner to use (or get it if necessary) and launch the runner
 #[cfg(not(target_family = "wasm"))]
 async fn discover_or_get_runner_and_launch<T>(
-    fs: T,
+    fs: &Arc<T>,
     c: &CartonInfo,
     visible_device: Device,
 ) -> Runner
@@ -225,7 +223,7 @@ impl From<Device> for runner_interface_v1::types::Device {
 // No discovery for wasm - just launch a runner and return
 #[cfg(target_family = "wasm")]
 async fn discover_or_get_runner_and_launch<T>(
-    fs: T,
+    fs: &Arc<T>,
     c: &CartonInfo,
     visible_device: Device,
 ) -> Runner
