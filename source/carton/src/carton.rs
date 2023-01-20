@@ -13,7 +13,7 @@ impl Carton {
     pub async fn load(url_or_path: String, opts: LoadOpts) -> Result<Self> {
         let (info, runner) = crate::load::load(&url_or_path, opts).await?;
 
-        Ok(Self { info, runner })
+        Ok(Self { info, runner: runner.unwrap() })
     }
 
     /// Infer using a set of inputs.
@@ -64,7 +64,7 @@ impl Carton {
 
     /// Get info for a model
     pub async fn get_model_info(url_or_path: String) -> Result<CartonInfo> {
-        todo!()
+        crate::load::get_carton_info(&url_or_path).await
     }
 
     /// Allocate a tensor
