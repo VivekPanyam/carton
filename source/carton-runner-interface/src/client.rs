@@ -3,6 +3,7 @@ use std::sync::{atomic::AtomicU64, Arc};
 use anywhere::{transport::serde::SerdeTransport, Servable};
 use dashmap::DashMap;
 use tokio::sync::{mpsc, oneshot};
+use lunchbox::types::{MaybeSend, MaybeSync};
 
 use crate::{
     do_spawn,
@@ -70,10 +71,10 @@ impl Client {
         out
     }
 
-    async fn serve_fs_with_capabilities<T>(&self, fs: T) -> FsToken
+    pub(crate) async fn serve_readonly_fs<T>(&self, fs: Arc<T>) -> FsToken
     where
-        T: lunchbox::ReadableFileSystem + Send + Sync + 'static,
-        T::FileType: lunchbox::types::ReadableFile + Send + Sync + Unpin,
+        T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
+        T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
     {
         let (tx, rx, id) = self.fs_multiplexer.get_new_stream().await;
 

@@ -25,7 +25,7 @@ where
 async fn load_misc_from_fs<T>(fs: &T, path: &str) -> crate::info::MiscFile
 where
     T: ReadableFileSystem,
-    T::FileType: ReadableFile + 'static,
+    T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
 {
     Box::new(fs.open(path).await.unwrap())
 }
@@ -33,7 +33,7 @@ where
 pub async fn load<T>(fs: &Arc<T>) -> Result<CartonInfo>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-    T::FileType: ReadableFile + 'static,
+    T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
 {
     // Load the toml file
     let toml = fs.read("/carton.toml").await?;
@@ -57,7 +57,7 @@ trait ConvertFrom<T> {
     fn from<F>(item: T, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static;
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static;
 }
 
 // Something like "into"
@@ -65,7 +65,7 @@ trait ConvertInto<T> {
     fn convert<F>(self, fs: &Arc<F>) -> T
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static;
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static;
 }
 
 // Blanket impl
@@ -76,7 +76,7 @@ where
     fn convert<F>(self, fs: &Arc<F>) -> U
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         U::from(self, fs)
     }
@@ -89,7 +89,7 @@ where
     fn from<F>(item: Vec<T>, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         item.into_iter().map(|v| v.convert(fs)).collect()
     }
@@ -102,7 +102,7 @@ where
     fn from<F>(item: HashMap<String, T>, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         item.into_iter().map(|(k, v)| (k, v.convert(fs))).collect()
     }
@@ -115,7 +115,7 @@ where
     fn from<F>(item: Option<T>, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         item.map(|v| v.convert(fs))
     }
@@ -153,7 +153,7 @@ impl ConvertFrom<super::carton_toml::TensorReference> for PossiblyLoaded<crate::
     fn from<F>(item: super::carton_toml::TensorReference, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         let fs = fs.clone();
         PossiblyLoaded::from_loader(Box::pin(async move {
@@ -166,7 +166,7 @@ impl ConvertFrom<super::carton_toml::MiscFileReference> for PossiblyLoaded<crate
     fn from<F>(item: super::carton_toml::MiscFileReference, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         let fs = fs.clone();
         PossiblyLoaded::from_loader(Box::pin(async move {
@@ -179,7 +179,7 @@ impl ConvertFrom<super::carton_toml::TensorOrMiscReference> for crate::info::Ten
     fn from<F>(item: super::carton_toml::TensorOrMiscReference, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         match item {
             super::carton_toml::TensorOrMiscReference::T(v) => {
@@ -196,7 +196,7 @@ impl ConvertFrom<super::carton_toml::Example> for crate::info::Example {
     fn from<F>(item: super::carton_toml::Example, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         Self {
             name: item.name,
@@ -211,7 +211,7 @@ impl ConvertFrom<super::carton_toml::SelfTest> for crate::info::SelfTest {
     fn from<F>(item: super::carton_toml::SelfTest, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + 'static,
+        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
     {
         Self {
             name: item.name,

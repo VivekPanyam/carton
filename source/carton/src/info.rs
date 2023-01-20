@@ -1,4 +1,4 @@
-use std::{collections::HashMap, pin::Pin};
+use std::{collections::HashMap, pin::Pin, sync::Mutex};
 
 use carton_macros::for_each_carton_type;
 use target_lexicon::Triple;
@@ -47,7 +47,8 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + Send +
 /// Something that is possibly loaded
 pub enum PossiblyLoaded<T> {
     // Something that can return a T
-    Unloaded(BoxFuture<'static, T>),
+    // This type is kinda messy so that `PossiblyLoaded` implements Sync
+    Unloaded(Mutex<Option<BoxFuture<'static, T>>>),
 
     // A T
     Loaded(T),
@@ -59,12 +60,13 @@ impl<T> PossiblyLoaded<T> {
     }
 
     pub fn from_loader(loader: BoxFuture<'static, T>) -> Self {
-        Self::Unloaded(loader)
+        Self::Unloaded(Mutex::new(Some(loader)))
     }
 
     pub async fn get(&mut self) -> &T {
         match self {
-            PossiblyLoaded::Unloaded(fetcher) => {
+            PossiblyLoaded::Unloaded(mutex) => {
+                let fetcher = mutex.lock().unwrap().take().unwrap();
                 let item = fetcher.await;
                 *self = Self::Loaded(item);
 
@@ -101,8 +103,12 @@ pub struct Example {
     pub sample_out: HashMap<String, TensorOrMisc>,
 }
 
-/// This isn't ideal, but since it's not on the critical path, it's probably okay
+// This isn't ideal, but since it's not on the critical path, it's probably okay
+#[cfg(target_family = "wasm")]
 pub type MiscFile = Box<dyn AsyncRead>;
+
+#[cfg(not(target_family = "wasm"))]
+pub type MiscFile = Box<dyn AsyncRead + Send + Sync>;
 
 pub enum TensorOrMisc {
     Tensor(PossiblyLoaded<Tensor>),
