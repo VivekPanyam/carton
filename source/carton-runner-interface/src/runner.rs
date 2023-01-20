@@ -4,6 +4,7 @@ use crate::{
     client::Client,
     do_not_modify::comms::OwnedComms,
     do_not_modify::types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
+    types::RunnerOpt,
 };
 
 use lunchbox::types::{MaybeSend, MaybeSync};
@@ -59,34 +60,38 @@ impl Runner {
         Ok(Self { client })
     }
 
-    pub async fn load<T>(&self, fs: &Arc<T>)
-    where
+    pub async fn load<T>(
+        &self,
+        fs: &Arc<T>,
+        runner_name: String,
+        required_framework_version: semver::VersionReq,
+        runner_compat_version: u64,
+        runner_opts: Option<HashMap<String, RunnerOpt>>,
+        visible_device: Device,
+        carton_manifest_hash: String,
+    ) -> Result<(), String> where
         T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
         T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
     {
         // Serve the filesystem
         let token = self.client.serve_readonly_fs(fs.clone()).await;
 
-        // match client
-        //     .do_rpc(RPCRequestData::Load {
-        //         path,
-        //         runner,
-        //         runner_version,
-        //         runner_opts,
-        //         // TODO change this
-        //         visible_device: Device::CPU,
-        //     })
-        //     .await
-        // {
-        //     RPCResponseData::Load {
-        //         name,
-        //         runner,
-        //         inputs,
-        //         outputs,
-        //     } => Ok(Self { client }),
-        //     RPCResponseData::Error { e } => Err(e),
-        //     _ => panic!("Unexpected RPC response type!"),
-        // }
+        match self
+            .client
+            .do_rpc(RPCRequestData::Load {
+                fs: token,
+                runner_name,
+                required_framework_version,
+                runner_compat_version,
+                runner_opts,
+                visible_device,
+                carton_manifest_hash,
+            })
+            .await {
+                RPCResponseData::Load => Ok(()),
+                RPCResponseData::Error { e } => Err(e),
+                _ => panic!("Unexpected RPC response type!")
+            }
     }
 
     // pub async fn seal(&self, tensors: HashMap<String, Tensor>) -> Result<SealHandle, String> {

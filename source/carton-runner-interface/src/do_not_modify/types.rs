@@ -60,12 +60,10 @@ pub enum RPCRequestData {
         /// For a readonly filesystem
         fs: FsToken,
 
-        runner_name: Option<String>,
-        required_framework_version: Option<String>,
+        runner_name: String,
+        required_framework_version: semver::VersionReq,
         runner_compat_version: u64,
-
-        // TODO: fix this
-        runner_opts: Option<String>,
+        runner_opts: Option<HashMap<String, RunnerOpt>>,
         visible_device: Device,
 
         // The hash of the model
@@ -104,12 +102,8 @@ pub enum RPCRequestData {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum RPCResponseData {
-    Load {
-        name: String,
-        
-        // TODO: Change this to a runnerinfo struct
-        runner: String,
-    },
+    // Doesn't return anything on successful load
+    Load,
 
     Pack {
         // The path to the output directory. This can be in the temp folder passed into `Pack`
@@ -137,6 +131,17 @@ pub enum RPCResponseData {
         e: String,
     }
 
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum RunnerOpt {
+    Integer(i64),
+    Double(f64),
+    String(String),
+    Boolean(bool),
+
+    // Serializes into a rfc3339 time string so this should be fine to put on the wire
+    Date(chrono::DateTime<chrono::Utc>),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]

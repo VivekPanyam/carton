@@ -38,6 +38,15 @@ pub struct CartonInfo {
     pub runner: RunnerInfo,
 }
 
+/// An internal struct used when loading models. It contains extra things like the
+/// manifest hash
+pub(crate) struct CartonInfoWithExtras {
+    pub(crate) info: CartonInfo,
+
+    /// The sha256 of the MANIFEST file
+    pub(crate) manifest_sha256: String,
+}
+
 #[cfg(target_family = "wasm")]
 pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + 'a>>;
 
@@ -138,6 +147,7 @@ pub struct RunnerInfo {
 }
 
 /// The types of options that can be passed to runners
+#[derive(Clone)]
 pub enum RunnerOpt {
     Integer(i64),
     Double(f64),

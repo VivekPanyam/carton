@@ -15,7 +15,7 @@ use zipfs::{GetReader, ZipFS};
 use crate::{
     error::CartonError,
     http::HTTPFile,
-    types::{CartonInfo, Device, LoadOpts},
+    types::{CartonInfo, Device, LoadOpts}, info::CartonInfoWithExtras,
 };
 
 /// Load a carton given a url or path and options
@@ -35,13 +35,13 @@ pub(crate) async fn load(url_or_path: &str, opts: LoadOpts) -> ReturnType {
     fetch(url_or_path, opts, false).await
 }
 
-pub(crate) async fn get_carton_info(url_or_path: &str) -> crate::error::Result<CartonInfo> {
+pub(crate) async fn get_carton_info(url_or_path: &str) -> crate::error::Result<CartonInfoWithExtras> {
     let (info, _) = fetch(url_or_path, Default::default(), true).await?;
     Ok(info)
 }
 
 /// The return type of `load`
-pub(crate) type ReturnType = crate::error::Result<(CartonInfo, Option<Runner>)>;
+pub(crate) type ReturnType = crate::error::Result<(CartonInfoWithExtras, Option<Runner>)>;
 
 /// All the versions of the runner interface that we support
 pub(crate) enum Runner {
@@ -123,15 +123,15 @@ where
 {
     // First, figure out which format version this is
     // Currently, there's only one so we always pass through to it
-    let mut info = crate::format::v1::load(fs).await?;
+    let mut info_with_extras = crate::format::v1::load(fs).await?;
 
     // Merge in load opts
     if let Some(v) = opts.override_runner_name {
-        info.runner.runner_name = v;
+        info_with_extras.info.runner.runner_name = v;
     }
 
     if let Some(v) = opts.override_required_framework_version {
-        info.runner.required_framework_version = VersionReq::parse(&v).map_err(|_| {
+        info_with_extras.info.runner.required_framework_version = VersionReq::parse(&v).map_err(|_| {
             CartonError::Other(
                 "`override_required_framework_version` was not a valid semver version range",
             )
@@ -139,7 +139,7 @@ where
     }
 
     if let Some(v) = opts.override_runner_opts {
-        info.runner.opts = if let Some(mut orig) = info.runner.opts {
+        info_with_extras.info.runner.opts = if let Some(mut orig) = info_with_extras.info.runner.opts {
             for (k, val) in v.into_iter() {
                 orig.insert(k, val);
             }
@@ -151,11 +151,11 @@ where
     }
 
     if skip_runner {
-        Ok((info, None))
+        Ok((info_with_extras, None))
     } else {
-        let runner = discover_or_get_runner_and_launch(fs, &info, opts.visible_device).await;
+        let runner = discover_or_get_runner_and_launch(fs, &info_with_extras, opts.visible_device).await?;
 
-        Ok((info, Some(runner)))
+        Ok((info_with_extras, Some(runner)))
     }
 }
 
@@ -163,9 +163,9 @@ where
 #[cfg(not(target_family = "wasm"))]
 async fn discover_or_get_runner_and_launch<T>(
     fs: &Arc<T>,
-    c: &CartonInfo,
+    c: &CartonInfoWithExtras,
     visible_device: Device,
-) -> Runner
+) -> crate::error::Result<Runner>
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
@@ -178,14 +178,15 @@ where
         .into_iter()
         .filter(|runner| {
             // The runner name must be the same as the model we're trying to load
-            (runner.runner_name == c.runner.runner_name)
+            (runner.runner_name == c.info.runner.runner_name)
 
             // The runner compat version must be the same as the model we're trying to load
             // (this is kind of like a version for the `model` directory)
-            && (runner.runner_compat_version == c.runner.runner_compat_version)
+            && (runner.runner_compat_version == c.info.runner.runner_compat_version)
 
             // The runner's framework_version must satisfy the model's required range
             && (c
+                .info
                 .runner
                 .required_framework_version
                 .matches(&runner.framework_version))
@@ -205,12 +206,20 @@ where
             1 => {
                 let runner = runner_interface_v1::Runner::new(
                     &std::path::PathBuf::from(candidate.runner_path),
-                    visible_device.into(),
+                    visible_device.clone().into(),
                 ).await.unwrap();
 
-                runner.load(fs).await;
+                runner.load(
+                    fs,
+                    c.info.runner.runner_name.clone(),
+                    c.info.runner.required_framework_version.clone(),
+                    c.info.runner.runner_compat_version,
+                    c.info.runner.opts.clone().map(|item| item.into_iter().map(|(k,v)| (k, v.into())).collect()),
+                    visible_device.into(),
+                    c.manifest_sha256.clone(),
+                ).await.map_err(|e| CartonError::ErrorFromRunner(e))?;
 
-                Runner::V1(runner)
+                Ok(Runner::V1(runner))
 
             },
             version => unreachable!("This runner requires a newer interface ({version}) than we have. Shouldn't happen because of the check above."),
@@ -231,13 +240,25 @@ impl From<Device> for runner_interface_v1::types::Device {
     }
 }
 
+impl From<crate::types::RunnerOpt> for runner_interface_v1::types::RunnerOpt {
+    fn from(value: crate::types::RunnerOpt) -> Self {
+        match value {
+            crate::info::RunnerOpt::Integer(v) => Self::Integer(v),
+            crate::info::RunnerOpt::Double(v) => Self::Double(v),
+            crate::info::RunnerOpt::String(v) => Self::String(v),
+            crate::info::RunnerOpt::Boolean(v) => Self::Boolean(v),
+            crate::info::RunnerOpt::Date(v) => Self::Date(v),
+        }
+    }
+}
+
 // No discovery for wasm - just launch a runner and return
 #[cfg(target_family = "wasm")]
 async fn discover_or_get_runner_and_launch<T>(
     fs: &Arc<T>,
-    c: &CartonInfo,
+    c: &CartonInfoWithExtras,
     visible_device: Device,
-) -> Runner
+) -> crate::error::Result<Runner>
 where
     T: lunchbox::ReadableFileSystem,
 {

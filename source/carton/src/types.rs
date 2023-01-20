@@ -36,7 +36,7 @@ pub struct LoadOpts {
 pub type RunnerOpt = crate::info::RunnerOpt;
 
 /// Supported device types
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum Device {
     #[default]
     CPU,

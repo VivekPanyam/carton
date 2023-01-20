@@ -23,10 +23,7 @@ async fn main() {
                 server
                     .send_response_for_request(
                         req_id,
-                        RPCResponseData::Load {
-                            name: "model_name".to_string(),
-                            runner: "noop".to_string(),
-                        },
+                        RPCResponseData::Load,
                     )
                     .await
                     .unwrap();

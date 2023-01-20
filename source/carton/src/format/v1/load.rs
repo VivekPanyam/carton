@@ -7,9 +7,10 @@ use std::sync::Arc;
 
 use lunchbox::types::{MaybeSend, MaybeSync, ReadableFile};
 use lunchbox::ReadableFileSystem;
+use sha2::{Sha256, Digest};
 
 use crate::error::Result;
-use crate::info::PossiblyLoaded;
+use crate::info::{PossiblyLoaded, CartonInfoWithExtras};
 use crate::types::CartonInfo;
 
 async fn load_tensor_from_fs<T>(fs: &T, path: &str) -> crate::types::Tensor
@@ -30,7 +31,7 @@ where
     Box::new(fs.open(path).await.unwrap())
 }
 
-pub async fn load<T>(fs: &Arc<T>) -> Result<CartonInfo>
+pub(crate) async fn load<T>(fs: &Arc<T>) -> Result<CartonInfoWithExtras>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
@@ -40,7 +41,7 @@ where
     let config = crate::format::v1::carton_toml::parse(&toml).await?;
 
     // Create a CartonInfo struct
-    Ok(CartonInfo {
+    let info = CartonInfo {
         model_name: config.model_name,
         model_description: config.model_description,
         required_platforms: convert_opt_vec(config.required_platforms),
@@ -49,7 +50,15 @@ where
         self_tests: config.self_test.convert(fs),
         examples: config.example.convert(fs),
         runner: config.runner.into(),
-    })
+    };
+
+    // Compute the manifest sha256
+    let manifest = fs.read("/MANIFEST").await?;
+    let mut hasher = Sha256::new();
+    hasher.update(manifest);
+    let manifest_sha256 = format!("{:x}", hasher.finalize());
+
+    Ok(CartonInfoWithExtras { info, manifest_sha256 })
 }
 
 // Type conversions
