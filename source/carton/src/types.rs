@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 /// An opaque handle returned by `seal`
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct SealHandle(u64);
+pub struct SealHandle(pub(crate) u64);
 
 /// Options provided when loading a Carton
 #[derive(Default)]
