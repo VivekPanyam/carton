@@ -7,6 +7,7 @@ use lazy_static::lazy_static;
 pub struct SealHandle(u64);
 
 /// Options provided when loading a Carton
+#[derive(Default)]
 pub struct LoadOpts {
     /// Override the runner to use
     /// If not overridden, this is fetched from the carton metadata
@@ -35,8 +36,9 @@ pub struct LoadOpts {
 pub type RunnerOpt = crate::info::RunnerOpt;
 
 /// Supported device types
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Device {
+    #[default]
     CPU,
     GPU {
         /// The UUID of the specified device

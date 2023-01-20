@@ -32,11 +32,16 @@ pub(crate) async fn load(url_or_path: &str, opts: LoadOpts) -> ReturnType {
     // and so on. The final step returns a value (of a type that is known ahead of time).
     // This simplifies types and avoids dynamic dispatch (at the cost of a larger binary because of
     // monomorphization).
-    fetch(url_or_path, opts).await
+    fetch(url_or_path, opts, false).await
+}
+
+pub(crate) async fn get_carton_info(url_or_path: &str) -> crate::error::Result<CartonInfo> {
+    let (info, _) = fetch(url_or_path, Default::default(), true).await?;
+    Ok(info)
 }
 
 /// The return type of `load`
-pub(crate) type ReturnType = crate::error::Result<(CartonInfo, Runner)>;
+pub(crate) type ReturnType = crate::error::Result<(CartonInfo, Option<Runner>)>;
 
 /// All the versions of the runner interface that we support
 pub(crate) enum Runner {
@@ -49,7 +54,8 @@ const MAX_SUPPORTED_INTERFACE_VERSION: u64 = 1;
 /// Step 1: Fetch the file or directory (and call into step 2)
 /// If `url` points to a dir on disk, load a local lunchbox filesystem and
 /// call directly into step 3
-async fn fetch(url: &str, opts: LoadOpts) -> ReturnType {
+/// If `skip_runner` is true, a runner will not be launched. Only CartonInfo will be returned.
+async fn fetch(url: &str, opts: LoadOpts, skip_runner: bool) -> ReturnType {
     let url = parse_protocol(url);
     match url {
         #[cfg(not(target_family = "wasm"))]
@@ -57,20 +63,20 @@ async fn fetch(url: &str, opts: LoadOpts) -> ReturnType {
             if tokio::fs::metadata(&path.0).await?.is_dir() {
                 // This is a local directory (or a symlink to one)
                 // Skip directly to step 3
-                maybe_resolve_links(&Arc::new(lunchbox::LocalFS::with_base_dir(path.0).unwrap()), opts).await
+                maybe_resolve_links(&Arc::new(lunchbox::LocalFS::with_base_dir(path.0).unwrap()), opts, skip_runner).await
             } else {
                 // This is a file (or a symlink to one)
-                unwrap_container(path, opts).await
+                unwrap_container(path, opts, skip_runner).await
             }
         }
         #[cfg(target_family = "wasm")]
         LocatorWithProtocol::LocalFilePath(_) => panic!("Local file paths not supported on wasm!"),
-        LocatorWithProtocol::HttpURL(url) => unwrap_container(url, opts).await,
+        LocatorWithProtocol::HttpURL(url) => unwrap_container(url, opts, skip_runner).await,
     }
 }
 
 /// Optional Step 2: Unwrap a container (e.g. zip) (and call into step 3)
-async fn unwrap_container<T>(item: T, opts: LoadOpts) -> ReturnType
+async fn unwrap_container<T>(item: T, opts: LoadOpts, skip_runner: bool) -> ReturnType
 where
     T: GetReader + 'static + MaybeSync + MaybeSend,
     T::R: MaybeSync + MaybeSend,
@@ -78,11 +84,11 @@ where
     // We currently only support zip so there isn't a whole lot to do here
     let zip = ZipFS::new(item).await;
 
-    maybe_resolve_links(&Arc::new(zip), opts).await
+    maybe_resolve_links(&Arc::new(zip), opts, skip_runner).await
 }
 
 /// Step 3: Resolve links (and call into step 4)
-async fn maybe_resolve_links<T>(fs: &Arc<T>, opts: LoadOpts) -> ReturnType
+async fn maybe_resolve_links<T>(fs: &Arc<T>, opts: LoadOpts, skip_runner: bool) -> ReturnType
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
@@ -100,7 +106,7 @@ where
 
     if !has_links {
         // No links to resolve so just pass through
-        load_carton(fs, opts).await
+        load_carton(fs, opts, skip_runner).await
     } else {
         // Resolve links and then make an overlayfs and
         // pass through to load_carton
@@ -110,7 +116,7 @@ where
 }
 
 /// Step 4: Load carton info from the resolved fs (and call into step 5)
-async fn load_carton<T>(fs: &Arc<T>, opts: LoadOpts) -> ReturnType
+async fn load_carton<T>(fs: &Arc<T>, opts: LoadOpts, skip_runner: bool) -> ReturnType
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
@@ -144,9 +150,13 @@ where
         }
     }
 
-    let runner = discover_or_get_runner_and_launch(fs, &info, opts.visible_device).await;
+    if skip_runner {
+        Ok((info, None))
+    } else {
+        let runner = discover_or_get_runner_and_launch(fs, &info, opts.visible_device).await;
 
-    Ok((info, runner))
+        Ok((info, Some(runner)))
+    }
 }
 
 // Step 5: Figure out what runner to use (or get it if necessary) and launch the runner
