@@ -26,10 +26,11 @@ pub(crate) async fn load(url_or_path: &str, opts: LoadOpts) -> ReturnType {
     // 3. Resolve links if necessary
     // 4. Load carton info from the resolved FS
     // 5. Figure out what runner to use (or get it if necessary) and launch the runner
+    // 6. Load the model
     //
     // Because the output type of each step generally can't be known ahead of time, this
     // process is implemented in a slightly odd way. Step 1 calls into step 2 which calls into step 3
-    // and so on. The final step returns a value (of a type that is known ahead of time).
+    // which calls into step 4. Step 4 calls step 5 followed by step 6 and returns a value (of a type that is known ahead of time).
     // This simplifies types and avoids dynamic dispatch (at the cost of a larger binary because of
     // monomorphization).
     fetch(url_or_path, opts, false).await
@@ -115,7 +116,7 @@ where
     }
 }
 
-/// Step 4: Load carton info from the resolved fs (and call into step 5)
+/// Step 4: Load carton info from the resolved fs (and call into step 5 and then call into step 6)
 async fn load_carton<T>(fs: &Arc<T>, opts: LoadOpts, skip_runner: bool) -> ReturnType
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
@@ -153,7 +154,11 @@ where
     if skip_runner {
         Ok((info_with_extras, None))
     } else {
-        let runner = discover_or_get_runner_and_launch(fs, &info_with_extras, opts.visible_device).await?;
+        // Launch a runner
+        let runner = discover_or_get_runner_and_launch(&info_with_extras.info, &opts.visible_device).await?;
+
+        // Load the model
+        load_model(fs, &runner, &info_with_extras, opts.visible_device).await?;
 
         Ok((info_with_extras, Some(runner)))
     }
@@ -161,14 +166,10 @@ where
 
 // Step 5: Figure out what runner to use (or get it if necessary) and launch the runner
 #[cfg(not(target_family = "wasm"))]
-async fn discover_or_get_runner_and_launch<T>(
-    fs: &Arc<T>,
-    c: &CartonInfoWithExtras,
-    visible_device: Device,
+async fn discover_or_get_runner_and_launch(
+    info: &CartonInfo,
+    visible_device: &Device,
 ) -> crate::error::Result<Runner>
-where
-    T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-    T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
 {
     // TODO: maybe we want to just do this once at startup or cache it?
     let local_runners = crate::discovery::discover_runners().await;
@@ -178,15 +179,14 @@ where
         .into_iter()
         .filter(|runner| {
             // The runner name must be the same as the model we're trying to load
-            (runner.runner_name == c.info.runner.runner_name)
+            (runner.runner_name == info.runner.runner_name)
 
             // The runner compat version must be the same as the model we're trying to load
             // (this is kind of like a version for the `model` directory)
-            && (runner.runner_compat_version == c.info.runner.runner_compat_version)
+            && (runner.runner_compat_version == info.runner.runner_compat_version)
 
             // The runner's framework_version must satisfy the model's required range
-            && (c
-                .info
+            && (info
                 .runner
                 .required_framework_version
                 .matches(&runner.framework_version))
@@ -209,16 +209,6 @@ where
                     visible_device.clone().into(),
                 ).await.unwrap();
 
-                runner.load(
-                    fs,
-                    c.info.runner.runner_name.clone(),
-                    c.info.runner.required_framework_version.clone(),
-                    c.info.runner.runner_compat_version,
-                    c.info.runner.opts.clone().map(|item| item.into_iter().map(|(k,v)| (k, v.into())).collect()),
-                    visible_device.into(),
-                    c.manifest_sha256.clone(),
-                ).await.map_err(|e| CartonError::ErrorFromRunner(e))?;
-
                 Ok(Runner::V1(runner))
 
             },
@@ -233,15 +223,41 @@ where
 
 // No discovery for wasm - just launch a runner and return
 #[cfg(target_family = "wasm")]
-async fn discover_or_get_runner_and_launch<T>(
-    fs: &Arc<T>,
-    c: &CartonInfoWithExtras,
-    visible_device: Device,
+async fn discover_or_get_runner_and_launch(
+    c: &CartonInfo,
+    visible_device: &Device,
 ) -> crate::error::Result<Runner>
-where
-    T: lunchbox::ReadableFileSystem,
 {
     todo!()
+}
+
+
+// Step 6: Load the model
+async fn load_model<T>(
+    fs: &Arc<T>,
+    runner: &Runner,
+    c: &CartonInfoWithExtras,
+    visible_device: Device,
+) -> crate::error::Result<()>
+where
+    T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
+    T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+{
+    match runner {
+        Runner::V1(runner) => {
+            runner.load(
+                    fs,
+                    c.info.runner.runner_name.clone(),
+                    c.info.runner.required_framework_version.clone(),
+                    c.info.runner.runner_compat_version,
+                    c.info.runner.opts.clone().map(|item| item.into_iter().map(|(k,v)| (k, v.into())).collect()),
+                    visible_device.into(),
+                    c.manifest_sha256.clone(),
+                ).await.map_err(|e| CartonError::ErrorFromRunner(e))?;
+        },
+    }
+
+    Ok(())
 }
 
 /// Given a url or a path, figure out what protocol it's using
