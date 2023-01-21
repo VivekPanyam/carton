@@ -1,8 +1,12 @@
-use std::{collections::HashMap, pin::Pin, sync::Mutex};
+use std::{
+    collections::HashMap,
+    pin::Pin,
+    sync::{Arc, Mutex},
+};
 
 use carton_macros::for_each_carton_type;
 use target_lexicon::Triple;
-use tokio::io::AsyncRead;
+use tokio::{io::AsyncRead, sync::OnceCell};
 
 use crate::types::Tensor;
 
@@ -54,45 +58,67 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + 'a>>;
 pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
 
 /// Something that is possibly loaded
-pub enum PossiblyLoaded<T> {
-    // Something that can return a T
-    // This type is kinda messy so that `PossiblyLoaded` implements Sync
-    Unloaded(Mutex<Option<BoxFuture<'static, T>>>),
+pub struct PossiblyLoaded<T> {
+    inner: Arc<PossiblyLoadedInner<T>>,
+}
 
-    // A T
-    Loaded(T),
+impl<T> Clone for PossiblyLoaded<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl<T> PossiblyLoaded<T> {
     pub fn from_value(value: T) -> Self {
-        Self::Loaded(value)
+        Self {
+            inner: Arc::new(PossiblyLoadedInner {
+                inner: OnceCell::new_with(Some(value)),
+                loader: Default::default(),
+            }),
+        }
     }
 
     pub fn from_loader(loader: BoxFuture<'static, T>) -> Self {
-        Self::Unloaded(Mutex::new(Some(loader)))
+        Self {
+            inner: Arc::new(PossiblyLoadedInner {
+                inner: Default::default(),
+                loader: Mutex::new(Some(loader)),
+            }),
+        }
     }
 
-    pub async fn get(&mut self) -> &T {
-        match self {
-            PossiblyLoaded::Unloaded(mutex) => {
-                let fetcher = mutex.lock().unwrap().take().unwrap();
-                let item = fetcher.await;
-                *self = Self::Loaded(item);
+    pub async fn get(&self) -> &T {
+        self.inner.get().await
+    }
+}
 
-                if let Self::Loaded(item) = self {
-                    item
-                } else {
-                    panic!("PossiblyLoaded was not loaded even though we just loaded it")
-                }
+struct PossiblyLoadedInner<T> {
+    inner: OnceCell<T>,
+
+    // This type is kinda messy so that `PossiblyLoaded` implements Sync
+    loader: Mutex<Option<BoxFuture<'static, T>>>,
+}
+
+impl<T> PossiblyLoadedInner<T> {
+    async fn get(&self) -> &T {
+        match self.inner.get() {
+            Some(value) => value,
+            None => {
+                // We need to initialize
+                let loader = { self.loader.lock().unwrap().take() };
+                self.inner
+                    .get_or_init(|| async move { loader.unwrap().await })
+                    .await
             }
-            PossiblyLoaded::Loaded(item) => item,
         }
     }
 }
 
 impl<T> From<T> for PossiblyLoaded<T> {
     fn from(value: T) -> Self {
-        Self::Loaded(value)
+        Self::from_value(value)
     }
 }
 
