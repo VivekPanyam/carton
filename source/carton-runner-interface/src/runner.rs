@@ -68,7 +68,7 @@ impl Runner {
         runner_compat_version: u64,
         runner_opts: Option<HashMap<String, RunnerOpt>>,
         visible_device: Device,
-        carton_manifest_hash: String,
+        carton_manifest_hash: Option<String>,
     ) -> Result<(), String> where
         T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
         T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
@@ -170,6 +170,31 @@ impl Runner {
 
                 Ok(out)
             },
+            RPCResponseData::Error { e } => Err(e),
+            _ => panic!("Unexpected RPC response type!"),
+        }
+    }
+
+    /// Pack a model and return a path to the output directory
+    pub async fn pack<T>(
+        &self,
+        fs: &Arc<T>,
+        input_path: &lunchbox::path::Path,
+        temp_folder: &lunchbox::path::Path,
+    ) -> Result<lunchbox::path::PathBuf, String>
+    where
+        T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
+        T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+    {
+        // Serve the filesystem
+        let token = self.client.serve_readonly_fs(fs.clone()).await;
+
+        match self
+            .client
+            .do_rpc(RPCRequestData::Pack { fs: token, input_path: input_path.to_string(), temp_folder: temp_folder.to_string() })
+            .await
+        {
+            RPCResponseData::Pack { output_path } => Ok(output_path.into()),
             RPCResponseData::Error { e } => Err(e),
             _ => panic!("Unexpected RPC response type!"),
         }

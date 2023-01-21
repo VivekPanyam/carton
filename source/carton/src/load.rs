@@ -166,7 +166,7 @@ where
 
 // Step 5: Figure out what runner to use (or get it if necessary) and launch the runner
 #[cfg(not(target_family = "wasm"))]
-async fn discover_or_get_runner_and_launch(
+pub(crate) async fn discover_or_get_runner_and_launch(
     info: &CartonInfo,
     visible_device: &Device,
 ) -> crate::error::Result<Runner>
@@ -223,7 +223,7 @@ async fn discover_or_get_runner_and_launch(
 
 // No discovery for wasm - just launch a runner and return
 #[cfg(target_family = "wasm")]
-async fn discover_or_get_runner_and_launch(
+pub(crate) async fn discover_or_get_runner_and_launch(
     c: &CartonInfo,
     visible_device: &Device,
 ) -> crate::error::Result<Runner>
@@ -233,7 +233,7 @@ async fn discover_or_get_runner_and_launch(
 
 
 // Step 6: Load the model
-async fn load_model<T>(
+pub(crate) async fn load_model<T>(
     fs: &Arc<T>,
     runner: &Runner,
     c: &CartonInfoWithExtras,

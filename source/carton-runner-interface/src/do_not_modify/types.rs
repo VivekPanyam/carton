@@ -67,7 +67,8 @@ pub enum RPCRequestData {
         visible_device: Device,
 
         // The hash of the model
-        carton_manifest_hash: String,
+        // This should always be avalable unless we're loading an unpacked model
+        carton_manifest_hash: Option<String>,
     },
 
     // Pack a model

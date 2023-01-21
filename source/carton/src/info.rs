@@ -52,8 +52,9 @@ pub struct CartonInfo {
 pub(crate) struct CartonInfoWithExtras {
     pub(crate) info: CartonInfo,
 
-    /// The sha256 of the MANIFEST file
-    pub(crate) manifest_sha256: String,
+    /// The sha256 of the MANIFEST file (if available)
+    /// This should always be available unless we're running an unpacked model
+    pub(crate) manifest_sha256: Option<String>,
 }
 
 #[cfg(target_family = "wasm")]
