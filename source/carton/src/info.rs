@@ -40,6 +40,11 @@ pub struct CartonInfo {
 
     /// Information about the runner to use
     pub runner: RunnerInfo,
+
+    /// Misc files that can be referenced by the description. The key is a string
+    /// starting with `@misc/` followed by a normalized path (i.e one that does not
+    /// reference parent directories, etc)
+    pub misc_files: Option<HashMap<String, PossiblyLoaded<MiscFile>>>,
 }
 
 /// An internal struct used when loading models. It contains extra things like the
