@@ -8,7 +8,7 @@ use tokio::{
     sync::mpsc,
 };
 
-use crate::{MaybeSend, do_spawn};
+use crate::{do_spawn, MaybeSend};
 
 /// Send and recv length-prefixed serialized structs on an [`AsyncRead`] and [`AsyncWrite`] pair
 pub(crate) async fn framed_transport<T, U, R, W>(

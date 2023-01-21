@@ -6,7 +6,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use lunchbox::{
-    types::{Metadata, OpenOptions, Permissions, ReadableFile, WritableFile, MaybeSync, MaybeSend},
+    types::{MaybeSend, MaybeSync, Metadata, OpenOptions, Permissions, ReadableFile, WritableFile},
     ReadableFileSystem, WritableFileSystem,
 };
 use tokio::io::{AsyncReadExt, AsyncSeek, AsyncSeekExt, AsyncWriteExt};
@@ -89,41 +89,70 @@ impl<T: ReadableFileSystem> ReadableFileOps for T where
 
 #[cfg_attr(target_family = "wasm", async_trait(?Send))]
 #[cfg_attr(not(target_family = "wasm"), async_trait)]
-pub(crate) trait WritableFileOps: WritableFileSystem where Self::FileType: MaybeSend + MaybeSync + WritableFile + Unpin {
+pub(crate) trait WritableFileOps: WritableFileSystem
+where
+    Self::FileType: MaybeSend + MaybeSync + WritableFile + Unpin,
+{
     // File IO
-    async fn write_data(&self, context: &ServerContext<Self>, handle: FileHandle, buf: Vec<u8>) -> std::io::Result<usize> {
+    async fn write_data(
+        &self,
+        context: &ServerContext<Self>,
+        handle: FileHandle,
+        buf: Vec<u8>,
+    ) -> std::io::Result<usize> {
         let mut item = context.open_files.get_mut(&handle).unwrap();
         item.write(&buf).await
     }
 
-    async fn write_flush(&self, context: &ServerContext<Self>, handle: FileHandle) -> std::io::Result<()> {
+    async fn write_flush(
+        &self,
+        context: &ServerContext<Self>,
+        handle: FileHandle,
+    ) -> std::io::Result<()> {
         let mut item = context.open_files.get_mut(&handle).unwrap();
         item.value_mut().flush().await
     }
-    async fn write_shutdown(&self, context: &ServerContext<Self>, handle: FileHandle) -> std::io::Result<()> {
+    async fn write_shutdown(
+        &self,
+        context: &ServerContext<Self>,
+        handle: FileHandle,
+    ) -> std::io::Result<()> {
         let mut item = context.open_files.get_mut(&handle).unwrap();
         item.value_mut().shutdown().await
     }
 
     // Write file operations
-    async fn file_sync_all(&self, context: &ServerContext<Self>, handle: FileHandle) -> std::io::Result<()> {
+    async fn file_sync_all(
+        &self,
+        context: &ServerContext<Self>,
+        handle: FileHandle,
+    ) -> std::io::Result<()> {
         let mut item = context.open_files.get_mut(&handle).unwrap();
         item.value_mut().sync_all().await
     }
 
-    async fn file_sync_data(&self, context: &ServerContext<Self>, handle: FileHandle) -> std::io::Result<()> {
+    async fn file_sync_data(
+        &self,
+        context: &ServerContext<Self>,
+        handle: FileHandle,
+    ) -> std::io::Result<()> {
         let mut item = context.open_files.get_mut(&handle).unwrap();
         item.value_mut().sync_data().await
     }
 
-    async fn file_set_len(&self, context: &ServerContext<Self>, handle: FileHandle, size: u64) -> std::io::Result<()> {
+    async fn file_set_len(
+        &self,
+        context: &ServerContext<Self>,
+        handle: FileHandle,
+        size: u64,
+    ) -> std::io::Result<()> {
         let mut item = context.open_files.get_mut(&handle).unwrap();
         item.value_mut().set_len(size).await
     }
 
     async fn file_set_permissions(
         &self,
-        context: &ServerContext<Self>, 
+        context: &ServerContext<Self>,
         handle: FileHandle,
         perm: Permissions,
     ) -> std::io::Result<()> {
@@ -132,7 +161,11 @@ pub(crate) trait WritableFileOps: WritableFileSystem where Self::FileType: Maybe
     }
 
     // Write filesystem operations
-    async fn create_file(&self, context: &ServerContext<Self>, path: RPCPath) -> std::io::Result<FileHandle> {
+    async fn create_file(
+        &self,
+        context: &ServerContext<Self>,
+        path: RPCPath,
+    ) -> std::io::Result<FileHandle> {
         self.create(path).await.map(|file| {
             let handle = context
                 .file_handle_counter
@@ -143,7 +176,7 @@ pub(crate) trait WritableFileOps: WritableFileSystem where Self::FileType: Maybe
     }
     async fn open_file_with_opts(
         &self,
-        context: &ServerContext<Self>, 
+        context: &ServerContext<Self>,
         opts: OpenOptions,
         path: RPCPath,
     ) -> std::io::Result<FileHandle> {
@@ -157,7 +190,10 @@ pub(crate) trait WritableFileOps: WritableFileSystem where Self::FileType: Maybe
     }
 }
 
-impl <T: WritableFileSystem> WritableFileOps for T where T::FileType: MaybeSend + MaybeSync + WritableFile + Unpin {}
+impl<T: WritableFileSystem> WritableFileOps for T where
+    T::FileType: MaybeSend + MaybeSync + WritableFile + Unpin
+{
+}
 
 #[cfg_attr(target_family = "wasm", async_trait(?Send))]
 #[cfg_attr(not(target_family = "wasm"), async_trait)]
@@ -177,4 +213,7 @@ where
     }
 }
 
-impl<T: ReadableFileSystem> SeekableFileOps for T where T::FileType: MaybeSend + MaybeSync + AsyncSeek + Unpin {}
+impl<T: ReadableFileSystem> SeekableFileOps for T where
+    T::FileType: MaybeSend + MaybeSync + AsyncSeek + Unpin
+{
+}

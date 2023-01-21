@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
-use carton_core::types::{Tensor, LoadOpts, Device, RunnerOpt};
+use carton_core::types::{Device, LoadOpts, RunnerOpt, Tensor};
 use numpy::{PyArrayDyn, ToPyArray};
-use pyo3::{prelude::*, types::PyDict, exceptions::PyValueError};
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
 #[derive(FromPyObject)]
 enum SupportedTensorType<'py> {
@@ -10,7 +10,6 @@ enum SupportedTensorType<'py> {
     Double(&'py PyArrayDyn<f64>),
     // TODO: handle this
     // String(&'py PyArrayDyn<PyString>),
-
     I8(&'py PyArrayDyn<i8>),
     I16(&'py PyArrayDyn<i16>),
     I32(&'py PyArrayDyn<i32>),
@@ -25,12 +24,12 @@ enum SupportedTensorType<'py> {
 #[pyclass]
 #[derive(Clone)]
 struct SealHandle {
-    inner: carton_core::types::SealHandle
+    inner: carton_core::types::SealHandle,
 }
 
 #[pyclass]
 struct Carton {
-    inner: Arc<carton_core::Carton>
+    inner: Arc<carton_core::Carton>,
 }
 // TODO do we need with_gil?
 
@@ -51,7 +50,6 @@ impl Carton {
         let tensors: HashMap<String, SupportedTensorType> = tensors.extract().unwrap();
 
         for (k, v) in tensors {
-
             // TODO: this makes a copy
             let native = match v {
                 SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
@@ -68,10 +66,7 @@ impl Carton {
                 SupportedTensorType::U64(item) => Tensor::U64(item.to_owned_array()),
             };
 
-            transformed.insert(
-                k,
-                native
-            );
+            transformed.insert(k, native);
         }
 
         let inner = self.inner.clone();
@@ -87,7 +82,6 @@ impl Carton {
         let tensors: HashMap<String, SupportedTensorType> = tensors.extract().unwrap();
 
         for (k, v) in tensors {
-
             // TODO: this makes a copy
             let native = match v {
                 SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
@@ -104,10 +98,7 @@ impl Carton {
                 SupportedTensorType::U64(item) => Tensor::U64(item.to_owned_array()),
             };
 
-            transformed.insert(
-                k,
-                native
-            );
+            transformed.insert(k, native);
         }
 
         let inner = self.inner.clone();
@@ -135,16 +126,12 @@ impl Carton {
                     }
                 });
 
-                transformed.insert(
-                    k,
-                    pytype
-                );
+                transformed.insert(k, pytype);
             }
 
             Ok(transformed)
         })
     }
-
 
     // TODO: merge the infer methods into one
     fn infer_with_handle<'a>(&self, py: Python<'a>, handle: SealHandle) -> PyResult<&'a PyAny> {
@@ -173,16 +160,12 @@ impl Carton {
                     }
                 });
 
-                transformed.insert(
-                    k,
-                    pytype
-                );
+                transformed.insert(k, pytype);
             }
 
             Ok(transformed)
         })
     }
-
 }
 
 #[derive(FromPyObject)]
@@ -191,7 +174,6 @@ enum PyRunnerOpt {
     Double(f64),
     String(String),
     Boolean(bool),
-
     // TODO: datetime
     // Date(DateTime<Utc>),
 }
@@ -209,28 +191,32 @@ impl From<PyRunnerOpt> for RunnerOpt {
 
 /// Loads a model
 #[pyfunction]
-fn load(py: Python,
-        path: String,
-        override_runner_name: Option<String>,
-        override_required_framework_version: Option<String>,
-        override_runner_opts: Option<HashMap<String, PyRunnerOpt>>,
-        visible_device: String) -> PyResult<&PyAny> {
+fn load(
+    py: Python,
+    path: String,
+    override_runner_name: Option<String>,
+    override_required_framework_version: Option<String>,
+    override_runner_opts: Option<HashMap<String, PyRunnerOpt>>,
+    visible_device: String,
+) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let opts = LoadOpts {
             override_runner_name,
             override_required_framework_version,
-            override_runner_opts: override_runner_opts.map(|opts| {
-                opts.into_iter().map(|(k, v)| {
-                    (k, v.into())
-                }).collect()
-            }),
+            override_runner_opts: override_runner_opts
+                .map(|opts| opts.into_iter().map(|(k, v)| (k, v.into())).collect()),
             // TODO: use something more specific than ValueError
-            visible_device: Device::maybe_from_str(&visible_device).map_err(|e| PyValueError::new_err(e.to_string()))?
+            visible_device: Device::maybe_from_str(&visible_device)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?,
         };
 
         // TODO: use something more specific than ValueError
-        let inner = carton_core::Carton::load(path, opts).await.map_err(|e| PyValueError::new_err(e.to_string()))?;
-        Ok(Carton { inner: Arc::new(inner) })
+        let inner = carton_core::Carton::load(path, opts)
+            .await
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+        Ok(Carton {
+            inner: Arc::new(inner),
+        })
     })
 }
 

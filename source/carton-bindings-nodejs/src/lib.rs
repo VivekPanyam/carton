@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use carton::{
+    types::{for_each_carton_type, Device, LoadOpts, Tensor},
     Carton,
-    types::{for_each_carton_type, Tensor, LoadOpts, Device},
 };
 use ndarray::ShapeBuilder;
 use neon::{prelude::*, types::buffer::TypedArray};
@@ -42,7 +42,6 @@ fn load(mut cx: FunctionContext) -> JsResult<JsPromise> {
     //     .get_opt::<JsString, _, _>(&mut cx, "override_runner_opts")?
     //     .map(|item| item.value(&mut cx));
 
-
     let visible_device = load_opts
         .get::<JsString, _, _>(&mut cx, "visible_device")?
         .value(&mut cx);
@@ -51,7 +50,8 @@ fn load(mut cx: FunctionContext) -> JsResult<JsPromise> {
         override_runner_name,
         override_required_framework_version,
         override_runner_opts: None,
-        visible_device: Device::maybe_from_str(&visible_device).or_else(|err| cx.throw_error(err.to_string()))?,
+        visible_device: Device::maybe_from_str(&visible_device)
+            .or_else(|err| cx.throw_error(err.to_string()))?,
     };
 
     let rt = runtime(&mut cx)?;
@@ -184,7 +184,6 @@ impl CartonWrapper {
                 // Convert the outputs
                 let out = cx.empty_object();
                 for (k, v) in res {
-
                     // TODO: this should ignore the `string` type
                     for_each_carton_type! {
                         match v {

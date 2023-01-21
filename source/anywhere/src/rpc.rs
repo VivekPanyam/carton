@@ -26,9 +26,9 @@ use lunchbox::types::MaybeSync;
 use lunchbox::types::Metadata;
 use lunchbox::types::OpenOptions;
 use lunchbox::types::Permissions;
+use lunchbox::types::WritableFile;
 use lunchbox::ReadableFileSystem;
 use lunchbox::WritableFileSystem;
-use lunchbox::types::WritableFile;
 use tokio::io::AsyncSeek;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
@@ -98,7 +98,6 @@ impl AnywhereRPCClient {
 //     }
 // }
 
-
 #[cfg(target_family = "wasm")]
 pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + 'a>>;
 
@@ -106,7 +105,9 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + 'a>>;
 pub type BoxFuture<'a, T> = Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
 
 macro_rules! maybe_add_args {
-    ($context:ident, with_server_context) => { $context };
+    ($context:ident, with_server_context) => {
+        $context
+    };
 }
 
 // This automatically implements an RPC system for a set of async functions
@@ -313,12 +314,18 @@ macro_rules! autoimpl {
     };
 }
 
-pub struct ServerContext<T: HasFileType> where T::FileType: MaybeSend + MaybeSync {
+pub struct ServerContext<T: HasFileType>
+where
+    T::FileType: MaybeSend + MaybeSync,
+{
     pub(crate) open_files: DashMap<FileHandle, T::FileType>,
     pub(crate) file_handle_counter: AtomicU64,
 }
 
-impl<T: HasFileType> ServerContext<T> where T::FileType: MaybeSend + MaybeSync {
+impl<T: HasFileType> ServerContext<T>
+where
+    T::FileType: MaybeSend + MaybeSync,
+{
     fn new() -> Self {
         Self {
             open_files: Default::default(),

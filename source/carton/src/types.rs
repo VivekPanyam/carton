@@ -1,6 +1,6 @@
 pub use carton_macros::for_each_carton_type;
-use std::collections::HashMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 /// An opaque handle returned by `seal`
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -50,9 +50,7 @@ pub enum Device {
 
 #[cfg(not(target_family = "wasm"))]
 lazy_static! {
-    static ref NVML: Option<nvml_wrapper::Nvml> = {
-        nvml_wrapper::Nvml::init().ok()
-    };
+    static ref NVML: Option<nvml_wrapper::Nvml> = { nvml_wrapper::Nvml::init().ok() };
 }
 
 impl Device {
@@ -71,22 +69,23 @@ impl Device {
 
         use crate::error::CartonError;
         if let Ok(index) = s.parse::<u32>() {
-            return Ok(Self::maybe_from_index(index))
+            return Ok(Self::maybe_from_index(index));
         }
 
         // Check if it's a cpu
         if s.to_lowercase() == "cpu" {
-            return Ok(Device::CPU)
+            return Ok(Device::CPU);
         }
 
         // Check if it's a UUID
         if s.starts_with("GPU-") || s.starts_with("MIG-GPU-") {
-            return Ok(Device::GPU { uuid: Some(s.to_string())})
+            return Ok(Device::GPU {
+                uuid: Some(s.to_string()),
+            });
         }
 
         // TODO: return an error
         Err(CartonError::InvalidDeviceFormat(s.to_string()))
-
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -94,7 +93,7 @@ impl Device {
         if let Some(nvml) = NVML.as_ref() {
             if let Ok(device) = nvml.device_by_index(i) {
                 if let Ok(uuid) = device.uuid() {
-                    return Self::GPU { uuid: Some(uuid) }
+                    return Self::GPU { uuid: Some(uuid) };
                 }
             }
         }

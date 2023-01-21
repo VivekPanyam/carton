@@ -4,7 +4,7 @@ use crate::{
     client::Client,
     do_not_modify::comms::OwnedComms,
     do_not_modify::types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
-    types::{RunnerOpt, Handle},
+    types::{Handle, RunnerOpt},
 };
 
 use lunchbox::types::{MaybeSend, MaybeSync};
@@ -69,7 +69,8 @@ impl Runner {
         runner_opts: Option<HashMap<String, RunnerOpt>>,
         visible_device: Device,
         carton_manifest_hash: Option<String>,
-    ) -> Result<(), String> where
+    ) -> Result<(), String>
+    where
         T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
         T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
     {
@@ -87,11 +88,12 @@ impl Runner {
                 visible_device,
                 carton_manifest_hash,
             })
-            .await {
-                RPCResponseData::Load => Ok(()),
-                RPCResponseData::Error { e } => Err(e),
-                _ => panic!("Unexpected RPC response type!")
-            }
+            .await
+        {
+            RPCResponseData::Load => Ok(()),
+            RPCResponseData::Error { e } => Err(e),
+            _ => panic!("Unexpected RPC response type!"),
+        }
     }
 
     // pub async fn seal(&self, tensors: HashMap<String, Tensor>) -> Result<SealHandle, String> {
@@ -106,11 +108,10 @@ impl Runner {
         &self,
         tensors_orig: HashMap<String, Tensor>,
     ) -> Result<HashMap<String, Tensor>, String> {
-
         // Wrap each tensor in a handle (this possibly sends the fd for backing SHM chunks to the other process)
         let comms = self.client.get_comms();
         let mut tensors = HashMap::new();
-        for (k,v) in tensors_orig.into_iter() {
+        for (k, v) in tensors_orig.into_iter() {
             tensors.insert(k, Handle::new(v, comms).await);
         }
 
@@ -125,22 +126,18 @@ impl Runner {
                     out.insert(k, v.into_inner(comms).await);
                 }
 
-
                 Ok(out)
-            },
+            }
             RPCResponseData::Error { e } => Err(e),
             _ => panic!("Unexpected RPC response type!"),
         }
     }
 
-    pub async fn seal(
-        &self,
-        tensors_orig: HashMap<String, Tensor>,
-    ) -> Result<u64, String> {
+    pub async fn seal(&self, tensors_orig: HashMap<String, Tensor>) -> Result<u64, String> {
         // Wrap each tensor in a handle (this possibly sends the fd for backing SHM chunks to the other process)
         let comms = self.client.get_comms();
         let mut tensors = HashMap::new();
-        for (k,v) in tensors_orig.into_iter() {
+        for (k, v) in tensors_orig.into_iter() {
             tensors.insert(k, Handle::new(v, comms).await);
         }
 
@@ -151,15 +148,14 @@ impl Runner {
         }
     }
 
-    pub async fn infer_with_handle(
-        &self,
-        handle: u64
-    ) -> Result<HashMap<String, Tensor>, String> {
+    pub async fn infer_with_handle(&self, handle: u64) -> Result<HashMap<String, Tensor>, String> {
         let comms = self.client.get_comms();
 
         match self
             .client
-            .do_rpc(RPCRequestData::InferWithHandle { handle: SealHandle(handle) })
+            .do_rpc(RPCRequestData::InferWithHandle {
+                handle: SealHandle(handle),
+            })
             .await
         {
             RPCResponseData::Infer { tensors } => {
@@ -169,7 +165,7 @@ impl Runner {
                 }
 
                 Ok(out)
-            },
+            }
             RPCResponseData::Error { e } => Err(e),
             _ => panic!("Unexpected RPC response type!"),
         }
@@ -191,7 +187,11 @@ impl Runner {
 
         match self
             .client
-            .do_rpc(RPCRequestData::Pack { fs: token, input_path: input_path.to_string(), temp_folder: temp_folder.to_string() })
+            .do_rpc(RPCRequestData::Pack {
+                fs: token,
+                input_path: input_path.to_string(),
+                temp_folder: temp_folder.to_string(),
+            })
             .await
         {
             RPCResponseData::Pack { output_path } => Ok(output_path.into()),

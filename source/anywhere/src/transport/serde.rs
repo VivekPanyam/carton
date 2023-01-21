@@ -1,7 +1,7 @@
 use std::sync::{atomic::AtomicUsize, Arc};
 
 use crate::{
-    rpc::{self, AnywhereRPCClient, MaybeRead, MaybeWrite, MaybeSeek},
+    rpc::{self, AnywhereRPCClient, MaybeRead, MaybeSeek, MaybeWrite},
     types::AnywhereFS,
 };
 use dashmap::DashMap;

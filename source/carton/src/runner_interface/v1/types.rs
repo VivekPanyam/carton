@@ -4,7 +4,6 @@ use carton_macros::for_each_carton_type;
 
 use crate::types::{Device, RunnerOpt, Tensor};
 
-
 impl From<Device> for runner_interface_v1::types::Device {
     fn from(value: Device) -> Self {
         match value {

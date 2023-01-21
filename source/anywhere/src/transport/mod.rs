@@ -1,7 +1,7 @@
 use crate::rpc::AnywhereRPCServer;
 
-pub mod serde;
 pub mod framed;
+pub mod serde;
 
 #[cfg(feature = "tcp")]
 pub mod tcp;

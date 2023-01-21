@@ -94,7 +94,10 @@ impl Carton {
 
         // Ask the runner to pack the model
         let model_dir_path = match runner {
-            Runner::V1(runner) => runner.pack(&localfs, path.as_ref(), temp_folder).await.map_err(|e| CartonError::ErrorFromRunner(e))?,
+            Runner::V1(runner) => runner
+                .pack(&localfs, path.as_ref(), temp_folder)
+                .await
+                .map_err(|e| CartonError::ErrorFromRunner(e))?,
         };
 
         // Save and package the model
@@ -128,12 +131,16 @@ impl Carton {
 
         // Ask the runner to pack the model
         let model_dir_path = match &runner {
-            Runner::V1(runner) => runner.pack(&localfs, path.as_ref(), temp_folder).await.map_err(|e| CartonError::ErrorFromRunner(e))?,
+            Runner::V1(runner) => runner
+                .pack(&localfs, path.as_ref(), temp_folder)
+                .await
+                .map_err(|e| CartonError::ErrorFromRunner(e))?,
         };
 
         // Create a localfs with the new root
         // TODO: don't unwrap this one because it may fail if the runner returned an invalid path
-        let localfs = Arc::new(lunchbox::LocalFS::with_base_dir(model_dir_path.to_string()).unwrap());
+        let localfs =
+            Arc::new(lunchbox::LocalFS::with_base_dir(model_dir_path.to_string()).unwrap());
 
         // Ask the runner to load the model it just packed
         let info_with_extras = CartonInfoWithExtras {
@@ -142,7 +149,13 @@ impl Carton {
         };
 
         // TODO: correctly merge `load_opts` into `info_with_extras`
-        crate::load::load_model(&localfs, &runner, &info_with_extras, load_opts.visible_device).await?;
+        crate::load::load_model(
+            &localfs,
+            &runner,
+            &info_with_extras,
+            load_opts.visible_device,
+        )
+        .await?;
 
         // Return a Carton
         Ok(Self {

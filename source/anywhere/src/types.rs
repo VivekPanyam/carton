@@ -1,9 +1,12 @@
-use crate::{rpc::AnywhereRPCClient};
+use crate::rpc::AnywhereRPCClient;
 use async_trait::async_trait;
 use futures::FutureExt;
 use lunchbox::{
     path::PathBuf,
-    types::{HasFileType, Metadata, OpenOptions, PathType, Permissions, ReadDir, ReadDirPoller, MaybeSend},
+    types::{
+        HasFileType, MaybeSend, Metadata, OpenOptions, PathType, Permissions, ReadDir,
+        ReadDirPoller,
+    },
 };
 
 use std::{io::Result, pin::Pin, sync::Arc};
@@ -195,7 +198,10 @@ impl<const W: bool, const S: bool> HasFileType for AnywhereFS<W, S> {
 impl<const W: bool, const S: bool> lunchbox::ReadableFileSystem for AnywhereFS<W, S> {
     // Open a file
     async fn open(&self, path: impl PathType) -> Result<Self::FileType> {
-        self.client.open_file(path.convert()).await.convert(&self.client)
+        self.client
+            .open_file(path.convert())
+            .await
+            .convert(&self.client)
     }
 
     // These are directly based on tokio::fs::...
@@ -250,7 +256,10 @@ impl<const W: bool, const S: bool> ReadDirPoller<AnywhereFS<W, S>> for AnywhereF
 impl<const S: bool> lunchbox::WritableFileSystem for AnywhereFS<true, S> {
     // Create a file
     async fn create(&self, path: impl PathType) -> Result<Self::FileType> {
-        self.client.create_file(path.convert()).await.convert(&self.client)
+        self.client
+            .create_file(path.convert())
+            .await
+            .convert(&self.client)
     }
 
     async fn open_with_opts(
@@ -258,7 +267,10 @@ impl<const S: bool> lunchbox::WritableFileSystem for AnywhereFS<true, S> {
         opts: &OpenOptions,
         path: impl PathType,
     ) -> Result<Self::FileType> {
-        self.client.open_file_with_opts(opts.clone(), path.convert()).await.convert(&self.client)
+        self.client
+            .open_file_with_opts(opts.clone(), path.convert())
+            .await
+            .convert(&self.client)
     }
 
     // These are directly based on tokio::fs::...
@@ -295,14 +307,20 @@ impl<const S: bool> lunchbox::WritableFileSystem for AnywhereFS<true, S> {
     }
 
     async fn set_permissions(&self, path: impl PathType, perm: Permissions) -> Result<()> {
-        self.client.set_permissions(path.convert(), perm.convert()).await
+        self.client
+            .set_permissions(path.convert(), perm.convert())
+            .await
     }
 
     async fn symlink(&self, src: impl PathType, dst: impl PathType) -> Result<()> {
         self.client.symlink(src.convert(), dst.convert()).await
     }
 
-    async fn write(&self, path: impl PathType, contents: impl AsRef<[u8]> + MaybeSend) -> Result<()> {
+    async fn write(
+        &self,
+        path: impl PathType,
+        contents: impl AsRef<[u8]> + MaybeSend,
+    ) -> Result<()> {
         self.client.write(path.convert(), contents.convert()).await
     }
 }
@@ -328,7 +346,7 @@ trait AutoImplConversion {}
 impl AutoImplConversion for Permissions {}
 impl AutoImplConversion for OpenOptions {}
 
-impl <T: AutoImplConversion> TypeConversion<T> for T {
+impl<T: AutoImplConversion> TypeConversion<T> for T {
     fn convert(self) -> T {
         self
     }
@@ -338,7 +356,9 @@ trait TypeConversionWithContext<T> {
     fn convert(self, client: &Arc<AnywhereRPCClient>) -> T;
 }
 
-impl<const W: bool, const S: bool> TypeConversionWithContext<Result<AnywhereFile<W, S>>> for std::io::Result<FileHandle> {
+impl<const W: bool, const S: bool> TypeConversionWithContext<Result<AnywhereFile<W, S>>>
+    for std::io::Result<FileHandle>
+{
     fn convert(self, client: &Arc<AnywhereRPCClient>) -> Result<AnywhereFile<W, S>> {
         let handle = self?;
         Ok(AnywhereFile {

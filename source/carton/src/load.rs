@@ -15,7 +15,8 @@ use zipfs::{GetReader, ZipFS};
 use crate::{
     error::CartonError,
     http::HTTPFile,
-    types::{CartonInfo, Device, LoadOpts}, info::CartonInfoWithExtras,
+    info::CartonInfoWithExtras,
+    types::{CartonInfo, Device, LoadOpts},
 };
 
 /// Load a carton given a url or path and options
@@ -36,7 +37,9 @@ pub(crate) async fn load(url_or_path: &str, opts: LoadOpts) -> ReturnType {
     fetch(url_or_path, opts, false).await
 }
 
-pub(crate) async fn get_carton_info(url_or_path: &str) -> crate::error::Result<CartonInfoWithExtras> {
+pub(crate) async fn get_carton_info(
+    url_or_path: &str,
+) -> crate::error::Result<CartonInfoWithExtras> {
     let (info, _) = fetch(url_or_path, Default::default(), true).await?;
     Ok(info)
 }
@@ -64,7 +67,12 @@ async fn fetch(url: &str, opts: LoadOpts, skip_runner: bool) -> ReturnType {
             if tokio::fs::metadata(&path.0).await?.is_dir() {
                 // This is a local directory (or a symlink to one)
                 // Skip directly to step 3
-                maybe_resolve_links(&Arc::new(lunchbox::LocalFS::with_base_dir(path.0).unwrap()), opts, skip_runner).await
+                maybe_resolve_links(
+                    &Arc::new(lunchbox::LocalFS::with_base_dir(path.0).unwrap()),
+                    opts,
+                    skip_runner,
+                )
+                .await
             } else {
                 // This is a file (or a symlink to one)
                 unwrap_container(path, opts, skip_runner).await
@@ -132,30 +140,33 @@ where
     }
 
     if let Some(v) = opts.override_required_framework_version {
-        info_with_extras.info.runner.required_framework_version = VersionReq::parse(&v).map_err(|_| {
-            CartonError::Other(
-                "`override_required_framework_version` was not a valid semver version range",
-            )
-        })?;
+        info_with_extras.info.runner.required_framework_version =
+            VersionReq::parse(&v).map_err(|_| {
+                CartonError::Other(
+                    "`override_required_framework_version` was not a valid semver version range",
+                )
+            })?;
     }
 
     if let Some(v) = opts.override_runner_opts {
-        info_with_extras.info.runner.opts = if let Some(mut orig) = info_with_extras.info.runner.opts {
-            for (k, val) in v.into_iter() {
-                orig.insert(k, val);
-            }
+        info_with_extras.info.runner.opts =
+            if let Some(mut orig) = info_with_extras.info.runner.opts {
+                for (k, val) in v.into_iter() {
+                    orig.insert(k, val);
+                }
 
-            Some(orig)
-        } else {
-            Some(v)
-        }
+                Some(orig)
+            } else {
+                Some(v)
+            }
     }
 
     if skip_runner {
         Ok((info_with_extras, None))
     } else {
         // Launch a runner
-        let runner = discover_or_get_runner_and_launch(&info_with_extras.info, &opts.visible_device).await?;
+        let runner =
+            discover_or_get_runner_and_launch(&info_with_extras.info, &opts.visible_device).await?;
 
         // Load the model
         load_model(fs, &runner, &info_with_extras, opts.visible_device).await?;
@@ -169,8 +180,7 @@ where
 pub(crate) async fn discover_or_get_runner_and_launch(
     info: &CartonInfo,
     visible_device: &Device,
-) -> crate::error::Result<Runner>
-{
+) -> crate::error::Result<Runner> {
     // TODO: maybe we want to just do this once at startup or cache it?
     let local_runners = crate::discovery::discover_runners().await;
 
@@ -226,11 +236,9 @@ pub(crate) async fn discover_or_get_runner_and_launch(
 pub(crate) async fn discover_or_get_runner_and_launch(
     c: &CartonInfo,
     visible_device: &Device,
-) -> crate::error::Result<Runner>
-{
+) -> crate::error::Result<Runner> {
     todo!()
 }
-
 
 // Step 6: Load the model
 pub(crate) async fn load_model<T>(
@@ -245,16 +253,23 @@ where
 {
     match runner {
         Runner::V1(runner) => {
-            runner.load(
+            runner
+                .load(
                     fs,
                     c.info.runner.runner_name.clone(),
                     c.info.runner.required_framework_version.clone(),
                     c.info.runner.runner_compat_version,
-                    c.info.runner.opts.clone().map(|item| item.into_iter().map(|(k,v)| (k, v.into())).collect()),
+                    c.info
+                        .runner
+                        .opts
+                        .clone()
+                        .map(|item| item.into_iter().map(|(k, v)| (k, v.into())).collect()),
                     visible_device.into(),
                     c.manifest_sha256.clone(),
-                ).await.map_err(|e| CartonError::ErrorFromRunner(e))?;
-        },
+                )
+                .await
+                .map_err(|e| CartonError::ErrorFromRunner(e))?;
+        }
     }
 
     Ok(())
