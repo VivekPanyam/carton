@@ -97,7 +97,7 @@ where
     let manifest = fs.read("/MANIFEST").await?;
     let mut hasher = Sha256::new();
     hasher.update(manifest);
-    let manifest_sha256 = format!("{:x}", hasher.finalize());
+    let manifest_sha256 = Some(format!("{:x}", hasher.finalize()));
 
     Ok(CartonInfoWithExtras {
         info,

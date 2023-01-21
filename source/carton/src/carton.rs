@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::error::Result;
+use crate::load::discover_or_get_runner_and_launch;
 use crate::{
     conversion_utils::convert_map,
     error::CartonError,
@@ -12,6 +13,10 @@ use crate::{
 pub struct Carton {
     info: CartonInfoWithExtras,
     runner: Runner,
+
+    /// An optional temp dir. This is used in `load_unpacked` to make sure the directory doesn't get
+    /// deleted while we need it
+    tempdir: Option<tempfile::TempDir>,
 }
 
 impl Carton {
@@ -22,6 +27,7 @@ impl Carton {
         Ok(Self {
             info,
             runner: runner.unwrap(),
+            tempdir: None,
         })
     }
 
@@ -68,20 +74,82 @@ impl Carton {
         }
     }
 
-    /// Pack a carton given a path and options
-    pub async fn pack(path: String, opts: PackOpts) -> Result<()> {
-        todo!()
+    /// Pack a carton given a path and options. Returns the path of the output file
+    #[cfg(not(target_family = "wasm"))]
+    pub async fn pack(path: String, opts: PackOpts) -> Result<std::path::PathBuf> {
+        use std::sync::Arc;
+
+        // Launch a runner
+        let runner = discover_or_get_runner_and_launch(&opts, &crate::types::Device::CPU).await?;
+
+        // Create a temp folder
+        // SAFETY: this only needs to last until the end of this method so it's okay if we don't store `tempdir`
+        let tempdir = tempfile::tempdir()?;
+
+        // Convert it to a lunchbox path
+        let temp_folder = lunchbox::path::Path::new(tempdir.path().to_str().unwrap());
+
+        // Create a localfs
+        let localfs = Arc::new(lunchbox::LocalFS::new().unwrap());
+
+        // Ask the runner to pack the model
+        let model_dir_path = match runner {
+            Runner::V1(runner) => runner.pack(&localfs, path.as_ref(), temp_folder).await.map_err(|e| CartonError::ErrorFromRunner(e))?,
+        };
+
+        // Save and package the model
+        crate::format::v1::save(opts, model_dir_path.to_string().as_ref()).await
     }
 
     /// Pack a carton given a path and options
     /// Functionally equivalent to `pack` followed by `load`, but implemented in a more
     /// optimized way
+    #[cfg(not(target_family = "wasm"))]
     pub async fn load_unpacked(
         path: String,
         pack_opts: PackOpts,
         load_opts: LoadOpts,
     ) -> Result<Self> {
-        todo!()
+        use std::sync::Arc;
+
+        // Launch a runner
+        let runner =
+            discover_or_get_runner_and_launch(&pack_opts, &crate::types::Device::CPU).await?;
+
+        // Create a temp folder
+        // SAFETY: this tempdir needs to last for the entire time this Carton exists
+        let tempdir = tempfile::tempdir()?;
+
+        // Convert it to a lunchbox path
+        let temp_folder = lunchbox::path::Path::new(tempdir.path().to_str().unwrap());
+
+        // Create a localfs
+        let localfs = Arc::new(lunchbox::LocalFS::new().unwrap());
+
+        // Ask the runner to pack the model
+        let model_dir_path = match &runner {
+            Runner::V1(runner) => runner.pack(&localfs, path.as_ref(), temp_folder).await.map_err(|e| CartonError::ErrorFromRunner(e))?,
+        };
+
+        // Create a localfs with the new root
+        // TODO: don't unwrap this one because it may fail if the runner returned an invalid path
+        let localfs = Arc::new(lunchbox::LocalFS::with_base_dir(model_dir_path.to_string()).unwrap());
+
+        // Ask the runner to load the model it just packed
+        let info_with_extras = CartonInfoWithExtras {
+            info: pack_opts,
+            manifest_sha256: None,
+        };
+
+        // TODO: correctly merge `load_opts` into `info_with_extras`
+        crate::load::load_model(&localfs, &runner, &info_with_extras, load_opts.visible_device).await?;
+
+        // Return a Carton
+        Ok(Self {
+            info: info_with_extras,
+            runner,
+            tempdir: Some(tempdir),
+        })
     }
 
     /// Get info for the loaded model
