@@ -148,14 +148,12 @@ impl Carton {
             manifest_sha256: None,
         };
 
+        // Merge in load opts
+        let visible_device = load_opts.visible_device.clone();
+        let info_with_extras = crate::load::merge_in_load_opts(info_with_extras, load_opts)?;
+
         // TODO: correctly merge `load_opts` into `info_with_extras`
-        crate::load::load_model(
-            &localfs,
-            &runner,
-            &info_with_extras,
-            load_opts.visible_device,
-        )
-        .await?;
+        crate::load::load_model(&localfs, &runner, &info_with_extras, visible_device).await?;
 
         // Return a Carton
         Ok(Self {
