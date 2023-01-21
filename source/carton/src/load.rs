@@ -132,44 +132,21 @@ where
 {
     // First, figure out which format version this is
     // Currently, there's only one so we always pass through to it
-    let mut info_with_extras = crate::format::v1::load(fs).await?;
+    let info_with_extras = crate::format::v1::load(fs).await?;
 
     // Merge in load opts
-    if let Some(v) = opts.override_runner_name {
-        info_with_extras.info.runner.runner_name = v;
-    }
-
-    if let Some(v) = opts.override_required_framework_version {
-        info_with_extras.info.runner.required_framework_version =
-            VersionReq::parse(&v).map_err(|_| {
-                CartonError::Other(
-                    "`override_required_framework_version` was not a valid semver version range",
-                )
-            })?;
-    }
-
-    if let Some(v) = opts.override_runner_opts {
-        info_with_extras.info.runner.opts =
-            if let Some(mut orig) = info_with_extras.info.runner.opts {
-                for (k, val) in v.into_iter() {
-                    orig.insert(k, val);
-                }
-
-                Some(orig)
-            } else {
-                Some(v)
-            }
-    }
+    let visible_device = opts.visible_device.clone();
+    let info_with_extras = merge_in_load_opts(info_with_extras, opts)?;
 
     if skip_runner {
         Ok((info_with_extras, None))
     } else {
         // Launch a runner
         let runner =
-            discover_or_get_runner_and_launch(&info_with_extras.info, &opts.visible_device).await?;
+            discover_or_get_runner_and_launch(&info_with_extras.info, &visible_device).await?;
 
         // Load the model
-        load_model(fs, &runner, &info_with_extras, opts.visible_device).await?;
+        load_model(fs, &runner, &info_with_extras, visible_device).await?;
 
         Ok((info_with_extras, Some(runner)))
     }
@@ -273,6 +250,39 @@ where
     }
 
     Ok(())
+}
+
+pub(crate) fn merge_in_load_opts(
+    mut info_with_extras: CartonInfoWithExtras,
+    opts: LoadOpts,
+) -> crate::error::Result<CartonInfoWithExtras> {
+    if let Some(v) = opts.override_runner_name {
+        info_with_extras.info.runner.runner_name = v;
+    }
+
+    if let Some(v) = opts.override_required_framework_version {
+        info_with_extras.info.runner.required_framework_version =
+            VersionReq::parse(&v).map_err(|_| {
+                CartonError::Other(
+                    "`override_required_framework_version` was not a valid semver version range",
+                )
+            })?;
+    }
+
+    if let Some(v) = opts.override_runner_opts {
+        info_with_extras.info.runner.opts =
+            if let Some(mut orig) = info_with_extras.info.runner.opts {
+                for (k, val) in v.into_iter() {
+                    orig.insert(k, val);
+                }
+
+                Some(orig)
+            } else {
+                Some(v)
+            }
+    }
+
+    Ok(info_with_extras)
 }
 
 /// Given a url or a path, figure out what protocol it's using
