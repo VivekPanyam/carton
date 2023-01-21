@@ -219,6 +219,7 @@ impl CartonWrapper {
                                     out.set(&mut cx, keystr, info)?;
                                 },
                             )*
+                            Tensor::NestedTensor(_) => panic!("Nested tensor output not implemented yet"),
                         }
 
                     }
