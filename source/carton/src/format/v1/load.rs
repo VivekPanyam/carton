@@ -7,11 +7,11 @@ use std::sync::Arc;
 
 use lunchbox::types::{MaybeSend, MaybeSync, ReadableFile};
 use lunchbox::ReadableFileSystem;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
-use crate::conversion_utils::{convert_opt_vec, convert_vec, convert_opt_map};
-use crate::error::Result;
-use crate::info::{PossiblyLoaded, CartonInfoWithExtras};
+use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
+use crate::error::{CartonError, Result};
+use crate::info::{CartonInfoWithExtras, PossiblyLoaded};
 use crate::types::CartonInfo;
 
 async fn load_tensor_from_fs<T>(fs: &T, path: &str) -> crate::types::Tensor
@@ -41,6 +41,44 @@ where
     let toml = fs.read("/carton.toml").await?;
     let config = crate::format::v1::carton_toml::parse(&toml).await?;
 
+    // Check for misc files
+    let manifest = fs.read_to_string("/MANIFEST").await?;
+    let mut misc_file_paths = Vec::new();
+
+    // Filter the manifest to files in `misc/`
+    // Note: not using `filter` so we can return errors easily
+    for line in manifest.lines() {
+        if let Some((file_path, _sha256)) = line.rsplit_once("=") {
+            if file_path.starts_with("misc/") {
+                misc_file_paths.push(file_path);
+            }
+        } else {
+            return Err(CartonError::Other(
+                "MANIFEST was not in the form {path}={sha256}",
+            ));
+        }
+    }
+
+    // Create the loaders for all the misc files
+    let misc_files = if misc_file_paths.is_empty() {
+        None
+    } else {
+        Some(
+            misc_file_paths
+                .into_iter()
+                .map(|path| {
+                    let fs = fs.clone();
+                    let owned_path = path.to_owned();
+                    let val = PossiblyLoaded::from_loader(Box::pin(async move {
+                        load_misc_from_fs(fs.as_ref(), &owned_path).await
+                    }));
+
+                    ("@".to_owned() + path, val)
+                })
+                .collect(),
+        )
+    };
+
     // Create a CartonInfo struct
     let info = CartonInfo {
         model_name: config.model_name,
@@ -49,8 +87,10 @@ where
         inputs: convert_opt_vec(config.input),
         outputs: convert_opt_vec(config.output),
         self_tests: config.self_test.convert(fs),
+        // TODO: reuse the misc files from above when loading examples
         examples: config.example.convert(fs),
         runner: config.runner.into(),
+        misc_files,
     };
 
     // Compute the manifest sha256
@@ -59,7 +99,10 @@ where
     hasher.update(manifest);
     let manifest_sha256 = format!("{:x}", hasher.finalize());
 
-    Ok(CartonInfoWithExtras { info, manifest_sha256 })
+    Ok(CartonInfoWithExtras {
+        info,
+        manifest_sha256,
+    })
 }
 
 // Type conversions
