@@ -6,7 +6,7 @@ use tokio::{
 };
 
 use crate::{
-    rpc::{AnywhereRPCClient, AnywhereRPCServer, MaybeRead, MaybeWrite, MaybeSeek},
+    rpc::{AnywhereRPCClient, AnywhereRPCServer, MaybeRead, MaybeSeek, MaybeWrite},
     types::AnywhereFS,
 };
 
@@ -94,8 +94,11 @@ where
     AnywhereRPCClient::new(tx).try_to_fs().await
 }
 
-pub(crate) async fn serve_fs<S, R, T, A: MaybeRead<T>, B: MaybeWrite<T>, C: MaybeSeek<T>>(fs: AnywhereRPCServer<T, A, B, C>, send: S, recv: R)
-where
+pub(crate) async fn serve_fs<S, R, T, A: MaybeRead<T>, B: MaybeWrite<T>, C: MaybeSeek<T>>(
+    fs: AnywhereRPCServer<T, A, B, C>,
+    send: S,
+    recv: R,
+) where
     S: AsyncWrite + Send + Unpin,
     R: AsyncRead + Send + Unpin,
     // T: Readable + MaybeWritable + MaybeSeekable,
@@ -139,8 +142,7 @@ pub struct FramedTransportServer<T, A, B, C> {
     inner: crate::rpc::AnywhereRPCServer<T, A, B, C>,
 }
 
-impl<T, A: MaybeRead<T>, B: MaybeWrite<T>, C: MaybeSeek<T>> FramedTransportServer<T, A, B, C>
-{
+impl<T, A: MaybeRead<T>, B: MaybeWrite<T>, C: MaybeSeek<T>> FramedTransportServer<T, A, B, C> {
     /// Serves a filesystem by handling length prefixed frames over something that implements [`AsyncRead`] and [`AsyncWrite`]
     pub async fn serve<S, R>(self, send: S, recv: R)
     where

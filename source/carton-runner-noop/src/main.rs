@@ -17,22 +17,14 @@ async fn main() {
 
         let req_id = req.id;
         match req.data {
-            RPCRequestData::Load {
-                ..
-            } => {
+            RPCRequestData::Load { .. } => {
                 server
-                    .send_response_for_request(
-                        req_id,
-                        RPCResponseData::Load,
-                    )
+                    .send_response_for_request(req_id, RPCResponseData::Load)
                     .await
                     .unwrap();
             }
 
-            RPCRequestData::Pack {
-                input_path,
-                ..
-            } => {
+            RPCRequestData::Pack { input_path, .. } => {
                 // Just return the input path
                 server
                     .send_response_for_request(

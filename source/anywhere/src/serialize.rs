@@ -1,10 +1,9 @@
 //! This module implements serializable wrappers for some types that are not serializable.
 
-use std::{time::SystemTime, io::SeekFrom};
+use std::{io::SeekFrom, time::SystemTime};
 
 use lunchbox::types::{Metadata, Permissions};
-use serde::{Serialize, Deserialize};
-
+use serde::{Deserialize, Serialize};
 
 // For std::io::ErrorKind
 macro_rules! impl_from {
@@ -44,7 +43,6 @@ macro_rules! impl_from {
         }
     };
 }
-
 
 impl_from! {
 // A subset of std::io::ErrorKind

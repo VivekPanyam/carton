@@ -1,11 +1,11 @@
-pub mod types;
-mod format;
-mod runner_interface;
 mod conversion_utils;
-mod http;
-mod load;
-mod info;
 pub mod error;
+mod format;
+mod http;
+mod info;
+mod load;
+mod runner_interface;
+pub mod types;
 
 #[cfg(not(target_family = "wasm"))]
 mod discovery;

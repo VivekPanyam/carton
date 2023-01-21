@@ -1,4 +1,4 @@
-use proc_macro::{TokenStream, Delimiter, Group, TokenTree};
+use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 use quote::quote;
 
 // Nested repeating macros get complex with declarative macros
@@ -8,7 +8,7 @@ use quote::quote;
 pub fn for_each_carton_type(item: TokenStream) -> TokenStream {
     let item = proc_macro2::TokenStream::from(item);
     quote! {
-        
+
             // Declare the inner macro
             macro_rules! inner {
                 ($( ( $CartonType:ident, $RustType:ty, $TypeStr:literal ) ), * ) => {
@@ -30,5 +30,6 @@ pub fn for_each_carton_type(item: TokenStream) -> TokenStream {
                 (U32, u32, "uint32"),
                 (U64, u64, "uint64")
             );
-    }.into()
+    }
+    .into()
 }

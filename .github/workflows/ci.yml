@@ -10,6 +10,16 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  formatting:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
+      - run: cargo fmt --check
   build_and_test_native:
     name: Native Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

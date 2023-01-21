@@ -1,6 +1,6 @@
-use std::{collections::HashMap, marker::PhantomData};
 pub use carton_macros::for_each_carton_type;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, marker::PhantomData};
 
 use super::comms::Comms;
 
@@ -18,7 +18,6 @@ pub struct RPCResponse {
     pub data: RPCResponseData,
 }
 
-
 pub(crate) type RpcId = u64;
 
 // Used in multiplexer
@@ -27,7 +26,6 @@ pub struct StreamID(pub(crate) u64);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct FsToken(pub(crate) StreamID);
-
 
 // Individual channels/streams to avoid head of line blocking
 #[allow(non_camel_case_types)]
@@ -44,7 +42,7 @@ pub(crate) enum ChannelId {
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct FdId(pub(crate) u64);
 
-// With this interface, creating a Carton is 
+// With this interface, creating a Carton is
 //      Pack(data) -> core library packaging -> model.carton
 // Loading it is
 //      model.carton -> core library unpackaging -> Load(data)
@@ -89,15 +87,15 @@ pub enum RPCRequestData {
     },
 
     Seal {
-        tensors: HashMap<String, Handle<Tensor>>
+        tensors: HashMap<String, Handle<Tensor>>,
     },
 
     InferWithTensors {
-        tensors: HashMap<String, Handle<Tensor>>
+        tensors: HashMap<String, Handle<Tensor>>,
     },
 
     InferWithHandle {
-        handle: SealHandle
+        handle: SealHandle,
     },
 }
 
@@ -111,15 +109,15 @@ pub enum RPCResponseData {
         // Note: this must be a *directory* even if the input was a file
         // This references a path on the FS that was passed in
         // during the request
-        output_path: String
+        output_path: String,
     },
 
     Seal {
-        handle: SealHandle
+        handle: SealHandle,
     },
 
     Infer {
-        tensors: HashMap<String, Handle<Tensor>>
+        tensors: HashMap<String, Handle<Tensor>>,
     },
 
     /// Something went wrong
@@ -130,8 +128,7 @@ pub enum RPCResponseData {
     // This should be used only when something is expected to take a long time (e.g generating a lockfile for a python project)
     SlowLog {
         e: String,
-    }
-
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -162,8 +159,8 @@ pub enum Device {
         /// The UUID of the specified device
         /// This must include the `GPU-` or `MIG-GPU-` prefix
         /// See https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#env-vars
-        uuid: Option<String>
-    }
+        uuid: Option<String>,
+    },
 }
 // TODO: pin the version of carton-macros so we don't accidentally change the types on the wire
 for_each_carton_type! {
@@ -187,7 +184,6 @@ for_each_carton_type! {
         }
     )*
 }
-
 
 // If we're running in wasm, wrap inner and derive serialize and deserialize normally (because we can't use shared memory)
 if_wasm! {
