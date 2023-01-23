@@ -212,40 +212,49 @@ The model folder contains the model and/or whatever other information the runner
 
 The tensor_data folder is optional and contains test data and/or example data referenced by the `carton.toml` file.
 
-There can be three files in this folder. One is a `numeric.safetensor` file which contains all numeric tensors as a safetensor file.
-
-Another is a `strings.toml` file
+This folder contains an `index.toml` file of the following format. This file must exist if there are any other files in this directory.
 
 ```toml
 [[tensor]]
-name = "self_test_tensor_0"
+name = "some_string_tensor"
+dtype = "string"
 shape = [1, 2, 3]
-data = ["a", "b", "c", "d", "e"]
+file = "tensor_0.toml"
 
 [[tensor]]
-name = "self_test_tensor_1"
-# ...
-```
+name = "some_numeric_tensor"
+dtype = "float32"
+shape = [2, 2, 3]
+file = "tensor_1.bin"
 
-Rationale:
-1. This lets us avoid a binary format that we have to carefully manage backwards compatibility for (e.g. a Rust struct serialized with bincode)
-2. The main overhead is the repeated `", "` for large tensors. In cases where it matters, this can be mitigated by changing or enabling zipfile compression. Most likely, this overhead won't have an impact. There's a relatively minor difference between storing strings in a binary format or storing them in a text format (vs the major difference between "3.14159265359" and the same value as a `float32` or `float64`).
-
-There must be no overlap in the names between the tensors in `strings.toml` and `numeric.safetensor`
-
-Finally, there can be a `nested.toml` file. This describes nested/ragged tensors.
-
-```toml
 [[tensor]]
-name = "some_tensor"
+name = "some_nested_tensor"
+
+# Nested/ragged tensors
+dtype = "nested"
+
+# Note: The inner tensors must not be nested tensors.
 inner = [
     "some_other_tensor",
     "another_tensor",
 ]
+
+# ...
 ```
 
-The inner tensors must be dense tensors (from strings or numeric). This may be relaxed in the future if necessary.
+Numeric tensors are stored in `.bin` files as little-endian, contiguous, C-order tensors.
 
+String tensors are stored in `toml` files (one for each string tensor)
+
+```toml
+data = ["a", "b", "c", "d", "e"]
+```
+
+Rationale:
+1. This lets us avoid a binary format that we have to carefully manage backwards compatibility for (e.g. a Rust struct serialized with bincode)
+2. The main overhead is the repeated `", "` for large tensors. In cases where it matters, this can be mitigated by zipfile compression. Most likely, this overhead won't have an impact. There's a relatively minor difference between storing strings in a binary format or storing them in a text format (vs the major difference between "3.14159265359" and the same value as a `float32` or `float64`).
+
+Because the data for each tensor is stored in a separate file, this structure enables fine-grained lazy loading of tensor data. Other options like safetensors were considered, but using them proved challenging. Safetensors store all the tensors in a single file that can be mmapped and lazy loaded. Unfortunately, the zipfile structure of a carton removes this possibility and requires loading the entire safetensors file.
 
 ## `misc`
 

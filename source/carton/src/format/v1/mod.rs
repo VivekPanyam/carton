@@ -3,5 +3,6 @@
 mod carton_toml;
 mod load;
 mod save;
+mod tensor;
 pub(crate) use load::load;
 pub(crate) use save::save;

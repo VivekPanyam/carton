@@ -98,6 +98,14 @@ impl<T> PossiblyLoaded<T> {
     pub async fn get(&self) -> &T {
         self.inner.get().await
     }
+
+    pub async fn into_get(self) -> Option<T> {
+        let inner = Arc::try_unwrap(self.inner);
+        match inner {
+            Ok(inner) => Some(inner.into_inner().await),
+            Err(_) => None,
+        }
+    }
 }
 
 struct PossiblyLoadedInner<T> {
@@ -119,6 +127,14 @@ impl<T> PossiblyLoadedInner<T> {
                     .await
             }
         }
+    }
+
+    async fn into_inner(self) -> T {
+        // Run `get` to ensure we load the value
+        self.get();
+
+        // This unwrap is safe because we just ran get above
+        self.inner.into_inner().unwrap()
     }
 }
 
