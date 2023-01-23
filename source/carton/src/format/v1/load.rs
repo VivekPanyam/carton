@@ -270,7 +270,7 @@ impl From<super::carton_toml::RunnerInfo> for crate::info::RunnerInfo {
         Self {
             runner_name: value.runner_name,
             required_framework_version: value.required_framework_version,
-            runner_compat_version: value.runner_compat_version,
+            runner_compat_version: Some(value.runner_compat_version),
             opts: convert_opt_map(value.opts),
         }
     }

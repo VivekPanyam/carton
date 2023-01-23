@@ -75,6 +75,15 @@ struct Args {
 pub async fn init_runner() -> Server {
     let args = Args::parse();
 
+    // Shutdown the runner if the parent process dies
+    // NOTE: this technically shuts down if the thread that forked this process dies, but since
+    // the parent should be running in tokio, this should be okay because if the parent's tokio
+    // runtime goes down, we should go down.
+    let res = unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) };
+    if res != 0 {
+        panic!("prctl failed")
+    }
+
     // TODO: run the FD passing channel on top of UDS and get the appropriate channels out
     Server::connect(&PathBuf::from(args.uds_path)).await
 }

@@ -142,7 +142,7 @@ where
         Ok((info_with_extras, None))
     } else {
         // Launch a runner
-        let runner =
+        let (runner, _) =
             discover_or_get_runner_and_launch(&info_with_extras.info, &visible_device).await?;
 
         // Load the model
@@ -157,7 +157,7 @@ where
 pub(crate) async fn discover_or_get_runner_and_launch(
     info: &CartonInfo,
     visible_device: &Device,
-) -> crate::error::Result<Runner> {
+) -> crate::error::Result<(Runner, crate::discovery::RunnerInfo)> {
     // TODO: maybe we want to just do this once at startup or cache it?
     let local_runners = crate::discovery::discover_runners().await;
 
@@ -170,7 +170,8 @@ pub(crate) async fn discover_or_get_runner_and_launch(
 
             // The runner compat version must be the same as the model we're trying to load
             // (this is kind of like a version for the `model` directory)
-            && (runner.runner_compat_version == info.runner.runner_compat_version)
+            // If an expected runner_compat_version was specified, check if it matches
+            && (info.runner.runner_compat_version.map(|inner| inner == runner.runner_compat_version).unwrap_or(true))
 
             // The runner's framework_version must satisfy the model's required range
             && (info
@@ -192,11 +193,11 @@ pub(crate) async fn discover_or_get_runner_and_launch(
             // Find the right interface to use
             1 => {
                 let runner = runner_interface_v1::Runner::new(
-                    &std::path::PathBuf::from(candidate.runner_path),
+                    &std::path::PathBuf::from(&candidate.runner_path),
                     visible_device.clone().into(),
                 ).await.unwrap();
 
-                Ok(Runner::V1(runner))
+                Ok((Runner::V1(runner), candidate))
 
             },
             version => unreachable!("This runner requires a newer interface ({version}) than we have. Shouldn't happen because of the check above."),
@@ -213,7 +214,7 @@ pub(crate) async fn discover_or_get_runner_and_launch(
 pub(crate) async fn discover_or_get_runner_and_launch(
     c: &CartonInfo,
     visible_device: &Device,
-) -> crate::error::Result<Runner> {
+) -> crate::error::Result<(Runner, ())> {
     todo!()
 }
 
@@ -235,7 +236,7 @@ where
                     fs,
                     c.info.runner.runner_name.clone(),
                     c.info.runner.required_framework_version.clone(),
-                    c.info.runner.runner_compat_version,
+                    c.info.runner.runner_compat_version.unwrap(),
                     c.info
                         .runner
                         .opts

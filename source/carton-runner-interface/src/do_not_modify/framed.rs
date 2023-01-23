@@ -1,6 +1,6 @@
 //! A framed transport on top of an [`AsyncRead`] and [`AsyncWrite`] pair
 
-use std::fmt::Debug;
+use std::{fmt::Debug, io::ErrorKind};
 
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::{
@@ -28,7 +28,11 @@ pub(crate) async fn framed_transport<T, U, R, W>(
 
         loop {
             // Read the size and then read the data
-            let size = br.read_u64().await.unwrap() as usize;
+            let size = match br.read_u64().await {
+                Ok(s) => s as usize,
+                Err(e) if e.kind() == ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("Got unexpected error: {:#?}", e),
+            };
 
             let mut data = vec![0u8; size];
             br.read_exact(&mut data).await.unwrap();
@@ -53,7 +57,11 @@ pub(crate) async fn framed_transport<T, U, R, W>(
                     bw.flush().await.unwrap();
 
                     // Blocking wait for new things to send
-                    req_rx.recv().await.unwrap()
+                    match req_rx.recv().await {
+                        Some(item) => item,
+                        // Disconnected
+                        None => break,
+                    }
                 }
                 Err(mpsc::error::TryRecvError::Disconnected) => {
                     // We're done

@@ -125,7 +125,13 @@ impl Comms {
 
                 // Wait until we can read
                 rs.readable().await.unwrap();
-                let (num_bytes, num_fds) = rs.recv_with_fd(&mut bytes, &mut fds).unwrap();
+                let (num_bytes, num_fds) = match rs.recv_with_fd(&mut bytes, &mut fds) {
+                    Ok(v) => v,
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock =>  {
+                        continue
+                    },
+                    Err(e) => panic!("Got an error: {:#?}", e)
+                };
 
                 if num_bytes != 0 {
                     assert_eq!(
