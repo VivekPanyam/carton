@@ -21,7 +21,6 @@ impl From<RunnerOpt> for runner_interface_v1::types::RunnerOpt {
             RunnerOpt::Double(v) => Self::Double(v),
             RunnerOpt::String(v) => Self::String(v),
             RunnerOpt::Boolean(v) => Self::Boolean(v),
-            RunnerOpt::Date(v) => Self::Date(v),
         }
     }
 }

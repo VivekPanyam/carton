@@ -137,9 +137,6 @@ pub enum RunnerOpt {
     Double(f64),
     String(String),
     Boolean(bool),
-
-    // Serializes into a rfc3339 time string so this should be fine to put on the wire
-    Date(chrono::DateTime<chrono::Utc>),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]

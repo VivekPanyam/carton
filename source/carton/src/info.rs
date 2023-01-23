@@ -201,7 +201,6 @@ pub enum RunnerOpt {
     Double(f64),
     String(String),
     Boolean(bool),
-    Date(chrono::DateTime<chrono::Utc>),
 }
 
 #[non_exhaustive]

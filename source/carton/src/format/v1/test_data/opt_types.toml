@@ -1,0 +1,13 @@
+# Tests all the option types
+spec_version = 1
+
+[runner]
+runner_name = "something"
+required_framework_version = "=1.2.3"
+runner_compat_version = 2
+
+[runner.opts]
+string = "string"
+integer = 42
+float = 4.23
+bool = false

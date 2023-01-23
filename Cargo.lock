@@ -200,7 +200,6 @@ dependencies = [
  "anywhere",
  "bincode",
  "carton-macros",
- "chrono",
  "clap",
  "dashmap",
  "js-sys",

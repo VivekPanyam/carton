@@ -321,7 +321,6 @@ impl From<super::carton_toml::RunnerOpt> for crate::info::RunnerOpt {
             super::carton_toml::RunnerOpt::Double(v) => Self::Double(v),
             super::carton_toml::RunnerOpt::String(v) => Self::String(v),
             super::carton_toml::RunnerOpt::Boolean(v) => Self::Boolean(v),
-            super::carton_toml::RunnerOpt::Date(v) => Self::Date(v),
         }
     }
 }
