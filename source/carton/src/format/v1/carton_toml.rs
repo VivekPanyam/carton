@@ -2,7 +2,6 @@
 //! See `docs/specification/format.md` for more details
 use std::{collections::HashMap, marker::PhantomData, str::FromStr};
 
-use chrono::{DateTime, Utc};
 use serde::{de::Visitor, Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -85,7 +84,6 @@ pub enum RunnerOpt {
     Double(f64),
     String(String),
     Boolean(bool),
-    Date(DateTime<Utc>),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
