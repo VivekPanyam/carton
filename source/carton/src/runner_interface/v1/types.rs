@@ -1,5 +1,6 @@
 //! Implements type conversions between carton::types and carton-runner-interface types for V1 of the runner interface
 
+use crate::conversion_utils::convert_vec;
 use carton_macros::for_each_carton_type;
 
 use crate::types::{Device, RunnerOpt, Tensor};
@@ -33,6 +34,7 @@ for_each_carton_type! {
                 $(
                     Tensor::$CartonType(v) => Self::$CartonType(v),
                 )*
+                Tensor::NestedTensor(v) => Self::NestedTensor(convert_vec(v)),
             }
         }
     }
@@ -43,6 +45,7 @@ for_each_carton_type! {
                 $(
                     runner_interface_v1::types::Tensor::$CartonType(v) => Self::$CartonType(v),
                 )*
+                runner_interface_v1::types::Tensor::NestedTensor(v) => Self::NestedTensor(convert_vec(v)),
             }
         }
     }

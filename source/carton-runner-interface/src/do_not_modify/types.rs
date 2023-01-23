@@ -170,8 +170,9 @@ for_each_carton_type! {
     pub enum Tensor {
         $($CartonType(ndarray::ArrayD::<$RustType>),)*
 
-        // A Nested Tensor / Ragged Tensor
-        // NestedTensor(Vec<Tensor>)
+        /// A Nested Tensor / Ragged Tensor
+        /// See the docs in the core carton library for more details
+        NestedTensor(Vec<Tensor>)
     }
 }
 

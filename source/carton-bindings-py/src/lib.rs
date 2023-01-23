@@ -123,6 +123,9 @@ impl Carton {
                         Tensor::U16(item) => item.to_pyarray(py).to_object(py),
                         Tensor::U32(item) => item.to_pyarray(py).to_object(py),
                         Tensor::U64(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::NestedTensor(_) => {
+                            panic!("Nested tensor output not implemented yet")
+                        }
                     }
                 });
 
@@ -157,6 +160,9 @@ impl Carton {
                         Tensor::U16(item) => item.to_pyarray(py).to_object(py),
                         Tensor::U32(item) => item.to_pyarray(py).to_object(py),
                         Tensor::U64(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::NestedTensor(_) => {
+                            panic!("Nested tensor output not implemented yet")
+                        }
                     }
                 });
 

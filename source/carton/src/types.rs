@@ -116,8 +116,21 @@ for_each_carton_type! {
     pub enum Tensor {
         $($CartonType(ndarray::ArrayD::<$RustType>),)*
 
-        // A Nested Tensor / Ragged Tensor
-        // NestedTensor(Vec<Tensor>)
+        /// A Nested Tensor / Ragged Tensor
+        /// Effectively a list of tensors. Most frameworks have constraints on what these tensors can
+        /// be, but Carton itself doesn't enforce any constraints other than that a `NestedTensor` cannot
+        /// contain `NestedTensor`s.
+        ///
+        /// The runner for each framework is responsible for returning an error if a NestedTensor does
+        /// not meet the requirements for the framework.
+        ///
+        /// Torch only requires that the number of dimensions of the contained tensors are the same:
+        /// https://pytorch.org/docs/1.13/nested.html
+        ///
+        /// TensorFlow requires that the number of dimensions and the type of each contained tensor
+        /// is the same:
+        /// https://www.tensorflow.org/guide/ragged_tensor#what_you_can_store_in_a_ragged_tensor
+        NestedTensor(Vec<Tensor>)
     }
 }
 
