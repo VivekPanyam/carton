@@ -184,7 +184,7 @@ pub struct RunnerInfo {
     pub required_framework_version: semver::VersionReq,
 
     /// Don't set this unless you know what you're doing
-    pub runner_compat_version: u64,
+    pub runner_compat_version: Option<u64>,
 
     /// Options to pass to the runner. These are runner-specific (e.g.
     /// PyTorch, TensorFlow, etc).

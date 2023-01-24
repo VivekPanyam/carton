@@ -38,8 +38,8 @@ runner_compat_version = 1
 # The interface that should be used to communicate with this runner
 runner_interface_version = 1
 
-# The release date of the runner
-runner_release_date = 1979-05-27T07:32:00Z
+# The release date of the runner as an rfc3339 string
+runner_release_date = "1979-05-27T07:32:00Z"
 
 # A path to the runner binary. This can be absolute or relative to this file
 runner_path = "../path/to/runner"

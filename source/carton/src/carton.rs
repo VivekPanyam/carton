@@ -80,7 +80,8 @@ impl Carton {
         use std::sync::Arc;
 
         // Launch a runner
-        let runner = discover_or_get_runner_and_launch(&opts, &crate::types::Device::CPU).await?;
+        let (runner, runner_info) =
+            discover_or_get_runner_and_launch(&opts, &crate::types::Device::CPU).await?;
 
         // Create a temp folder
         // SAFETY: this only needs to last until the end of this method so it's okay if we don't store `tempdir`
@@ -110,14 +111,20 @@ impl Carton {
     #[cfg(not(target_family = "wasm"))]
     pub async fn load_unpacked(
         path: String,
-        pack_opts: PackOpts,
+        mut pack_opts: PackOpts,
         load_opts: LoadOpts,
     ) -> Result<Self> {
         use std::sync::Arc;
 
         // Launch a runner
-        let runner =
+        let (runner, runner_info) =
             discover_or_get_runner_and_launch(&pack_opts, &crate::types::Device::CPU).await?;
+
+        // Set the runner_compat_version if the user didn't
+        pack_opts
+            .runner
+            .runner_compat_version
+            .get_or_insert(runner_info.runner_compat_version);
 
         // Create a temp folder
         // SAFETY: this tempdir needs to last for the entire time this Carton exists

@@ -13,8 +13,6 @@ async fn main() {
     let mut sealed_tensors = HashMap::new();
 
     while let Some(req) = server.get_next_request().await {
-        println!("Got item: {:#?}", &req);
-
         let req_id = req.id;
         match req.data {
             RPCRequestData::Load { .. } => {

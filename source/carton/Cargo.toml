@@ -34,3 +34,13 @@ lunchbox = { version = "0.1", features = ["serde", "localfs"]}
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 lunchbox = { version = "0.1", features = ["serde"]}
+
+[dev-dependencies]
+criterion = {version = "0.4", features = ["async_tokio", "html_reports"]}
+tokio = { version = "1", features = ["full", "tracing"] }
+console-subscriber = "0.1.8"
+escargot = "0.5.7"
+
+[[bench]]
+name = "bench_noop_infer"
+harness = false

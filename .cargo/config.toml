@@ -1,0 +1,4 @@
+[build]
+
+# This lets us use tokio's tracing feature (which we need for tokio-console)
+rustflags = ["--cfg", "tokio_unstable"]
