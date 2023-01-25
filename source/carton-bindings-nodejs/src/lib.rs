@@ -1,7 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 use carton::{
-    types::{for_each_carton_type, Device, LoadOpts, Tensor},
+    types::{for_each_carton_type, Device, GenericStorage, LoadOpts, NDarray, Tensor},
     Carton,
 };
 use ndarray::ShapeBuilder;
@@ -112,29 +112,46 @@ impl CartonWrapper {
             // Get the buffer, shape, stride, and dtype
             let jsbuffer = val.get::<JsArrayBuffer, _, _>(&mut cx, "buffer")?;
 
+            #[derive(Debug)]
+            struct KeepAlive<T> {
+                buf: Root<JsArrayBuffer>,
+                _pd: PhantomData<T>,
+
+                // Actually a *const T
+                // TODO: do this better
+                ptr: usize,
+                len: usize,
+            }
+
+            impl<T> AsRef<[T]> for KeepAlive<T> {
+                fn as_ref(&self) -> &[T] {
+                    unsafe { std::slice::from_raw_parts(self.ptr as _, self.len) }
+                }
+            }
+
             // TODO this makes a copy
             // Doing this for now to avoid some mutable borrow issues
             let buffer = jsbuffer.as_slice(&mut cx).to_vec();
 
-            let shape: Vec<usize> = val
+            let shape: Vec<u64> = val
                 .get::<JsArray, _, _>(&mut cx, "shape")?
                 .to_vec(&mut cx)?
                 .iter()
                 .map(|item| {
                     item.downcast_or_throw::<JsNumber, _>(&mut cx)
                         .unwrap()
-                        .value(&mut cx) as usize
+                        .value(&mut cx) as _
                 })
                 .collect();
 
-            let stride: Vec<usize> = val
+            let stride: Vec<i64> = val
                 .get::<JsArray, _, _>(&mut cx, "stride")?
                 .to_vec(&mut cx)?
                 .iter()
                 .map(|item| {
                     item.downcast_or_throw::<JsNumber, _>(&mut cx)
                         .unwrap()
-                        .value(&mut cx) as usize
+                        .value(&mut cx) as _
                 })
                 .collect();
 
@@ -146,10 +163,21 @@ impl CartonWrapper {
                 let t: Tensor = match dtype.as_str() {
                     $(
                         $TypeStr => unsafe {
-                            ndarray::ArrayView::from_shape_ptr(
-                                shape.strides(stride),
-                                buffer.as_ptr() as *const $RustType,
-                            ).to_owned().into()
+                            let data = jsbuffer.as_slice(&mut cx);
+                            let ptr = data.as_ptr() as _;
+                            let len = data.len();
+                            let storage = GenericStorage::new(KeepAlive::<$RustType> {
+                                buf: jsbuffer.root(&mut cx),
+                                _pd: PhantomData,
+                                ptr,
+                                len,
+                            });
+
+                            Tensor::$CartonType(NDarray::from_shape_strides_storage(
+                                shape,
+                                Some(stride),
+                                storage,
+                            ))
                         },
                     )*
                     dtype => panic!("Got unknown dtype: {dtype}"),
@@ -191,7 +219,8 @@ impl CartonWrapper {
                                 Tensor::$CartonType(t) => {
                                     // Get the data as a slice
                                     // TODO: this can make a copy
-                                    let mut standard = t.as_standard_layout();
+                                    let view = t.view();
+                                    let mut standard = view.as_standard_layout();
 
                                     let data = standard.as_slice_mut().unwrap();
 
@@ -206,7 +235,7 @@ impl CartonWrapper {
                                     let buf = JsArrayBuffer::external(&mut cx, data);
 
                                     // Get the shape
-                                    let shape = vec_to_array(&mut cx, t.shape())?;
+                                    let shape = vec_to_array(&mut cx, t.view().shape())?;
 
                                     let typestr = cx.string($TypeStr);
                                     let keystr = cx.string(k);

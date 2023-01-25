@@ -1,6 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
-use carton_core::types::{Device, LoadOpts, RunnerOpt, Tensor};
+use carton_core::types::{Device, GenericStorage, LoadOpts, NDarray, RunnerOpt, Tensor};
 use numpy::{PyArrayDyn, ToPyArray};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
@@ -19,6 +19,57 @@ enum SupportedTensorType<'py> {
     U16(&'py PyArrayDyn<u16>),
     U32(&'py PyArrayDyn<u32>),
     U64(&'py PyArrayDyn<u64>),
+}
+
+fn convert<T: numpy::Element + Debug + 'static>(item: &PyArrayDyn<T>) -> NDarray<T> {
+    let shape = item.shape().iter().map(|item| *item as _).collect();
+    let strides = Some(item.strides().iter().map(|item| *item as _).collect());
+
+    // Ensures that the array isn't dropped
+    #[derive(Debug)]
+    struct KeepAlive<T> {
+        _arr: Py<PyArrayDyn<T>>,
+
+        // Actually a *const T
+        // TODO: do this better
+        ptr: usize,
+        len: usize,
+    }
+
+    impl<T> AsRef<[T]> for KeepAlive<T> {
+        fn as_ref(&self) -> &[T] {
+            unsafe { std::slice::from_raw_parts(self.ptr as _, self.len) }
+        }
+    }
+
+    let ptr = unsafe { item.as_array().as_ptr() } as _;
+    let len = item.len();
+    let storage = GenericStorage::new(KeepAlive {
+        _arr: item.into(),
+        ptr,
+        len,
+    });
+
+    NDarray::from_shape_strides_storage(shape, strides, storage).into()
+}
+
+impl From<SupportedTensorType<'_>> for Tensor {
+    fn from(value: SupportedTensorType<'_>) -> Self {
+        match value {
+            SupportedTensorType::Float(item) => Tensor::Float(convert(item)),
+            SupportedTensorType::Double(item) => Tensor::Double(convert(item)),
+
+            SupportedTensorType::I8(item) => Tensor::I8(convert(item)),
+            SupportedTensorType::I16(item) => Tensor::I16(convert(item)),
+            SupportedTensorType::I32(item) => Tensor::I32(convert(item)),
+            SupportedTensorType::I64(item) => Tensor::I64(convert(item)),
+
+            SupportedTensorType::U8(item) => Tensor::U8(convert(item)),
+            SupportedTensorType::U16(item) => Tensor::U16(convert(item)),
+            SupportedTensorType::U32(item) => Tensor::U32(convert(item)),
+            SupportedTensorType::U64(item) => Tensor::U64(convert(item)),
+        }
+    }
 }
 
 #[pyclass]
@@ -50,23 +101,7 @@ impl Carton {
         let tensors: HashMap<String, SupportedTensorType> = tensors.extract().unwrap();
 
         for (k, v) in tensors {
-            // TODO: this makes a copy
-            let native = match v {
-                SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
-                SupportedTensorType::Double(item) => Tensor::Double(item.to_owned_array()),
-
-                SupportedTensorType::I8(item) => Tensor::I8(item.to_owned_array()),
-                SupportedTensorType::I16(item) => Tensor::I16(item.to_owned_array()),
-                SupportedTensorType::I32(item) => Tensor::I32(item.to_owned_array()),
-                SupportedTensorType::I64(item) => Tensor::I64(item.to_owned_array()),
-
-                SupportedTensorType::U8(item) => Tensor::U8(item.to_owned_array()),
-                SupportedTensorType::U16(item) => Tensor::U16(item.to_owned_array()),
-                SupportedTensorType::U32(item) => Tensor::U32(item.to_owned_array()),
-                SupportedTensorType::U64(item) => Tensor::U64(item.to_owned_array()),
-            };
-
-            transformed.insert(k, native);
+            transformed.insert(k, v.into());
         }
 
         let inner = self.inner.clone();
@@ -82,23 +117,7 @@ impl Carton {
         let tensors: HashMap<String, SupportedTensorType> = tensors.extract().unwrap();
 
         for (k, v) in tensors {
-            // TODO: this makes a copy
-            let native = match v {
-                SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
-                SupportedTensorType::Double(item) => Tensor::Double(item.to_owned_array()),
-
-                SupportedTensorType::I8(item) => Tensor::I8(item.to_owned_array()),
-                SupportedTensorType::I16(item) => Tensor::I16(item.to_owned_array()),
-                SupportedTensorType::I32(item) => Tensor::I32(item.to_owned_array()),
-                SupportedTensorType::I64(item) => Tensor::I64(item.to_owned_array()),
-
-                SupportedTensorType::U8(item) => Tensor::U8(item.to_owned_array()),
-                SupportedTensorType::U16(item) => Tensor::U16(item.to_owned_array()),
-                SupportedTensorType::U32(item) => Tensor::U32(item.to_owned_array()),
-                SupportedTensorType::U64(item) => Tensor::U64(item.to_owned_array()),
-            };
-
-            transformed.insert(k, native);
+            transformed.insert(k, v.into());
         }
 
         let inner = self.inner.clone();
@@ -111,18 +130,18 @@ impl Carton {
                 // TODO this makes a copy
                 let pytype = Python::with_gil(|py| {
                     match v {
-                        Tensor::Float(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::Double(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::Float(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::Double(item) => item.view().to_pyarray(py).to_object(py),
                         // Tensor::String(item) => item.to_pyarray(py).to_object(py),
                         Tensor::String(_) => panic!("String tensor output not implemented yet"),
-                        Tensor::I8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I64(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U64(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::I8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I64(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U64(item) => item.view().to_pyarray(py).to_object(py),
                         Tensor::NestedTensor(_) => {
                             panic!("Nested tensor output not implemented yet")
                         }
@@ -148,18 +167,18 @@ impl Carton {
                 // TODO this makes a copy
                 let pytype = Python::with_gil(|py| {
                     match v {
-                        Tensor::Float(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::Double(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::Float(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::Double(item) => item.view().to_pyarray(py).to_object(py),
                         // Tensor::String(item) => item.to_pyarray(py).to_object(py),
                         Tensor::String(_) => panic!("String tensor output not implemented yet"),
-                        Tensor::I8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I64(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U64(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::I8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I64(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U64(item) => item.view().to_pyarray(py).to_object(py),
                         Tensor::NestedTensor(_) => {
                             panic!("Nested tensor output not implemented yet")
                         }
@@ -180,8 +199,6 @@ enum PyRunnerOpt {
     Double(f64),
     String(String),
     Boolean(bool),
-    // TODO: datetime
-    // Date(DateTime<Utc>),
 }
 
 impl From<PyRunnerOpt> for RunnerOpt {

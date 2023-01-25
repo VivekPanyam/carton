@@ -1,6 +1,7 @@
 pub use carton_macros::for_each_carton_type;
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use lunchbox::types::{MaybeSend, MaybeSync};
+use std::{collections::HashMap, fmt::Debug};
 
 /// An opaque handle returned by `seal`
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -114,7 +115,7 @@ pub type CartonInfo = crate::info::CartonInfo;
 for_each_carton_type! {
     /// The core tensor type
     pub enum Tensor {
-        $($CartonType(ndarray::ArrayD::<$RustType>),)*
+        $($CartonType(NDarray::<$RustType>),)*
 
         /// A Nested Tensor / Ragged Tensor
         /// Effectively a list of tensors. Most frameworks have constraints on what these tensors can
@@ -134,13 +135,31 @@ for_each_carton_type! {
     }
 }
 
-for_each_carton_type! {
-    $(
-        /// Implement conversions from ndarray types
-        impl From<ndarray::ArrayD<$RustType>> for Tensor {
-            fn from(item: ndarray::ArrayD<$RustType>) -> Self {
-                Tensor::$CartonType(item)
-            }
+pub type NDarray<T> = runner_interface_v1::types::NDarray<T, GenericStorage<T>>;
+pub type DataType = crate::info::DataType;
+
+/// An alias for AsRef<[T]> + Debug + MaybeSend + MaybeSync
+pub trait AsRefAndDebug<T>: AsRef<[T]> + Debug + MaybeSend + MaybeSync {}
+impl<T, U> AsRefAndDebug<T> for U where U: AsRef<[T]> + Debug + MaybeSend + MaybeSync {}
+
+#[derive(Debug)]
+pub struct GenericStorage<T> {
+    inner: Box<dyn AsRefAndDebug<T>>,
+}
+
+impl<T> GenericStorage<T> {
+    pub fn new<U>(value: U) -> Self
+    where
+        U: AsRefAndDebug<T> + 'static,
+    {
+        Self {
+            inner: Box::new(value),
         }
-    )*
+    }
+}
+
+impl<T> AsRef<[T]> for GenericStorage<T> {
+    fn as_ref(&self) -> &[T] {
+        self.inner.as_ref().as_ref()
+    }
 }

@@ -9,7 +9,10 @@ use lunchbox::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{info::PossiblyLoaded, types::Tensor};
+use crate::{
+    info::PossiblyLoaded,
+    types::{GenericStorage, Tensor},
+};
 
 #[derive(Default, Serialize, Deserialize)]
 struct IndexToml {
@@ -88,7 +91,7 @@ pub(crate) fn save_tensors(
             // String tensor
             let string_tensor = StringsToml {
                 // TODO: this can make a copy
-                data: t.as_standard_layout().into_iter().collect(),
+                data: t.view().as_standard_layout().into_iter().collect(),
             };
 
             let fname = format!("tensor_{tensor_idx}.toml");
@@ -118,7 +121,8 @@ pub(crate) fn save_tensors(
                     $(
                         Tensor::$CartonType(v) => {
                             // TODO: this can make a copy
-                            let array = v.as_standard_layout();
+                            let view = v.view();
+                            let array = view.as_standard_layout();
 
                             #[cfg(not(target_endian = "little"))]
                             compile_error!("Writing tensor_data to disk is currently only supported on little-endian platforms");
@@ -155,7 +159,7 @@ pub(crate) fn save_tensors(
     Ok(())
 }
 
-fn bytes_per_elem<T>(array: &ndarray::ArrayD<T>) -> usize {
+fn bytes_per_elem<T>(array: &crate::types::NDarray<T>) -> usize {
     std::mem::size_of::<T>()
 }
 
@@ -182,19 +186,19 @@ where
                     continue;
                 },
                 "string" => {
-                    let shape: Vec<_> = t.shape.as_ref().unwrap().iter().map(|v| *v as usize).collect();
+                    let shape: Vec<_> = t.shape.clone().unwrap();
                     let fname = t.file.clone().unwrap();
                     let fs = fs.clone();
                     let path = tensor_data_path.join(fname);
                     PossiblyLoaded::from_loader(Box::pin(async move {
                         let data = fs.read(path).await.unwrap();
                         let strings: StringsToml = toml::from_slice(&data).unwrap();
-                        Tensor::String(ndarray::ArrayD::<String>::from_shape_vec(shape, strings.data).unwrap())
+                        Tensor::String(crate::types::NDarray::<String>::from_shape_storage(shape, GenericStorage::new(strings.data)))
                     }))
                 },
                 $(
                     $TypeStr => {
-                        let shape: Vec<_> = t.shape.as_ref().unwrap().iter().map(|v| *v as usize).collect();
+                        let shape: Vec<_> = t.shape.clone().unwrap();
                         let fname = t.file.clone().unwrap();
                         let fs = fs.clone();
                         let path = tensor_data_path.join(fname);
@@ -209,7 +213,7 @@ where
 
                             let typed_data = unsafe { std::slice::from_raw_parts(data.as_ptr() as *const $RustType, numel) }.to_vec();
 
-                            Tensor::$CartonType(ndarray::ArrayD::<$RustType>::from_shape_vec(shape, typed_data).unwrap())
+                            Tensor::$CartonType(crate::types::NDarray::<$RustType>::from_shape_storage(shape, GenericStorage::new(typed_data)))
                         }))
                     },
                 )*

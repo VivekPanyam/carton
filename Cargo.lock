@@ -302,6 +302,7 @@ dependencies = [
  "clap 4.1.1",
  "dashmap",
  "js-sys",
+ "lazy_static",
  "libc",
  "lunchbox",
  "ndarray",

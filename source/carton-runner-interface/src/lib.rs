@@ -32,6 +32,9 @@ if_not_wasm! {
 
     /// `Send` if not on wasm
     pub(crate) use Send as MaybeSend;
+
+    /// `Sync` if not on wasm
+    pub(crate) use Sync as MaybeSync;
 }
 
 if_wasm! {
@@ -40,6 +43,10 @@ if_wasm! {
     /// `Send` if not on wasm
     pub(crate) trait MaybeSend {}
     impl <T> MaybeSend for T {}
+
+    /// `Sync` if not on wasm
+    pub(crate) trait MaybeSync {}
+    impl <T> MaybeSync for T {}
 }
 
 pub use do_not_modify::types;

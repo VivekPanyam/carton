@@ -163,9 +163,10 @@ pub enum Device {
 for_each_carton_type! {
     /// TODO: We should to manually implement serialization and not depend on ndarray's serialization
     /// staying the same. Or just pin to a specific ndarray version
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug)]
+    #[cfg_attr(target_family = "wasm", derive(Serialize, Deserialize))]
     pub enum Tensor {
-        $($CartonType(ndarray::ArrayD::<$RustType>),)*
+        $($CartonType(NDarray::<$RustType, TensorStorage<$RustType>>),)*
 
         /// A Nested Tensor / Ragged Tensor
         /// See the docs in the core carton library for more details
@@ -175,13 +176,17 @@ for_each_carton_type! {
 
 for_each_carton_type! {
     $(
-        impl From<ndarray::ArrayD<$RustType>> for Tensor {
-            fn from(item: ndarray::ArrayD<$RustType>) -> Self {
+        impl From<NDarray<$RustType, TensorStorage<$RustType>>> for Tensor {
+            fn from(item: NDarray<$RustType, TensorStorage<$RustType>>) -> Self {
                 Tensor::$CartonType(item)
             }
         }
     )*
 }
+
+pub type NDarray<T, S> = super::ndarray::NDarray<T, S>;
+pub use super::ndarray::Storage;
+pub type TensorStorage<T> = super::storage::TensorStorage<T>;
 
 // If we're running in wasm, wrap inner and derive serialize and deserialize normally (because we can't use shared memory)
 if_wasm! {

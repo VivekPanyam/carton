@@ -1,7 +1,11 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
+
+use carton_macros::for_each_carton_type;
 
 use crate::error::Result;
 use crate::load::discover_or_get_runner_and_launch;
+use crate::types::DataType;
 use crate::{
     conversion_utils::convert_map,
     error::CartonError,
@@ -181,7 +185,22 @@ impl Carton {
     }
 
     /// Allocate a tensor
-    pub async fn alloc_tensor() -> Result<Tensor> {
-        todo!()
+    pub async fn alloc_tensor(&self, dtype: DataType, shape: Vec<u64>) -> Result<Tensor> {
+        match &self.runner {
+            Runner::V1(runner) => {
+                for_each_carton_type! {
+                    return match dtype {
+                        $(
+                            DataType::$CartonType =>
+                                Ok(runner
+                                    .alloc_tensor::<$RustType>(shape)
+                                    .await
+                                    .map_err(|e| CartonError::ErrorFromRunner(e))?
+                                    .into()),
+                        )*
+                    }
+                }
+            }
+        }
     }
 }
