@@ -1,7 +1,7 @@
 //! Utilities to convert between (Vec<T> -> Vec<U>) and (HashMap<_, T> -> HashMap<_, U>)
 //! because `From` is not implemented for these types
 
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, marker::PhantomData};
 
 pub(crate) fn convert_vec<T, U>(v: Vec<T>) -> Vec<U>
 where
@@ -39,21 +39,59 @@ where
 ///
 /// Therefore, we create a separate conversion trait that is almost identical to From, but it doesn't
 /// have an impl for From<T> for T
-pub(crate) trait ConvertFrom<T> {
-    fn from(value: T) -> Self;
-}
-
-// Something like "into"
-pub(crate) trait ConvertInto<T> {
-    fn convert_into(self) -> T;
-}
-
-// Blanket impl
-impl<T, U> ConvertInto<U> for T
-where
-    U: ConvertFrom<T>,
-{
-    fn convert_into(self) -> U {
-        U::from(self)
+///
+/// Note: the trait that should be implemented is `ConvertFromWithContext`
+pub(crate) trait ConvertFrom<T>: ConvertFromWithContext<T, ()> + Sized {
+    fn from(value: T) -> Self {
+        <Self as ConvertFromWithContext<T, ()>>::from(value, ())
     }
+}
+
+/// Blanket impl
+impl<T, U> ConvertFrom<T> for U where U: ConvertFromWithContext<T, ()> {}
+
+/// Allows conversions with context
+///
+/// Implementors should propagate `context` into any conversions they use internally.
+/// `ConvertFrom` will automatically be implemented for this type if the context is unnecessary
+/// (i.e. no transitive conversions require context)
+pub(crate) trait ConvertFromWithContext<T, C>
+where
+    C: Copy,
+{
+    fn from(value: T, context: C) -> Self;
+}
+
+/// Something like "into"
+pub(crate) trait ConvertInto<T>
+where
+    T: ConvertFrom<Self>,
+    Self: Sized,
+{
+    fn convert_into(self) -> T {
+        <T as ConvertFrom<Self>>::from(self)
+    }
+}
+
+/// Blanket impl
+impl<T, U> ConvertInto<T> for U where T: ConvertFrom<U> {}
+
+/// Something like "into", but with context
+pub(crate) trait ConvertIntoWithContext<T, C>
+where
+    T: ConvertFromWithContext<Self, C>,
+    Self: Sized,
+    C: Copy,
+{
+    fn convert_into_with_context(self, context: C) -> T {
+        T::from(self, context)
+    }
+}
+
+/// Blanket impl
+impl<T, U, C> ConvertIntoWithContext<T, C> for U
+where
+    T: ConvertFromWithContext<U, C>,
+    C: Copy,
+{
 }

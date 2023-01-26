@@ -2,7 +2,7 @@ pub use carton_macros::for_each_carton_type;
 use lazy_static::lazy_static;
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::conversion_utils::{ConvertFrom, ConvertInto};
+use crate::conversion_utils::{ConvertFromWithContext, ConvertIntoWithContext};
 use lunchbox::types::{MaybeSend, MaybeSync};
 
 /// An opaque handle returned by `seal`
@@ -137,20 +137,21 @@ for_each_carton_type! {
 
 for_each_carton_type! {
     /// Implement conversions between tensor of different types
-    impl<T, U> ConvertFrom<Tensor<T>> for Tensor<U>
+    impl<T, U, C> ConvertFromWithContext<Tensor<T>, C> for Tensor<U>
     where
         T: TensorStorage,
         U: TensorStorage,
+        C: Copy,
         $(
-            U::TypedStorage<$RustType>: ConvertFrom<T::TypedStorage<$RustType>>,
+            U::TypedStorage<$RustType>: ConvertFromWithContext<T::TypedStorage<$RustType>, C>,
         )*
     {
-        fn from(item: Tensor<T>) -> Self {
+        fn from(item: Tensor<T>, context: C) -> Self {
             match item {
                 $(
-                    Tensor::$CartonType(item) => Self::$CartonType(item.convert_into()),
+                    Tensor::$CartonType(item) => Self::$CartonType(item.convert_into_with_context(context)),
                 )*
-                Tensor::NestedTensor(item) => Self::NestedTensor(item.convert_into())
+                Tensor::NestedTensor(item) => Self::NestedTensor(item.convert_into_with_context(context))
             }
         }
     }
@@ -188,12 +189,13 @@ impl<T> TypedStorage<T> for ndarray::ArrayD<T> {
     }
 }
 
-impl<Other, T> ConvertFrom<Other> for ndarray::ArrayD<T>
+impl<Other, T, C> ConvertFromWithContext<Other, C> for ndarray::ArrayD<T>
 where
     Other: TypedStorage<T>,
     T: Clone,
+    C: Copy,
 {
-    fn from(value: Other) -> Self {
+    fn from(value: Other, _context: C) -> Self {
         // TODO: refactor to improve performance
         value.view().to_owned()
     }

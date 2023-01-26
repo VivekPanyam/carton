@@ -11,7 +11,7 @@ use target_lexicon::Triple;
 use tokio::{io::AsyncRead, sync::OnceCell};
 
 use crate::{
-    conversion_utils::{ConvertFrom, ConvertInto},
+    conversion_utils::{ConvertFromWithContext, ConvertIntoWithContext},
     types::{Tensor, TensorStorage},
 };
 
@@ -266,127 +266,144 @@ for_each_carton_type! {
     }
 }
 
-impl<T, U> ConvertFrom<CartonInfoWithExtras<T>> for CartonInfoWithExtras<U>
+impl<T, U, C> ConvertFromWithContext<CartonInfoWithExtras<T>, C> for CartonInfoWithExtras<U>
 where
-    CartonInfo<U>: ConvertFrom<CartonInfo<T>>,
+    CartonInfo<U>: ConvertFromWithContext<CartonInfo<T>, C>,
     T: TensorStorage,
     U: TensorStorage,
+    C: Copy,
 {
-    fn from(value: CartonInfoWithExtras<T>) -> Self {
+    fn from(value: CartonInfoWithExtras<T>, context: C) -> Self {
         Self {
-            info: value.info.convert_into(),
+            info: value.info.convert_into_with_context(context),
             manifest_sha256: value.manifest_sha256,
         }
     }
 }
 
-impl<T, U> ConvertFrom<CartonInfo<T>> for CartonInfo<U>
+impl<T, U, C> ConvertFromWithContext<CartonInfo<T>, C> for CartonInfo<U>
 where
-    SelfTest<U>: ConvertFrom<SelfTest<T>>,
-    Example<U>: ConvertFrom<Example<T>>,
+    SelfTest<U>: ConvertFromWithContext<SelfTest<T>, C>,
+    Example<U>: ConvertFromWithContext<Example<T>, C>,
     T: TensorStorage,
     U: TensorStorage,
+    C: Copy,
 {
-    fn from(value: CartonInfo<T>) -> Self {
+    fn from(value: CartonInfo<T>, context: C) -> Self {
         Self {
             model_name: value.model_name,
             model_description: value.model_description,
             required_platforms: value.required_platforms,
             inputs: value.inputs,
             outputs: value.outputs,
-            self_tests: value.self_tests.convert_into(),
-            examples: value.examples.convert_into(),
+            self_tests: value.self_tests.convert_into_with_context(context),
+            examples: value.examples.convert_into_with_context(context),
             runner: value.runner,
             misc_files: value.misc_files,
         }
     }
 }
 
-impl<T, U> ConvertFrom<SelfTest<T>> for SelfTest<U>
+impl<T, U, C> ConvertFromWithContext<SelfTest<T>, C> for SelfTest<U>
 where
-    PossiblyLoaded<Tensor<U>>: ConvertFrom<PossiblyLoaded<Tensor<T>>>,
+    PossiblyLoaded<Tensor<U>>: ConvertFromWithContext<PossiblyLoaded<Tensor<T>>, C>,
     T: TensorStorage,
     U: TensorStorage,
+    C: Copy,
 {
-    fn from(value: SelfTest<T>) -> Self {
+    fn from(value: SelfTest<T>, context: C) -> Self {
         Self {
             name: value.name,
             description: value.description,
-            inputs: value.inputs.convert_into(),
-            expected_out: value.expected_out.convert_into(),
+            inputs: value.inputs.convert_into_with_context(context),
+            expected_out: value.expected_out.convert_into_with_context(context),
         }
     }
 }
 
-impl<T, U> ConvertFrom<Example<T>> for Example<U>
+impl<T, U, C> ConvertFromWithContext<Example<T>, C> for Example<U>
 where
-    PossiblyLoaded<Tensor<U>>: ConvertFrom<PossiblyLoaded<Tensor<T>>>,
+    PossiblyLoaded<Tensor<U>>: ConvertFromWithContext<PossiblyLoaded<Tensor<T>>, C>,
     T: TensorStorage,
     U: TensorStorage,
+    C: Copy,
 {
-    fn from(value: Example<T>) -> Self {
+    fn from(value: Example<T>, context: C) -> Self {
         Self {
             name: value.name,
             description: value.description,
-            inputs: value.inputs.convert_into(),
-            sample_out: value.sample_out.convert_into(),
+            inputs: value.inputs.convert_into_with_context(context),
+            sample_out: value.sample_out.convert_into_with_context(context),
         }
     }
 }
 
-impl<T, U> ConvertFrom<TensorOrMisc<T>> for TensorOrMisc<U>
+impl<T, U, C> ConvertFromWithContext<TensorOrMisc<T>, C> for TensorOrMisc<U>
 where
-    PossiblyLoaded<Tensor<U>>: ConvertFrom<PossiblyLoaded<Tensor<T>>>,
+    PossiblyLoaded<Tensor<U>>: ConvertFromWithContext<PossiblyLoaded<Tensor<T>>, C>,
     T: TensorStorage,
     U: TensorStorage,
+    C: Copy,
 {
-    fn from(value: TensorOrMisc<T>) -> Self {
+    fn from(value: TensorOrMisc<T>, context: C) -> Self {
         match value {
-            TensorOrMisc::Tensor(t) => Self::Tensor(t.convert_into()),
+            TensorOrMisc::Tensor(t) => Self::Tensor(t.convert_into_with_context(context)),
             TensorOrMisc::Misc(m) => Self::Misc(m),
         }
     }
 }
 
-impl<T, U> ConvertFrom<PossiblyLoaded<T>> for PossiblyLoaded<U>
+impl<T, U, C> ConvertFromWithContext<PossiblyLoaded<T>, C> for PossiblyLoaded<U>
 where
-    U: ConvertFrom<T> + MaybeSend,
+    U: ConvertFromWithContext<T, C> + MaybeSend,
     T: MaybeSync + MaybeSend + 'static,
+    C: MaybeSend + 'static,
+    C: Copy,
 {
-    fn from(value: PossiblyLoaded<T>) -> Self {
+    fn from(value: PossiblyLoaded<T>, context: C) -> Self {
         Self::from_loader(Box::pin(async move {
-            value.into_get().await.unwrap().convert_into()
+            value
+                .into_get()
+                .await
+                .unwrap()
+                .convert_into_with_context(context)
         }))
     }
 }
 
-impl<T, U> ConvertFrom<Option<T>> for Option<U>
+impl<T, U, C> ConvertFromWithContext<Option<T>, C> for Option<U>
 where
-    U: ConvertFrom<T>,
+    U: ConvertFromWithContext<T, C>,
+    C: Copy,
 {
-    fn from(value: Option<T>) -> Self {
-        value.map(|item| item.convert_into())
+    fn from(value: Option<T>, context: C) -> Self {
+        value.map(|item| item.convert_into_with_context(context))
     }
 }
 
-impl<T, U> ConvertFrom<Vec<T>> for Vec<U>
+impl<T, U, C> ConvertFromWithContext<Vec<T>, C> for Vec<U>
 where
-    U: ConvertFrom<T>,
+    U: ConvertFromWithContext<T, C>,
+    C: Copy,
 {
-    fn from(value: Vec<T>) -> Self {
-        value.into_iter().map(|item| item.convert_into()).collect()
-    }
-}
-
-impl<K, T, U> ConvertFrom<HashMap<K, T>> for HashMap<K, U>
-where
-    U: ConvertFrom<T>,
-    K: Hash + Eq,
-{
-    fn from(value: HashMap<K, T>) -> Self {
+    fn from(value: Vec<T>, context: C) -> Self {
         value
             .into_iter()
-            .map(|(k, item)| (k, item.convert_into()))
+            .map(|item| item.convert_into_with_context(context))
+            .collect()
+    }
+}
+
+impl<K, T, U, C> ConvertFromWithContext<HashMap<K, T>, C> for HashMap<K, U>
+where
+    U: ConvertFromWithContext<T, C>,
+    K: Hash + Eq,
+    C: Copy,
+{
+    fn from(value: HashMap<K, T>, context: C) -> Self {
+        value
+            .into_iter()
+            .map(|(k, item)| (k, item.convert_into_with_context(context)))
             .collect()
     }
 }
