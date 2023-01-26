@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use carton::{
-    types::{for_each_carton_type, Device, GenericStorage, LoadOpts, Tensor},
+    types::{for_each_carton_type, Device, GenericStorage, LoadOpts, Tensor, TypedStorage},
     Carton,
 };
 use ndarray::ShapeBuilder;
@@ -191,7 +191,8 @@ impl CartonWrapper {
                                 Tensor::$CartonType(t) => {
                                     // Get the data as a slice
                                     // TODO: this can make a copy
-                                    let mut standard = t.as_standard_layout();
+                                    let view = t.view();
+                                    let mut standard = view.as_standard_layout();
 
                                     let data = standard.as_slice_mut().unwrap();
 
@@ -206,7 +207,7 @@ impl CartonWrapper {
                                     let buf = JsArrayBuffer::external(&mut cx, data);
 
                                     // Get the shape
-                                    let shape = vec_to_array(&mut cx, t.shape())?;
+                                    let shape = vec_to_array(&mut cx, view.shape())?;
 
                                     let typestr = cx.string($TypeStr);
                                     let keystr = cx.string(k);

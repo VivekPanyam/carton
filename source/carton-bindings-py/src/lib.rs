@@ -156,18 +156,18 @@ impl Carton {
                 // TODO this makes a copy
                 let pytype = Python::with_gil(|py| {
                     match v {
-                        Tensor::Float(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::Double(item) => item.to_pyarray(py).to_object(py),
-                        // Tensor::String(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::Float(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::Double(item) => item.view().to_pyarray(py).to_object(py),
+                        // Tensor::String(item) => item.view().to_pyarray(py).to_object(py),
                         Tensor::String(_) => panic!("String tensor output not implemented yet"),
-                        Tensor::I8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I64(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U64(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::I8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I64(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U64(item) => item.view().to_pyarray(py).to_object(py),
                         Tensor::NestedTensor(_) => {
                             panic!("Nested tensor output not implemented yet")
                         }
@@ -193,18 +193,18 @@ impl Carton {
                 // TODO this makes a copy
                 let pytype = Python::with_gil(|py| {
                     match v {
-                        Tensor::Float(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::Double(item) => item.to_pyarray(py).to_object(py),
-                        // Tensor::String(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::Float(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::Double(item) => item.view().to_pyarray(py).to_object(py),
+                        // Tensor::String(item) => item.view().to_pyarray(py).to_object(py),
                         Tensor::String(_) => panic!("String tensor output not implemented yet"),
-                        Tensor::I8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::I64(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U8(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U16(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U32(item) => item.to_pyarray(py).to_object(py),
-                        Tensor::U64(item) => item.to_pyarray(py).to_object(py),
+                        Tensor::I8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::I64(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U8(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U16(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U32(item) => item.view().to_pyarray(py).to_object(py),
+                        Tensor::U64(item) => item.view().to_pyarray(py).to_object(py),
                         Tensor::NestedTensor(_) => {
                             panic!("Nested tensor output not implemented yet")
                         }

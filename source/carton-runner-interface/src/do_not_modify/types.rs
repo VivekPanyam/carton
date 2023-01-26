@@ -165,7 +165,7 @@ for_each_carton_type! {
     /// staying the same. Or just pin to a specific ndarray version
     #[derive(Debug, Serialize, Deserialize)]
     pub enum Tensor {
-        $($CartonType(ndarray::ArrayD::<$RustType>),)*
+        $($CartonType(TensorStorage::<$RustType>),)*
 
         /// A Nested Tensor / Ragged Tensor
         /// See the docs in the core carton library for more details
@@ -173,10 +173,12 @@ for_each_carton_type! {
     }
 }
 
+pub type TensorStorage<T> = super::inline_storage::TensorStorage<T>;
+
 for_each_carton_type! {
     $(
-        impl From<ndarray::ArrayD<$RustType>> for Tensor {
-            fn from(item: ndarray::ArrayD<$RustType>) -> Self {
+        impl From<TensorStorage<$RustType>> for Tensor {
+            fn from(item: TensorStorage<$RustType>) -> Self {
                 Tensor::$CartonType(item)
             }
         }

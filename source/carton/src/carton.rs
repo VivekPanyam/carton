@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::Result;
 use crate::load::discover_or_get_runner_and_launch;
+use crate::runner_interface::storage::RunnerStorage;
 use crate::types::{GenericStorage, TensorStorage};
 use crate::{
     conversion_utils::convert_map,
@@ -37,7 +38,7 @@ impl Carton {
     pub async fn infer_with_inputs<T>(
         &self,
         tensors: HashMap<String, Tensor<T>>,
-    ) -> Result<HashMap<String, Tensor<GenericStorage>>>
+    ) -> Result<HashMap<String, Tensor<RunnerStorage>>>
     where
         T: TensorStorage,
     {
@@ -73,7 +74,7 @@ impl Carton {
     pub async fn infer_with_handle(
         &self,
         handle: SealHandle,
-    ) -> Result<HashMap<String, Tensor<GenericStorage>>> {
+    ) -> Result<HashMap<String, Tensor<RunnerStorage>>> {
         match &self.runner {
             Runner::V1(runner) => Ok(convert_map(
                 runner

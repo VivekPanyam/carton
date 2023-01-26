@@ -1,4 +1,5 @@
 mod framed;
+mod inline_storage;
 pub mod types;
 
 if_not_wasm! {

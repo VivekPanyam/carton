@@ -3,7 +3,8 @@
 use crate::conversion_utils::convert_vec;
 use carton_macros::for_each_carton_type;
 
-use crate::types::{Device, GenericStorage, RunnerOpt, Tensor, TensorStorage, TypedStorage};
+use crate::runner_interface::storage::{RunnerStorage, TypedRunnerStorage};
+use crate::types::{Device, RunnerOpt, Tensor, TensorStorage, TypedStorage};
 
 impl From<Device> for runner_interface_v1::types::Device {
     fn from(value: Device) -> Self {
@@ -31,19 +32,19 @@ for_each_carton_type! {
         fn from(value: Tensor<T>) -> Self {
             match value {
                 $(
-                    // TODO: this always makes a copy
-                    Tensor::$CartonType(v) => Self::$CartonType(v.view().to_owned()),
+                    Tensor::$CartonType(v) => Self::$CartonType(v.view().into()),
                 )*
                 Tensor::NestedTensor(v) => Self::NestedTensor(convert_vec(v)),
             }
         }
     }
 
-    impl From<runner_interface_v1::types::Tensor> for Tensor<GenericStorage> {
+    impl From<runner_interface_v1::types::Tensor> for Tensor<RunnerStorage> {
         fn from(value: runner_interface_v1::types::Tensor) -> Self {
             match value {
                 $(
-                    runner_interface_v1::types::Tensor::$CartonType(v) => Self::$CartonType(v),
+                    // TODO: this makes a copy
+                    runner_interface_v1::types::Tensor::$CartonType(v) => Self::$CartonType(TypedRunnerStorage::V1(v)),
                 )*
                 runner_interface_v1::types::Tensor::NestedTensor(v) => Self::NestedTensor(convert_vec(v)),
             }
