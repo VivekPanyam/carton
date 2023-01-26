@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
-use carton_core::types::{Device, GenericStorage, LoadOpts, RunnerOpt, Tensor};
+use carton_core::types::{Device, LoadOpts, RunnerOpt, Tensor, TensorStorage, TypedStorage};
+use ndarray::ShapeBuilder;
 use numpy::{PyArrayDyn, ToPyArray};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
@@ -19,6 +20,90 @@ enum SupportedTensorType<'py> {
     U16(&'py PyArrayDyn<u16>),
     U32(&'py PyArrayDyn<u32>),
     U64(&'py PyArrayDyn<u64>),
+}
+
+struct PyTensorStorage {}
+
+impl TensorStorage for PyTensorStorage {
+    type TypedStorage<T> = TypedPyTensorStorage<T>
+    where
+        T: Send + Sync;
+}
+
+struct TypedPyTensorStorage<T> {
+    /// This keeps the data "alive" while this tensor is in scope
+    _keepalive: Py<PyArrayDyn<T>>,
+    shape: ndarray::StrideShape<ndarray::IxDyn>,
+    ptr: *mut T,
+}
+
+/// See the note in the `TypedStorage` impl below for why this is safe
+unsafe impl<T> Send for TypedPyTensorStorage<T> where T: Send {}
+unsafe impl<T> Sync for TypedPyTensorStorage<T> where T: Sync {}
+
+impl<T: numpy::Element> TypedPyTensorStorage<T> {
+    fn new(item: &PyArrayDyn<T>) -> Self {
+        // We don't want to hold the GIL in the methods in `TypedStorage<T>`. This means
+        // we can't do any operations on PyArrayDyn. Therefore, we extract the shape and
+        // pointer below. See the safety notes in the TypedStorage impl below.
+
+        let shape = item.shape().strides(
+            &item
+                .strides()
+                .into_iter()
+                .map(|s| (*s).try_into().unwrap())
+                .collect::<Vec<usize>>(),
+        );
+
+        let ptr = item.data();
+
+        Self {
+            _keepalive: item.into(),
+            shape,
+            ptr,
+        }
+    }
+}
+
+impl<T> TypedStorage<T> for TypedPyTensorStorage<T> {
+    fn view(&self) -> ndarray::ArrayViewD<T> {
+        // SAFETY: Because we hold Py<_> of the array in `_keepalive`, the array has not been
+        // reclaimed or deallocated by python.
+        // TODO: confirm that there isn't a way for the shape or data pointer to change
+        unsafe { ndarray::ArrayViewD::from_shape_ptr(self.shape.clone(), self.ptr) }
+    }
+
+    fn view_mut(&mut self) -> ndarray::ArrayViewMutD<T> {
+        // SAFETY: Because we hold Py<_> of the array in `_keepalive`, the array has not been
+        // reclaimed or deallocated by python.
+        // TODO: confirm that there isn't a way for the shape or data pointer to change
+        unsafe { ndarray::ArrayViewMutD::from_shape_ptr(self.shape.clone(), self.ptr as _) }
+    }
+}
+
+impl<T: numpy::Element> From<&PyArrayDyn<T>> for TypedPyTensorStorage<T> {
+    fn from(value: &PyArrayDyn<T>) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<SupportedTensorType<'_>> for Tensor<PyTensorStorage> {
+    fn from(value: SupportedTensorType<'_>) -> Self {
+        match value {
+            SupportedTensorType::Float(item) => Tensor::Float(item.into()),
+            SupportedTensorType::Double(item) => Tensor::Double(item.into()),
+
+            SupportedTensorType::I8(item) => Tensor::I8(item.into()),
+            SupportedTensorType::I16(item) => Tensor::I16(item.into()),
+            SupportedTensorType::I32(item) => Tensor::I32(item.into()),
+            SupportedTensorType::I64(item) => Tensor::I64(item.into()),
+
+            SupportedTensorType::U8(item) => Tensor::U8(item.into()),
+            SupportedTensorType::U16(item) => Tensor::U16(item.into()),
+            SupportedTensorType::U32(item) => Tensor::U32(item.into()),
+            SupportedTensorType::U64(item) => Tensor::U64(item.into()),
+        }
+    }
 }
 
 #[pyclass]
@@ -46,28 +131,8 @@ impl Carton {
     }
 
     fn seal<'a>(&self, py: Python<'a>, tensors: &PyDict) -> PyResult<&'a PyAny> {
-        let mut transformed = HashMap::new();
         let tensors: HashMap<String, SupportedTensorType> = tensors.extract().unwrap();
-
-        for (k, v) in tensors {
-            // TODO: this makes a copy
-            let native: Tensor<GenericStorage> = match v {
-                SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
-                SupportedTensorType::Double(item) => Tensor::Double(item.to_owned_array()),
-
-                SupportedTensorType::I8(item) => Tensor::I8(item.to_owned_array()),
-                SupportedTensorType::I16(item) => Tensor::I16(item.to_owned_array()),
-                SupportedTensorType::I32(item) => Tensor::I32(item.to_owned_array()),
-                SupportedTensorType::I64(item) => Tensor::I64(item.to_owned_array()),
-
-                SupportedTensorType::U8(item) => Tensor::U8(item.to_owned_array()),
-                SupportedTensorType::U16(item) => Tensor::U16(item.to_owned_array()),
-                SupportedTensorType::U32(item) => Tensor::U32(item.to_owned_array()),
-                SupportedTensorType::U64(item) => Tensor::U64(item.to_owned_array()),
-            };
-
-            transformed.insert(k, native);
-        }
+        let transformed = tensors.into_iter().map(|(k, v)| (k, v.into())).collect();
 
         let inner = self.inner.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
@@ -78,28 +143,8 @@ impl Carton {
 
     // TODO: merge the infer methods into one
     fn infer_with_inputs<'a>(&self, py: Python<'a>, tensors: &PyDict) -> PyResult<&'a PyAny> {
-        let mut transformed = HashMap::new();
         let tensors: HashMap<String, SupportedTensorType> = tensors.extract().unwrap();
-
-        for (k, v) in tensors {
-            // TODO: this makes a copy
-            let native: Tensor<GenericStorage> = match v {
-                SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
-                SupportedTensorType::Double(item) => Tensor::Double(item.to_owned_array()),
-
-                SupportedTensorType::I8(item) => Tensor::I8(item.to_owned_array()),
-                SupportedTensorType::I16(item) => Tensor::I16(item.to_owned_array()),
-                SupportedTensorType::I32(item) => Tensor::I32(item.to_owned_array()),
-                SupportedTensorType::I64(item) => Tensor::I64(item.to_owned_array()),
-
-                SupportedTensorType::U8(item) => Tensor::U8(item.to_owned_array()),
-                SupportedTensorType::U16(item) => Tensor::U16(item.to_owned_array()),
-                SupportedTensorType::U32(item) => Tensor::U32(item.to_owned_array()),
-                SupportedTensorType::U64(item) => Tensor::U64(item.to_owned_array()),
-            };
-
-            transformed.insert(k, native);
-        }
+        let transformed = tensors.into_iter().map(|(k, v)| (k, v.into())).collect();
 
         let inner = self.inner.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {

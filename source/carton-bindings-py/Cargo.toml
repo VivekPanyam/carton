@@ -12,3 +12,4 @@ pyo3 = { version = "0.17.3", features = ["extension-module"] }
 pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
 carton-core = { package = "carton", path = "../carton" }
 numpy = "0.17"
+ndarray = { version = "0.15" }

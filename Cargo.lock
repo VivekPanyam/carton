@@ -278,6 +278,7 @@ name = "carton-bindings-py"
 version = "0.1.0"
 dependencies = [
  "carton",
+ "ndarray",
  "numpy",
  "pyo3",
  "pyo3-asyncio",
