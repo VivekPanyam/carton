@@ -30,3 +30,30 @@ where
 {
     v.map(|item| convert_map(item))
 }
+
+/// Several useful conversions are not allowed by rust because they happen to overlap with the core
+/// `impl<T> From<T> for T`.
+///
+/// For example, if we wanted to convert any tensor to a GenericTensor, we couldn't implement `From`
+/// because it overlaps with converting a `GenericTensor` to a `GenericTensor` (i.e. From<T> for T)
+///
+/// Therefore, we create a separate conversion trait that is almost identical to From, but it doesn't
+/// have an impl for From<T> for T
+pub(crate) trait ConvertFrom<T> {
+    fn from(value: T) -> Self;
+}
+
+// Something like "into"
+pub(crate) trait ConvertInto<T> {
+    fn convert_into(self) -> T;
+}
+
+// Blanket impl
+impl<T, U> ConvertInto<U> for T
+where
+    U: ConvertFrom<T>,
+{
+    fn convert_into(self) -> U {
+        U::from(self)
+    }
+}

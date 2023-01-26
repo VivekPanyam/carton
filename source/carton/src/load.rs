@@ -16,7 +16,7 @@ use crate::{
     error::CartonError,
     http::HTTPFile,
     info::CartonInfoWithExtras,
-    types::{CartonInfo, Device, LoadOpts},
+    types::{CartonInfo, Device, GenericStorage, LoadOpts, TensorStorage},
 };
 
 /// Load a carton given a url or path and options
@@ -39,13 +39,14 @@ pub(crate) async fn load(url_or_path: &str, opts: LoadOpts) -> ReturnType {
 
 pub(crate) async fn get_carton_info(
     url_or_path: &str,
-) -> crate::error::Result<CartonInfoWithExtras> {
+) -> crate::error::Result<CartonInfoWithExtras<GenericStorage>> {
     let (info, _) = fetch(url_or_path, Default::default(), true).await?;
     Ok(info)
 }
 
 /// The return type of `load`
-pub(crate) type ReturnType = crate::error::Result<(CartonInfoWithExtras, Option<Runner>)>;
+pub(crate) type ReturnType =
+    crate::error::Result<(CartonInfoWithExtras<GenericStorage>, Option<Runner>)>;
 
 /// All the versions of the runner interface that we support
 pub(crate) enum Runner {
@@ -154,10 +155,13 @@ where
 
 // Step 5: Figure out what runner to use (or get it if necessary) and launch the runner
 #[cfg(not(target_family = "wasm"))]
-pub(crate) async fn discover_or_get_runner_and_launch(
-    info: &CartonInfo,
+pub(crate) async fn discover_or_get_runner_and_launch<T>(
+    info: &CartonInfo<T>,
     visible_device: &Device,
-) -> crate::error::Result<(Runner, crate::discovery::RunnerInfo)> {
+) -> crate::error::Result<(Runner, crate::discovery::RunnerInfo)>
+where
+    T: TensorStorage,
+{
     // TODO: maybe we want to just do this once at startup or cache it?
     let local_runners = crate::discovery::discover_runners().await;
 
@@ -211,23 +215,27 @@ pub(crate) async fn discover_or_get_runner_and_launch(
 
 // No discovery for wasm - just launch a runner and return
 #[cfg(target_family = "wasm")]
-pub(crate) async fn discover_or_get_runner_and_launch(
-    c: &CartonInfo,
+pub(crate) async fn discover_or_get_runner_and_launch<T>(
+    c: &CartonInfo<T>,
     visible_device: &Device,
-) -> crate::error::Result<(Runner, ())> {
+) -> crate::error::Result<(Runner, ())>
+where
+    T: TensorStorage,
+{
     todo!()
 }
 
 // Step 6: Load the model
-pub(crate) async fn load_model<T>(
+pub(crate) async fn load_model<T, U>(
     fs: &Arc<T>,
     runner: &Runner,
-    c: &CartonInfoWithExtras,
+    c: &CartonInfoWithExtras<U>,
     visible_device: Device,
 ) -> crate::error::Result<()>
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+    U: TensorStorage,
 {
     match runner {
         Runner::V1(runner) => {
@@ -253,10 +261,13 @@ where
     Ok(())
 }
 
-pub(crate) fn merge_in_load_opts(
-    mut info_with_extras: CartonInfoWithExtras,
+pub(crate) fn merge_in_load_opts<T>(
+    mut info_with_extras: CartonInfoWithExtras<T>,
     opts: LoadOpts,
-) -> crate::error::Result<CartonInfoWithExtras> {
+) -> crate::error::Result<CartonInfoWithExtras<T>>
+where
+    T: TensorStorage,
+{
     if let Some(v) = opts.override_runner_name {
         info_with_extras.info.runner.runner_name = v;
     }

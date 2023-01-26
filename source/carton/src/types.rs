@@ -1,6 +1,9 @@
 pub use carton_macros::for_each_carton_type;
 use lazy_static::lazy_static;
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
+
+use crate::conversion_utils::{ConvertFrom, ConvertInto};
+use lunchbox::types::{MaybeSend, MaybeSync};
 
 /// An opaque handle returned by `seal`
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -105,16 +108,14 @@ impl Device {
 }
 
 /// Options that can be specified when packing a model
-pub type PackOpts = CartonInfo;
+pub type PackOpts<T> = CartonInfo<T>;
 
-// Directly expose everything in the carton.toml for now
-// TODO: have an intermediate type
-pub type CartonInfo = crate::info::CartonInfo;
+pub type CartonInfo<T> = crate::info::CartonInfo<T>;
 
 for_each_carton_type! {
     /// The core tensor type
-    pub enum Tensor {
-        $($CartonType(ndarray::ArrayD::<$RustType>),)*
+    pub enum Tensor<Storage> where Storage: TensorStorage {
+        $($CartonType(Storage::TypedStorage::<$RustType>),)*
 
         /// A Nested Tensor / Ragged Tensor
         /// Effectively a list of tensors. Most frameworks have constraints on what these tensors can
@@ -130,17 +131,70 @@ for_each_carton_type! {
         /// TensorFlow requires that the number of dimensions and the type of each contained tensor
         /// is the same:
         /// https://www.tensorflow.org/guide/ragged_tensor#what_you_can_store_in_a_ragged_tensor
-        NestedTensor(Vec<Tensor>)
+        NestedTensor(Vec<Tensor<Storage>>)
     }
 }
 
 for_each_carton_type! {
-    $(
-        /// Implement conversions from ndarray types
-        impl From<ndarray::ArrayD<$RustType>> for Tensor {
-            fn from(item: ndarray::ArrayD<$RustType>) -> Self {
-                Tensor::$CartonType(item)
+    /// Implement conversions between tensor of different types
+    impl<T, U> ConvertFrom<Tensor<T>> for Tensor<U>
+    where
+        T: TensorStorage,
+        U: TensorStorage,
+        $(
+            U::TypedStorage<$RustType>: ConvertFrom<T::TypedStorage<$RustType>>,
+        )*
+    {
+        fn from(item: Tensor<T>) -> Self {
+            match item {
+                $(
+                    Tensor::$CartonType(item) => Self::$CartonType(item.convert_into()),
+                )*
+                Tensor::NestedTensor(item) => Self::NestedTensor(item.convert_into())
             }
         }
-    )*
+    }
+}
+
+pub trait TensorStorage {
+    /// Storage for each tensor type
+    type TypedStorage<T>: TypedStorage<T> + MaybeSend + MaybeSync
+    where
+        T: MaybeSend + MaybeSync;
+}
+
+pub trait TypedStorage<T> {
+    // Get a view of this tensor
+    fn view(&self) -> ndarray::ArrayViewD<T>;
+
+    // Get a mut view of this tensor
+    fn view_mut(&mut self) -> ndarray::ArrayViewMutD<T>;
+}
+
+pub type DataType = crate::info::DataType;
+
+pub struct GenericStorage;
+impl TensorStorage for GenericStorage {
+    type TypedStorage<T> = ndarray::ArrayD<T>  where T: MaybeSend + MaybeSync;
+}
+
+impl<T> TypedStorage<T> for ndarray::ArrayD<T> {
+    fn view(&self) -> ndarray::ArrayViewD<T> {
+        self.view()
+    }
+
+    fn view_mut(&mut self) -> ndarray::ArrayViewMutD<T> {
+        self.view_mut()
+    }
+}
+
+impl<Other, T> ConvertFrom<Other> for ndarray::ArrayD<T>
+where
+    Other: TypedStorage<T>,
+    T: Clone,
+{
+    fn from(value: Other) -> Self {
+        // TODO: refactor to improve performance
+        value.view().to_owned()
+    }
 }

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::Result;
 use crate::load::discover_or_get_runner_and_launch;
+use crate::types::{GenericStorage, TensorStorage};
 use crate::{
     conversion_utils::convert_map,
     error::CartonError,
@@ -11,7 +12,7 @@ use crate::{
 };
 
 pub struct Carton {
-    info: CartonInfoWithExtras,
+    info: CartonInfoWithExtras<GenericStorage>,
     runner: Runner,
 
     /// An optional temp dir. This is used in `load_unpacked` to make sure the directory doesn't get
@@ -33,10 +34,13 @@ impl Carton {
 
     /// Infer using a set of inputs.
     /// Consider using `seal` and `infer_with_handle` in pipelines
-    pub async fn infer_with_inputs(
+    pub async fn infer_with_inputs<T>(
         &self,
-        tensors: HashMap<String, Tensor>,
-    ) -> Result<HashMap<String, Tensor>> {
+        tensors: HashMap<String, Tensor<T>>,
+    ) -> Result<HashMap<String, Tensor<GenericStorage>>>
+    where
+        T: TensorStorage,
+    {
         match &self.runner {
             Runner::V1(runner) => Ok(convert_map(
                 runner
@@ -50,7 +54,10 @@ impl Carton {
     /// "Seal" a set of inputs that will be used for inference.
     /// This lets carton start processing tensors (e.g. moving them to the correct devices) before
     /// actually running inference and can lead to more efficient pipelines.
-    pub async fn seal(&self, tensors: HashMap<String, Tensor>) -> Result<SealHandle> {
+    pub async fn seal<T>(&self, tensors: HashMap<String, Tensor<T>>) -> Result<SealHandle>
+    where
+        T: TensorStorage,
+    {
         match &self.runner {
             Runner::V1(runner) => Ok(SealHandle(
                 runner
@@ -63,7 +70,10 @@ impl Carton {
 
     /// Infer using a handle from `seal`.
     /// This approach can make inference pipelines more efficient vs just using `infer_with_inputs`
-    pub async fn infer_with_handle(&self, handle: SealHandle) -> Result<HashMap<String, Tensor>> {
+    pub async fn infer_with_handle(
+        &self,
+        handle: SealHandle,
+    ) -> Result<HashMap<String, Tensor<GenericStorage>>> {
         match &self.runner {
             Runner::V1(runner) => Ok(convert_map(
                 runner
@@ -76,7 +86,10 @@ impl Carton {
 
     /// Pack a carton given a path and options. Returns the path of the output file
     #[cfg(not(target_family = "wasm"))]
-    pub async fn pack(path: String, opts: PackOpts) -> Result<std::path::PathBuf> {
+    pub async fn pack<T>(path: String, opts: PackOpts<T>) -> Result<std::path::PathBuf>
+    where
+        T: TensorStorage,
+    {
         use std::sync::Arc;
 
         // Launch a runner
@@ -109,12 +122,17 @@ impl Carton {
     /// Functionally equivalent to `pack` followed by `load`, but implemented in a more
     /// optimized way
     #[cfg(not(target_family = "wasm"))]
-    pub async fn load_unpacked(
+    pub async fn load_unpacked<T>(
         path: String,
-        mut pack_opts: PackOpts,
+        mut pack_opts: PackOpts<T>,
         load_opts: LoadOpts,
-    ) -> Result<Self> {
+    ) -> Result<Self>
+    where
+        T: TensorStorage + 'static,
+    {
         use std::sync::Arc;
+
+        use crate::conversion_utils::ConvertInto;
 
         // Launch a runner
         let (runner, runner_info) =
@@ -164,24 +182,24 @@ impl Carton {
 
         // Return a Carton
         Ok(Self {
-            info: info_with_extras,
+            info: info_with_extras.convert_into(),
             runner,
             tempdir: Some(tempdir),
         })
     }
 
     /// Get info for the loaded model
-    pub fn get_info(&self) -> &CartonInfo {
+    pub fn get_info(&self) -> &CartonInfo<GenericStorage> {
         &self.info.info
     }
 
     /// Get info for a model
-    pub async fn get_model_info(url_or_path: String) -> Result<CartonInfo> {
+    pub async fn get_model_info(url_or_path: String) -> Result<CartonInfo<GenericStorage>> {
         Ok(crate::load::get_carton_info(&url_or_path).await?.info)
     }
 
     /// Allocate a tensor
-    pub async fn alloc_tensor() -> Result<Tensor> {
+    pub async fn alloc_tensor() -> Result<Tensor<GenericStorage>> {
         todo!()
     }
 }

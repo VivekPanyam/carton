@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use carton_core::types::{Device, LoadOpts, RunnerOpt, Tensor};
+use carton_core::types::{Device, GenericStorage, LoadOpts, RunnerOpt, Tensor};
 use numpy::{PyArrayDyn, ToPyArray};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 
@@ -51,7 +51,7 @@ impl Carton {
 
         for (k, v) in tensors {
             // TODO: this makes a copy
-            let native = match v {
+            let native: Tensor<GenericStorage> = match v {
                 SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
                 SupportedTensorType::Double(item) => Tensor::Double(item.to_owned_array()),
 
@@ -83,7 +83,7 @@ impl Carton {
 
         for (k, v) in tensors {
             // TODO: this makes a copy
-            let native = match v {
+            let native: Tensor<GenericStorage> = match v {
                 SupportedTensorType::Float(item) => Tensor::Float(item.to_owned_array()),
                 SupportedTensorType::Double(item) => Tensor::Double(item.to_owned_array()),
 
