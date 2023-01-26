@@ -9,7 +9,9 @@ use lunchbox::types::{MaybeSend, MaybeSync, ReadableFile};
 use lunchbox::ReadableFileSystem;
 use sha2::{Digest, Sha256};
 
-use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
+use crate::conversion_utils::{
+    convert_opt_map, convert_opt_vec, convert_vec, ConvertFromWithContext, ConvertIntoWithContext,
+};
 use crate::error::{CartonError, Result};
 use crate::info::{CartonInfoWithExtras, PossiblyLoaded};
 use crate::types::{CartonInfo, GenericStorage};
@@ -86,9 +88,9 @@ where
         required_platforms: convert_opt_vec(config.required_platforms),
         inputs: convert_opt_vec(config.input),
         outputs: convert_opt_vec(config.output),
-        self_tests: config.self_test.convert(fs),
+        self_tests: config.self_test.convert_into_with_context(fs),
         // TODO: reuse the misc files from above when loading examples
-        examples: config.example.convert(fs),
+        examples: config.example.convert_into_with_context(fs),
         runner: config.runner.into(),
         misc_files,
     };
@@ -105,83 +107,13 @@ where
     })
 }
 
-// Type conversions
-trait ConvertFrom<T> {
-    fn from<F>(item: T, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static;
-}
-
-// Something like "into"
-trait ConvertInto<T> {
-    fn convert<F>(self, fs: &Arc<F>) -> T
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static;
-}
-
-// Blanket impl
-impl<T, U> ConvertInto<U> for T
-where
-    U: ConvertFrom<T>,
-{
-    fn convert<F>(self, fs: &Arc<F>) -> U
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
-        U::from(self, fs)
-    }
-}
-
-impl<T, U> ConvertFrom<Vec<T>> for Vec<U>
-where
-    U: ConvertFrom<T>,
-{
-    fn from<F>(item: Vec<T>, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
-        item.into_iter().map(|v| v.convert(fs)).collect()
-    }
-}
-
-impl<T, U> ConvertFrom<HashMap<String, T>> for HashMap<String, U>
-where
-    U: ConvertFrom<T>,
-{
-    fn from<F>(item: HashMap<String, T>, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
-        item.into_iter().map(|(k, v)| (k, v.convert(fs))).collect()
-    }
-}
-
-impl<T, U> ConvertFrom<Option<T>> for Option<U>
-where
-    U: ConvertFrom<T>,
-{
-    fn from<F>(item: Option<T>, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
-        item.map(|v| v.convert(fs))
-    }
-}
-
-impl ConvertFrom<super::carton_toml::TensorReference>
+impl<F> ConvertFromWithContext<super::carton_toml::TensorReference, &Arc<F>>
     for PossiblyLoaded<crate::types::Tensor<GenericStorage>>
+where
+    F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
+    F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
 {
-    fn from<F>(item: super::carton_toml::TensorReference, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
+    fn from(item: super::carton_toml::TensorReference, fs: &Arc<F>) -> Self {
         let fs = fs.clone();
         PossiblyLoaded::from_loader(Box::pin(async move {
             load_tensor_from_fs(fs.as_ref(), item.0.strip_prefix("@").unwrap()).await
@@ -189,12 +121,13 @@ impl ConvertFrom<super::carton_toml::TensorReference>
     }
 }
 
-impl ConvertFrom<super::carton_toml::MiscFileReference> for PossiblyLoaded<crate::info::MiscFile> {
-    fn from<F>(item: super::carton_toml::MiscFileReference, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
+impl<F> ConvertFromWithContext<super::carton_toml::MiscFileReference, &Arc<F>>
+    for PossiblyLoaded<crate::info::MiscFile>
+where
+    F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
+    F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
+{
+    fn from(item: super::carton_toml::MiscFileReference, fs: &Arc<F>) -> Self {
         let fs = fs.clone();
         PossiblyLoaded::from_loader(Box::pin(async move {
             load_misc_from_fs(fs.as_ref(), item.0.strip_prefix("@").unwrap()).await
@@ -202,51 +135,57 @@ impl ConvertFrom<super::carton_toml::MiscFileReference> for PossiblyLoaded<crate
     }
 }
 
-impl ConvertFrom<super::carton_toml::TensorOrMiscReference>
+impl<C> ConvertFromWithContext<super::carton_toml::TensorOrMiscReference, C>
     for crate::info::TensorOrMisc<GenericStorage>
+where
+    C: Copy,
+    PossiblyLoaded<crate::types::Tensor<GenericStorage>>:
+        ConvertFromWithContext<super::carton_toml::TensorReference, C>,
+    PossiblyLoaded<crate::info::MiscFile>:
+        ConvertFromWithContext<super::carton_toml::MiscFileReference, C>,
 {
-    fn from<F>(item: super::carton_toml::TensorOrMiscReference, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
+    fn from(item: super::carton_toml::TensorOrMiscReference, context: C) -> Self {
         match item {
             super::carton_toml::TensorOrMiscReference::T(v) => {
-                crate::info::TensorOrMisc::Tensor(v.convert(fs))
+                crate::info::TensorOrMisc::Tensor(v.convert_into_with_context(context))
             }
             super::carton_toml::TensorOrMiscReference::M(v) => {
-                crate::info::TensorOrMisc::Misc(v.convert(fs))
+                crate::info::TensorOrMisc::Misc(v.convert_into_with_context(context))
             }
         }
     }
 }
 
-impl ConvertFrom<super::carton_toml::Example> for crate::info::Example<GenericStorage> {
-    fn from<F>(item: super::carton_toml::Example, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
+impl<C> ConvertFromWithContext<super::carton_toml::Example, C>
+    for crate::info::Example<GenericStorage>
+where
+    C: Copy,
+    crate::info::TensorOrMisc<GenericStorage>:
+        ConvertFromWithContext<super::carton_toml::TensorOrMiscReference, C>,
+{
+    fn from(item: super::carton_toml::Example, context: C) -> Self {
         Self {
             name: item.name,
             description: item.description,
-            inputs: item.inputs.convert(fs),
-            sample_out: item.sample_out.convert(fs),
+            inputs: item.inputs.convert_into_with_context(context),
+            sample_out: item.sample_out.convert_into_with_context(context),
         }
     }
 }
 
-impl ConvertFrom<super::carton_toml::SelfTest> for crate::info::SelfTest<GenericStorage> {
-    fn from<F>(item: super::carton_toml::SelfTest, fs: &Arc<F>) -> Self
-    where
-        F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
-    {
+impl<C> ConvertFromWithContext<super::carton_toml::SelfTest, C>
+    for crate::info::SelfTest<GenericStorage>
+where
+    C: Copy,
+    PossiblyLoaded<crate::types::Tensor<GenericStorage>>:
+        ConvertFromWithContext<super::carton_toml::TensorReference, C>,
+{
+    fn from(item: super::carton_toml::SelfTest, context: C) -> Self {
         Self {
             name: item.name,
             description: item.description,
-            inputs: item.inputs.convert(fs),
-            expected_out: item.expected_out.convert(fs),
+            inputs: item.inputs.convert_into_with_context(context),
+            expected_out: item.expected_out.convert_into_with_context(context),
         }
     }
 }
