@@ -4,7 +4,7 @@ use crate::{
     client::Client,
     do_not_modify::comms::OwnedComms,
     do_not_modify::types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
-    types::{Handle, RunnerOpt},
+    types::{Handle, RunnerOpt, TensorStorage},
 };
 
 use lunchbox::types::{MaybeSend, MaybeSync};
@@ -198,6 +198,13 @@ impl Runner {
             RPCResponseData::Error { e } => Err(e),
             _ => panic!("Unexpected RPC response type!"),
         }
+    }
+
+    pub async fn alloc_tensor<T: Clone + Default>(&self, shape: Vec<u64>) -> Result<Tensor, String>
+    where
+        Tensor: From<TensorStorage<T>>,
+    {
+        Ok(crate::do_not_modify::inline_storage::alloc_tensor::<T>(shape).into())
     }
 
     // pub async fn infer_with_handle(
