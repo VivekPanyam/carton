@@ -9,7 +9,10 @@ use lunchbox::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{info::PossiblyLoaded, types::Tensor};
+use crate::{
+    info::PossiblyLoaded,
+    types::{GenericStorage, Tensor, TensorStorage, TypedStorage},
+};
 
 #[derive(Default, Serialize, Deserialize)]
 struct IndexToml {
@@ -36,10 +39,13 @@ struct StringsToml {
     data: Vec<String>,
 }
 
-pub(crate) fn save_tensors(
+pub(crate) fn save_tensors<T>(
     tensor_data_path: &std::path::Path,
-    tensors: HashMap<String, Tensor>,
-) -> crate::error::Result<()> {
+    tensors: HashMap<String, Tensor<T>>,
+) -> crate::error::Result<()>
+where
+    T: TensorStorage,
+{
     let mut index_toml = IndexToml::default();
 
     // First, split out all nested tensors
@@ -88,7 +94,7 @@ pub(crate) fn save_tensors(
             // String tensor
             let string_tensor = StringsToml {
                 // TODO: this can make a copy
-                data: t.as_standard_layout().into_iter().collect(),
+                data: t.view().as_standard_layout().into_iter().collect(),
             };
 
             let fname = format!("tensor_{tensor_idx}.toml");
@@ -97,7 +103,7 @@ pub(crate) fn save_tensors(
             index_toml.tensor.push(TensorInfo {
                 name: k.clone(),
                 dtype: "string".into(),
-                shape: Some(t.shape().into_iter().map(|v| *v as u64).collect()),
+                shape: Some(t.view().shape().into_iter().map(|v| *v as u64).collect()),
                 file: Some(fname.clone()),
                 ..Default::default()
             });
@@ -118,12 +124,13 @@ pub(crate) fn save_tensors(
                     $(
                         Tensor::$CartonType(v) => {
                             // TODO: this can make a copy
-                            let array = v.as_standard_layout();
+                            let view = v.view();
+                            let array = view.as_standard_layout();
 
                             #[cfg(not(target_endian = "little"))]
                             compile_error!("Writing tensor_data to disk is currently only supported on little-endian platforms");
 
-                            let bytes_per_elem = bytes_per_elem(&v);
+                            let bytes_per_elem = bytes_per_elem(&view);
                             let total_bytes = array.len() * bytes_per_elem;
 
                             let data = unsafe { std::slice::from_raw_parts(array.as_ptr() as *const u8, total_bytes) };
@@ -155,7 +162,7 @@ pub(crate) fn save_tensors(
     Ok(())
 }
 
-fn bytes_per_elem<T>(array: &ndarray::ArrayD<T>) -> usize {
+fn bytes_per_elem<T>(array: &ndarray::ArrayViewD<T>) -> usize {
     std::mem::size_of::<T>()
 }
 
@@ -163,7 +170,7 @@ fn bytes_per_elem<T>(array: &ndarray::ArrayD<T>) -> usize {
 pub(crate) async fn load_tensors<T>(
     fs: &Arc<T>,
     tensor_data_path: &lunchbox::path::Path,
-) -> crate::error::Result<HashMap<String, PossiblyLoaded<Tensor>>>
+) -> crate::error::Result<HashMap<String, PossiblyLoaded<Tensor<GenericStorage>>>>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
@@ -173,7 +180,7 @@ where
         toml::from_slice(&fs.read(tensor_data_path.join("index.toml")).await.unwrap()).unwrap();
 
     // Create loaders for all the unnested tensors
-    let mut unnested: HashMap<String, PossiblyLoaded<Tensor>> = HashMap::new();
+    let mut unnested: HashMap<String, PossiblyLoaded<Tensor<GenericStorage>>> = HashMap::new();
     for t in &index_toml.tensor {
         for_each_numeric_carton_type! {
             let loader = match t.dtype.as_str() {

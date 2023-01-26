@@ -12,9 +12,9 @@ use sha2::{Digest, Sha256};
 use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
 use crate::error::{CartonError, Result};
 use crate::info::{CartonInfoWithExtras, PossiblyLoaded};
-use crate::types::CartonInfo;
+use crate::types::{CartonInfo, GenericStorage};
 
-async fn load_tensor_from_fs<T>(fs: &T, path: &str) -> crate::types::Tensor
+async fn load_tensor_from_fs<T>(fs: &T, path: &str) -> crate::types::Tensor<GenericStorage>
 where
     T: ReadableFileSystem,
     T::FileType: ReadableFile + 'static,
@@ -32,7 +32,7 @@ where
     Box::new(fs.open(path).await.unwrap())
 }
 
-pub(crate) async fn load<T>(fs: &Arc<T>) -> Result<CartonInfoWithExtras>
+pub(crate) async fn load<T>(fs: &Arc<T>) -> Result<CartonInfoWithExtras<GenericStorage>>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
@@ -174,7 +174,9 @@ where
     }
 }
 
-impl ConvertFrom<super::carton_toml::TensorReference> for PossiblyLoaded<crate::types::Tensor> {
+impl ConvertFrom<super::carton_toml::TensorReference>
+    for PossiblyLoaded<crate::types::Tensor<GenericStorage>>
+{
     fn from<F>(item: super::carton_toml::TensorReference, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
@@ -200,7 +202,9 @@ impl ConvertFrom<super::carton_toml::MiscFileReference> for PossiblyLoaded<crate
     }
 }
 
-impl ConvertFrom<super::carton_toml::TensorOrMiscReference> for crate::info::TensorOrMisc {
+impl ConvertFrom<super::carton_toml::TensorOrMiscReference>
+    for crate::info::TensorOrMisc<GenericStorage>
+{
     fn from<F>(item: super::carton_toml::TensorOrMiscReference, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
@@ -217,7 +221,7 @@ impl ConvertFrom<super::carton_toml::TensorOrMiscReference> for crate::info::Ten
     }
 }
 
-impl ConvertFrom<super::carton_toml::Example> for crate::info::Example {
+impl ConvertFrom<super::carton_toml::Example> for crate::info::Example<GenericStorage> {
     fn from<F>(item: super::carton_toml::Example, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
@@ -232,7 +236,7 @@ impl ConvertFrom<super::carton_toml::Example> for crate::info::Example {
     }
 }
 
-impl ConvertFrom<super::carton_toml::SelfTest> for crate::info::SelfTest {
+impl ConvertFrom<super::carton_toml::SelfTest> for crate::info::SelfTest<GenericStorage> {
     fn from<F>(item: super::carton_toml::SelfTest, fs: &Arc<F>) -> Self
     where
         F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use carton::{
-    types::{for_each_carton_type, Device, LoadOpts, Tensor},
+    types::{for_each_carton_type, Device, GenericStorage, LoadOpts, Tensor},
     Carton,
 };
 use ndarray::ShapeBuilder;
@@ -143,13 +143,13 @@ impl CartonWrapper {
             // TODO this makes another copy (the `to_owned`)
             // TODO: we should ignore strings here
             for_each_carton_type! {
-                let t: Tensor = match dtype.as_str() {
+                let t: Tensor<GenericStorage> = match dtype.as_str() {
                     $(
                         $TypeStr => unsafe {
-                            ndarray::ArrayView::from_shape_ptr(
+                            Tensor::$CartonType(ndarray::ArrayView::from_shape_ptr(
                                 shape.strides(stride),
                                 buffer.as_ptr() as *const $RustType,
-                            ).to_owned().into()
+                            ).to_owned())
                         },
                     )*
                     dtype => panic!("Got unknown dtype: {dtype}"),

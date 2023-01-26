@@ -1,17 +1,25 @@
 use std::{
     collections::HashMap,
+    hash::Hash,
     pin::Pin,
     sync::{Arc, Mutex},
 };
 
 use carton_macros::for_each_carton_type;
+use lunchbox::types::{MaybeSend, MaybeSync};
 use target_lexicon::Triple;
 use tokio::{io::AsyncRead, sync::OnceCell};
 
-use crate::types::Tensor;
+use crate::{
+    conversion_utils::{ConvertFrom, ConvertInto},
+    types::{Tensor, TensorStorage},
+};
 
 // Info about a carton
-pub struct CartonInfo {
+pub struct CartonInfo<T>
+where
+    T: TensorStorage,
+{
     /// The name of the model
     pub model_name: Option<String>,
 
@@ -32,11 +40,11 @@ pub struct CartonInfo {
 
     /// Test data
     /// Can be empty
-    pub self_tests: Option<Vec<SelfTest>>,
+    pub self_tests: Option<Vec<SelfTest<T>>>,
 
     /// Examples
     /// Can be empty
-    pub examples: Option<Vec<Example>>,
+    pub examples: Option<Vec<Example<T>>>,
 
     /// Information about the runner to use
     pub runner: RunnerInfo,
@@ -49,8 +57,11 @@ pub struct CartonInfo {
 
 /// An internal struct used when loading models. It contains extra things like the
 /// manifest hash
-pub(crate) struct CartonInfoWithExtras {
-    pub(crate) info: CartonInfo,
+pub(crate) struct CartonInfoWithExtras<T>
+where
+    T: TensorStorage,
+{
+    pub(crate) info: CartonInfo<T>,
 
     /// The sha256 of the MANIFEST file (if available)
     /// This should always be available unless we're running an unpacked model
@@ -144,20 +155,26 @@ impl<T> From<T> for PossiblyLoaded<T> {
     }
 }
 
-pub struct SelfTest {
+pub struct SelfTest<T>
+where
+    T: TensorStorage,
+{
     pub name: Option<String>,
     pub description: Option<String>,
-    pub inputs: HashMap<String, PossiblyLoaded<Tensor>>,
+    pub inputs: HashMap<String, PossiblyLoaded<Tensor<T>>>,
 
     // Can be empty
-    pub expected_out: Option<HashMap<String, PossiblyLoaded<Tensor>>>,
+    pub expected_out: Option<HashMap<String, PossiblyLoaded<Tensor<T>>>>,
 }
 
-pub struct Example {
+pub struct Example<T>
+where
+    T: TensorStorage,
+{
     pub name: Option<String>,
     pub description: Option<String>,
-    pub inputs: HashMap<String, TensorOrMisc>,
-    pub sample_out: HashMap<String, TensorOrMisc>,
+    pub inputs: HashMap<String, TensorOrMisc<T>>,
+    pub sample_out: HashMap<String, TensorOrMisc<T>>,
 }
 
 // This isn't ideal, but since it's not on the critical path, it's probably okay
@@ -167,8 +184,11 @@ pub type MiscFile = Box<dyn AsyncRead>;
 #[cfg(not(target_family = "wasm"))]
 pub type MiscFile = Box<dyn AsyncRead + Send + Sync>;
 
-pub enum TensorOrMisc {
-    Tensor(PossiblyLoaded<Tensor>),
+pub enum TensorOrMisc<T>
+where
+    T: TensorStorage,
+{
+    Tensor(PossiblyLoaded<Tensor<T>>),
     Misc(PossiblyLoaded<MiscFile>),
 }
 
@@ -243,5 +263,130 @@ for_each_carton_type! {
     #[derive(Debug)]
     pub enum DataType {
         $($CartonType,)*
+    }
+}
+
+impl<T, U> ConvertFrom<CartonInfoWithExtras<T>> for CartonInfoWithExtras<U>
+where
+    CartonInfo<U>: ConvertFrom<CartonInfo<T>>,
+    T: TensorStorage,
+    U: TensorStorage,
+{
+    fn from(value: CartonInfoWithExtras<T>) -> Self {
+        Self {
+            info: value.info.convert_into(),
+            manifest_sha256: value.manifest_sha256,
+        }
+    }
+}
+
+impl<T, U> ConvertFrom<CartonInfo<T>> for CartonInfo<U>
+where
+    SelfTest<U>: ConvertFrom<SelfTest<T>>,
+    Example<U>: ConvertFrom<Example<T>>,
+    T: TensorStorage,
+    U: TensorStorage,
+{
+    fn from(value: CartonInfo<T>) -> Self {
+        Self {
+            model_name: value.model_name,
+            model_description: value.model_description,
+            required_platforms: value.required_platforms,
+            inputs: value.inputs,
+            outputs: value.outputs,
+            self_tests: value.self_tests.convert_into(),
+            examples: value.examples.convert_into(),
+            runner: value.runner,
+            misc_files: value.misc_files,
+        }
+    }
+}
+
+impl<T, U> ConvertFrom<SelfTest<T>> for SelfTest<U>
+where
+    PossiblyLoaded<Tensor<U>>: ConvertFrom<PossiblyLoaded<Tensor<T>>>,
+    T: TensorStorage,
+    U: TensorStorage,
+{
+    fn from(value: SelfTest<T>) -> Self {
+        Self {
+            name: value.name,
+            description: value.description,
+            inputs: value.inputs.convert_into(),
+            expected_out: value.expected_out.convert_into(),
+        }
+    }
+}
+
+impl<T, U> ConvertFrom<Example<T>> for Example<U>
+where
+    PossiblyLoaded<Tensor<U>>: ConvertFrom<PossiblyLoaded<Tensor<T>>>,
+    T: TensorStorage,
+    U: TensorStorage,
+{
+    fn from(value: Example<T>) -> Self {
+        Self {
+            name: value.name,
+            description: value.description,
+            inputs: value.inputs.convert_into(),
+            sample_out: value.sample_out.convert_into(),
+        }
+    }
+}
+
+impl<T, U> ConvertFrom<TensorOrMisc<T>> for TensorOrMisc<U>
+where
+    PossiblyLoaded<Tensor<U>>: ConvertFrom<PossiblyLoaded<Tensor<T>>>,
+    T: TensorStorage,
+    U: TensorStorage,
+{
+    fn from(value: TensorOrMisc<T>) -> Self {
+        match value {
+            TensorOrMisc::Tensor(t) => Self::Tensor(t.convert_into()),
+            TensorOrMisc::Misc(m) => Self::Misc(m),
+        }
+    }
+}
+
+impl<T, U> ConvertFrom<PossiblyLoaded<T>> for PossiblyLoaded<U>
+where
+    U: ConvertFrom<T> + MaybeSend,
+    T: MaybeSync + MaybeSend + 'static,
+{
+    fn from(value: PossiblyLoaded<T>) -> Self {
+        Self::from_loader(Box::pin(async move {
+            value.into_get().await.unwrap().convert_into()
+        }))
+    }
+}
+
+impl<T, U> ConvertFrom<Option<T>> for Option<U>
+where
+    U: ConvertFrom<T>,
+{
+    fn from(value: Option<T>) -> Self {
+        value.map(|item| item.convert_into())
+    }
+}
+
+impl<T, U> ConvertFrom<Vec<T>> for Vec<U>
+where
+    U: ConvertFrom<T>,
+{
+    fn from(value: Vec<T>) -> Self {
+        value.into_iter().map(|item| item.convert_into()).collect()
+    }
+}
+
+impl<K, T, U> ConvertFrom<HashMap<K, T>> for HashMap<K, U>
+where
+    U: ConvertFrom<T>,
+    K: Hash + Eq,
+{
+    fn from(value: HashMap<K, T>) -> Self {
+        value
+            .into_iter()
+            .map(|(k, item)| (k, item.convert_into()))
+            .collect()
     }
 }
