@@ -1,7 +1,7 @@
 //! This benchmark measures tensor allocation overhead
 use carton_macros::for_each_numeric_carton_type;
 use carton_runner_interface::_only_public_for_benchmarks_do_not_use::{
-    alloc_tensor, alloc_tensor_no_pool, Allocator, InlineTensorStorage, TypedAlloc,
+    alloc_tensor, alloc_tensor_no_pool, InlineAllocator, InlineTensorStorage, TypedAlloc,
 };
 use criterion::{
     criterion_group, criterion_main, measurement::Measurement, AxisScale, BenchmarkGroup,
@@ -16,7 +16,7 @@ fn typed_alloc_benchmark<T: Clone + Default, U: Measurement>(
     shape: &Vec<u64>,
     fill_value: T,
 ) where
-    Allocator: TypedAlloc<T, Output = InlineTensorStorage>,
+    InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
 {
     let numel = shape.iter().product::<u64>();
     let size_bytes = std::mem::size_of::<T>() as u64 * numel;

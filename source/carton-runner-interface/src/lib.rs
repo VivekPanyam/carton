@@ -47,6 +47,8 @@ pub use runner::Runner;
 
 #[cfg(feature = "benchmark")]
 pub mod _only_public_for_benchmarks_do_not_use {
-    pub use crate::do_not_modify::alloc::{Allocator, InlineTensorStorage, TypedAlloc};
-    pub use crate::do_not_modify::storage::{alloc_tensor, alloc_tensor_no_pool};
+    pub use crate::do_not_modify::alloc::TypedAlloc;
+    pub use crate::do_not_modify::alloc_inline::{
+        alloc_tensor, alloc_tensor_no_pool, InlineAllocator, InlineTensorStorage,
+    };
 }

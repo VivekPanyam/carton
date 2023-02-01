@@ -1,4 +1,5 @@
 pub(crate) mod alloc;
+pub(crate) mod alloc_inline;
 mod alloc_pool;
 mod framed;
 pub(crate) mod storage;

@@ -83,6 +83,16 @@ pub trait AllocItem {
     fn len(&self) -> usize;
 }
 
+impl<T: Default + Clone> AllocItem for Vec<T> {
+    fn new(numel: usize) -> Self {
+        vec![T::default(); numel]
+    }
+
+    fn len(&self) -> usize {
+        self.len()
+    }
+}
+
 /// Allocates `T: AllocItem` and attempts to reuse previously allocated and dropped items.
 #[derive(Debug)]
 pub(crate) struct PoolAllocator<T> {
