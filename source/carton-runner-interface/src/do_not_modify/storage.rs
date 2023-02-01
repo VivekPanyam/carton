@@ -95,9 +95,8 @@ where
     static POOL_ALLOCATOR: Lazy<Allocator> = Lazy::new(|| Allocator::without_pool());
 
     let numel = shape.iter().product::<u64>() as usize;
-    let size_bytes = numel * std::mem::size_of::<T>();
 
-    let data = POOL_ALLOCATOR.alloc(size_bytes);
+    let data = POOL_ALLOCATOR.alloc(numel);
 
     TensorStorage {
         data,
@@ -114,9 +113,8 @@ where
     static POOL_ALLOCATOR: Lazy<Allocator> = Lazy::new(|| Allocator::new());
 
     let numel = shape.iter().product::<u64>() as usize;
-    let size_bytes = numel * std::mem::size_of::<T>();
 
-    let data = POOL_ALLOCATOR.alloc(size_bytes);
+    let data = POOL_ALLOCATOR.alloc(numel);
 
     TensorStorage {
         data,
