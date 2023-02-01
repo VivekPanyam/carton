@@ -1,7 +1,8 @@
 //! This benchmark measures tensor allocation overhead
 use carton_macros::for_each_numeric_carton_type;
 use carton_runner_interface::_only_public_for_benchmarks_do_not_use::{
-    alloc_tensor, alloc_tensor_no_pool, InlineAllocator, InlineTensorStorage, TypedAlloc,
+    alloc_tensor_inline, alloc_tensor_no_pool_inline, alloc_tensor_no_pool_shm, alloc_tensor_shm,
+    InlineAllocator, InlineTensorStorage, SHMAllocator, SHMTensorStorage, TypedAlloc,
 };
 use criterion::{
     criterion_group, criterion_main, measurement::Measurement, AxisScale, BenchmarkGroup,
@@ -17,6 +18,7 @@ fn typed_alloc_benchmark<T: Clone + Default, U: Measurement>(
     fill_value: T,
 ) where
     InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
+    SHMAllocator: TypedAlloc<T, Output = SHMTensorStorage>,
 {
     let numel = shape.iter().product::<u64>();
     let size_bytes = std::mem::size_of::<T>() as u64 * numel;
@@ -29,7 +31,7 @@ fn typed_alloc_benchmark<T: Clone + Default, U: Measurement>(
         shape,
         |b, shape| {
             b.iter(|| {
-                let mut t = alloc_tensor::<T>(shape.clone());
+                let mut t = alloc_tensor_inline::<T>(shape.clone());
                 t.view_mut()
                     .as_slice_mut()
                     .unwrap()
@@ -46,7 +48,7 @@ fn typed_alloc_benchmark<T: Clone + Default, U: Measurement>(
         shape,
         |b, shape| {
             b.iter(|| {
-                let mut t = alloc_tensor_no_pool::<T>(shape.clone());
+                let mut t = alloc_tensor_no_pool_inline::<T>(shape.clone());
                 t.view_mut()
                     .as_slice_mut()
                     .unwrap()
@@ -62,8 +64,42 @@ fn typed_alloc_benchmark<T: Clone + Default, U: Measurement>(
         ),
         shape,
         |b, shape| {
-            let mut t = alloc_tensor::<T>(shape.clone());
+            let mut t = alloc_tensor_inline::<T>(shape.clone());
             b.iter(|| {
+                t.view_mut()
+                    .as_slice_mut()
+                    .unwrap()
+                    .fill(fill_value.clone());
+            })
+        },
+    );
+
+    group.bench_with_input(
+        BenchmarkId::new(
+            "shm_storage_with_pool",
+            name.to_owned() + "_" + std::any::type_name::<T>(),
+        ),
+        shape,
+        |b, shape| {
+            b.iter(|| {
+                let mut t = alloc_tensor_shm::<T>(shape.clone());
+                t.view_mut()
+                    .as_slice_mut()
+                    .unwrap()
+                    .fill(fill_value.clone());
+            })
+        },
+    );
+
+    group.bench_with_input(
+        BenchmarkId::new(
+            "shm_storage_without_pool",
+            name.to_owned() + "_" + std::any::type_name::<T>(),
+        ),
+        shape,
+        |b, shape| {
+            b.iter(|| {
+                let mut t = alloc_tensor_no_pool_shm::<T>(shape.clone());
                 t.view_mut()
                     .as_slice_mut()
                     .unwrap()

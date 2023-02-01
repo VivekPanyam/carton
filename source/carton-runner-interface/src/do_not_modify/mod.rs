@@ -6,6 +6,7 @@ pub(crate) mod storage;
 pub mod types;
 
 if_not_wasm! {
+    pub(crate) mod alloc_shm;
     pub(crate) mod comms;
 }
 

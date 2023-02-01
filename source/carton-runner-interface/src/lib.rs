@@ -49,6 +49,12 @@ pub use runner::Runner;
 pub mod _only_public_for_benchmarks_do_not_use {
     pub use crate::do_not_modify::alloc::TypedAlloc;
     pub use crate::do_not_modify::alloc_inline::{
-        alloc_tensor, alloc_tensor_no_pool, InlineAllocator, InlineTensorStorage,
+        alloc_tensor as alloc_tensor_inline, alloc_tensor_no_pool as alloc_tensor_no_pool_inline,
+        InlineAllocator, InlineTensorStorage,
+    };
+
+    pub use crate::do_not_modify::alloc_shm::{
+        alloc_tensor as alloc_tensor_shm, alloc_tensor_no_pool as alloc_tensor_no_pool_shm,
+        SHMAllocator, SHMTensorStorage,
     };
 }
