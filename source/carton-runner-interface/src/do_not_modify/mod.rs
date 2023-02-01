@@ -1,5 +1,7 @@
+pub(crate) mod alloc;
+mod alloc_pool;
 mod framed;
-pub(crate) mod inline_storage;
+pub(crate) mod storage;
 pub mod types;
 
 if_not_wasm! {
