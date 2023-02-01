@@ -2,7 +2,7 @@ pub use carton_macros::for_each_carton_type;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, marker::PhantomData};
 
-use super::{alloc::InlineTensorStorage, comms::Comms};
+use super::{alloc_inline::InlineTensorStorage, comms::Comms};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RPCRequest {

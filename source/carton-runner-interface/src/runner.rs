@@ -4,7 +4,8 @@ use crate::{
     client::Client,
     do_not_modify::comms::OwnedComms,
     do_not_modify::{
-        alloc::{Allocator, InlineTensorStorage, TypedAlloc},
+        alloc::TypedAlloc,
+        alloc_inline::{InlineAllocator, InlineTensorStorage},
         types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
     },
     types::{Handle, RunnerOpt, TensorStorage},
@@ -205,10 +206,10 @@ impl Runner {
 
     pub async fn alloc_tensor<T: Clone + Default>(&self, shape: Vec<u64>) -> Result<Tensor, String>
     where
-        Allocator: TypedAlloc<T, Output = InlineTensorStorage>,
+        InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
         Tensor: From<TensorStorage<T>>,
     {
-        Ok(crate::do_not_modify::storage::alloc_tensor(shape).into())
+        Ok(crate::do_not_modify::alloc_inline::alloc_tensor(shape).into())
     }
 
     // pub async fn infer_with_handle(
