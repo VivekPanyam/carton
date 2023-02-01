@@ -1,18 +1,25 @@
 //! TensorStorage that is stored inline
 
-use carton_macros::for_each_numeric_carton_type;
+use std::{fmt::Debug, marker::PhantomData};
+
 use ndarray::{ShapeBuilder, StrideShape};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
+use super::alloc::{Allocator, AsPtr, InlineTensorStorage, NumericTensorType, TypedAlloc};
+
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TensorStorage<T> {
-    // TODO: use a vec<u8> for primitive types
-    data: Vec<T>,
+pub struct TensorStorage<T, Storage> {
+    data: Storage,
     shape: Vec<u64>,
     strides: Option<Vec<u64>>,
+    pd: PhantomData<T>,
 }
 
-impl<T> TensorStorage<T> {
+impl<T, Storage> TensorStorage<T, Storage>
+where
+    Storage: AsPtr<T>,
+{
     fn get_shape(&self) -> StrideShape<ndarray::IxDyn> {
         match &self.strides {
             None => self
@@ -43,7 +50,11 @@ impl<T> TensorStorage<T> {
 }
 
 // Copy the data
-impl<T: NumericCartonType> From<ndarray::ArrayViewD<'_, T>> for TensorStorage<T> {
+impl<T: NumericTensorType + Default + Copy> From<ndarray::ArrayViewD<'_, T>>
+    for TensorStorage<T, InlineTensorStorage>
+where
+    Allocator: TypedAlloc<T, Output = InlineTensorStorage>,
+{
     fn from(view: ndarray::ArrayViewD<'_, T>) -> Self {
         // Alloc a tensor
         let mut out = alloc_tensor(view.shape().iter().map(|v| (*v) as _).collect());
@@ -62,7 +73,7 @@ impl<T: NumericCartonType> From<ndarray::ArrayViewD<'_, T>> for TensorStorage<T>
     }
 }
 
-impl From<ndarray::ArrayViewD<'_, String>> for TensorStorage<String> {
+impl From<ndarray::ArrayViewD<'_, String>> for TensorStorage<String, InlineTensorStorage> {
     fn from(view: ndarray::ArrayViewD<'_, String>) -> Self {
         // Alloc a tensor
         let mut out = alloc_tensor(view.shape().iter().map(|v| (*v) as _).collect());
@@ -75,21 +86,42 @@ impl From<ndarray::ArrayViewD<'_, String>> for TensorStorage<String> {
 }
 
 // Allocates a contiguous tensor with a shape and type
-pub(crate) fn alloc_tensor<T: Default + Clone>(shape: Vec<u64>) -> TensorStorage<T> {
-    let numel: u64 = shape.iter().product();
-    let data: Vec<T> = vec![T::default(); numel as _];
+pub fn alloc_tensor_no_pool<T: Default + Clone>(
+    shape: Vec<u64>,
+) -> TensorStorage<T, InlineTensorStorage>
+where
+    Allocator: TypedAlloc<T, Output = InlineTensorStorage>,
+{
+    static POOL_ALLOCATOR: Lazy<Allocator> = Lazy::new(|| Allocator::without_pool());
+
+    let numel = shape.iter().product::<u64>() as usize;
+    let size_bytes = numel * std::mem::size_of::<T>();
+
+    let data = POOL_ALLOCATOR.alloc(size_bytes);
 
     TensorStorage {
         data,
         shape,
         strides: None,
+        pd: PhantomData,
     }
 }
 
-trait NumericCartonType: Default + Copy {}
+pub fn alloc_tensor<T: Default + Clone>(shape: Vec<u64>) -> TensorStorage<T, InlineTensorStorage>
+where
+    Allocator: TypedAlloc<T, Output = InlineTensorStorage>,
+{
+    static POOL_ALLOCATOR: Lazy<Allocator> = Lazy::new(|| Allocator::new());
 
-for_each_numeric_carton_type! {
-    $(
-        impl NumericCartonType for $RustType {}
-    )*
+    let numel = shape.iter().product::<u64>() as usize;
+    let size_bytes = numel * std::mem::size_of::<T>();
+
+    let data = POOL_ALLOCATOR.alloc(size_bytes);
+
+    TensorStorage {
+        data,
+        shape,
+        strides: None,
+        pd: PhantomData,
+    }
 }

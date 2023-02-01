@@ -21,7 +21,7 @@ macro_rules! if_not_wasm {
 mod client;
 mod do_not_modify;
 mod multiplexer;
-mod runner;
+pub mod runner;
 
 if_not_wasm! {
     pub mod server;
@@ -44,3 +44,9 @@ if_wasm! {
 
 pub use do_not_modify::types;
 pub use runner::Runner;
+
+#[cfg(feature = "benchmark")]
+pub mod _only_public_for_benchmarks_do_not_use {
+    pub use crate::do_not_modify::alloc::{Allocator, InlineTensorStorage, TypedAlloc};
+    pub use crate::do_not_modify::storage::{alloc_tensor, alloc_tensor_no_pool};
+}
