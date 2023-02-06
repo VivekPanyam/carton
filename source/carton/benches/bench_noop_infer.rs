@@ -56,6 +56,7 @@ platform = "{}"
 
     let pack_opts: CartonInfo<GenericStorage> = CartonInfo {
         model_name: None,
+        short_description: None,
         model_description: None,
         required_platforms: None,
         inputs: None,

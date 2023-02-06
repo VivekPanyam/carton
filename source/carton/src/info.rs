@@ -23,6 +23,9 @@ where
     /// The name of the model
     pub model_name: Option<String>,
 
+    /// A short description (should be 100 characters or less)
+    pub short_description: Option<String>,
+
     /// The model description
     pub model_description: Option<String>,
 
@@ -292,6 +295,7 @@ where
     fn from(value: CartonInfo<T>, context: C) -> Self {
         Self {
             model_name: value.model_name,
+            short_description: value.short_description,
             model_description: value.model_description,
             required_platforms: value.required_platforms,
             inputs: value.inputs,
