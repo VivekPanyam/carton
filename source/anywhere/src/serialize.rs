@@ -171,3 +171,22 @@ impl From<SerializableMetadata> for Metadata {
         )
     }
 }
+
+fn path_to_string(path: &lunchbox::path::PathBuf) -> String {
+    path.as_str().to_owned()
+}
+
+// the RelativePath types use `deserialize_any` which doesn't work with bincode
+// An impl for RelativePathBuf
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(remote = "lunchbox::path::PathBuf")]
+pub struct SerializableRelativePathBuf {
+    #[serde(getter = "path_to_string")]
+    inner: String,
+}
+
+impl From<SerializableRelativePathBuf> for lunchbox::path::PathBuf {
+    fn from(value: SerializableRelativePathBuf) -> Self {
+        value.inner.into()
+    }
+}

@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 use crate::file_ops::ReadableFileOps;
 use crate::file_ops::SeekableFileOps;
 use crate::file_ops::WritableFileOps;
-use crate::serialize::{IoError, SeekFromDef, SerializableMetadata};
+use crate::serialize::{IoError, SeekFromDef, SerializableMetadata, SerializableRelativePathBuf};
 use crate::transport::Transport;
 use crate::types;
 use crate::types::FileHandle;
@@ -355,11 +355,11 @@ autoimpl! {
         // Read only filesystem operations
         #[with_server_context]
         async fn open_file(path: RPCPath) -> std::io::Result<FileHandle>;
-        async fn canonicalize(path: RPCPath) -> std::io::Result<PathBuf>;
+        async fn canonicalize(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableRelativePathBuf")] PathBuf>;
         async fn metadata(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableMetadata")] Metadata>;
         async fn read(path: RPCPath) -> std::io::Result<Vec<u8>>;
         // async fn read_dir(path: RPCPath) -> std::io::Result<ReadDir<Self::ReadDirPollerType, Self>>;
-        async fn read_link(path: RPCPath) -> std::io::Result<PathBuf>;
+        async fn read_link(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableRelativePathBuf")]PathBuf>;
         async fn read_to_string(path: RPCPath) -> std::io::Result<String>;
         async fn symlink_metadata(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableMetadata")] Metadata>;
     }
