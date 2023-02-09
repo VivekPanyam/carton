@@ -183,11 +183,11 @@ impl Runner {
         temp_folder: &lunchbox::path::Path,
     ) -> Result<lunchbox::path::PathBuf, String>
     where
-        T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-        T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+        T: lunchbox::WritableFileSystem + MaybeSend + MaybeSync + 'static,
+        T::FileType: lunchbox::types::WritableFile + MaybeSend + MaybeSync + Unpin,
     {
         // Serve the filesystem
-        let token = self.client.serve_readonly_fs(fs.clone()).await;
+        let token = self.client.serve_writable_fs(fs.clone()).await;
 
         match self
             .client
