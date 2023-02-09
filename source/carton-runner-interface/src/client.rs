@@ -96,6 +96,28 @@ impl Client {
         FsToken(id)
     }
 
+    pub(crate) async fn serve_writable_fs<T>(&self, fs: Arc<T>) -> FsToken
+    where
+        T: lunchbox::WritableFileSystem + MaybeSend + MaybeSync + 'static,
+        T::FileType: lunchbox::types::WritableFile + MaybeSend + MaybeSync + Unpin,
+    {
+        let (tx, rx, id) = self.fs_multiplexer.get_new_stream().await;
+
+        // Serve the filesystem
+        do_spawn(async move {
+            fs.build_server()
+                .allow_read()
+                .allow_write()
+                .disallow_seek()
+                .build()
+                .into_transport::<SerdeTransport>()
+                .serve(tx, rx)
+                .await;
+        });
+
+        FsToken(id)
+    }
+
     /// Make an RPC request and get the response
     pub(crate) async fn do_rpc(&self, data: RPCRequestData) -> RPCResponseData {
         // Set the RPC ID
