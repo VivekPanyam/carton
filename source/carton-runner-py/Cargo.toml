@@ -1,0 +1,25 @@
+[package]
+name = "carton-runner-py"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+carton-runner-interface = { path = "../carton-runner-interface" }
+tokio = { version = "1", features = ["full"] }
+pyo3 = { version = "0.17.3", features = ["auto-initialize"]}
+pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
+numpy = "0.17"
+ndarray = { version = "0.15" }
+lazy_static = "1.4.0"
+reqwest = { version = "0.11" }
+tempfile = "3.3.0"
+home = "0.5.4"
+sha2 = "0.10.6"
+async_zip = {version = "0.0.11", features = ["full"]}
+path-clean = "0.1.0"
+toml = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+url = "2.3.1"
+log = "0.4"
+libc = "0.2"
