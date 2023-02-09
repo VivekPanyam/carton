@@ -58,7 +58,10 @@ pub(crate) async fn get_pip_deps_report(requirements_file_path: PathBuf) -> PipR
     let tempdir = tempfile::tempdir().unwrap();
     let output_file_path = tempdir.path().join("report.json");
 
-    let log_dir = tempfile::tempdir().unwrap();
+    let logs_tmp_dir = std::env::temp_dir().join("carton_logs");
+    tokio::fs::create_dir_all(&logs_tmp_dir).await.unwrap();
+
+    let log_dir = tempfile::tempdir_in(logs_tmp_dir).unwrap();
     log::info!(target: "slowlog", "Finding transitive dependencies using `pip install --report`. This may take a while. See the `pip` logs in {:#?}", log_dir);
 
     // Run pip in a new process to isolate it a little bit from our embedded interpreter
