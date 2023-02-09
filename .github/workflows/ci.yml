@@ -35,7 +35,8 @@ jobs:
           submodules: recursive
       - run: cargo build --verbose
       - run: cargo test --verbose
-      - name: Upload `carton_logs`
+      - name: Upload `carton_logs` on failure
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: tmp_carton_logs
