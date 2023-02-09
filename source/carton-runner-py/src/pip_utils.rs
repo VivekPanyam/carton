@@ -1,7 +1,7 @@
-use std::{path::PathBuf, sync::atomic::AtomicBool};
+use std::path::PathBuf;
 
 use serde::Deserialize;
-use tokio::process::Command;
+use tokio::{process::Command, sync::OnceCell};
 
 use crate::{python_utils::get_executable_path, wheel::install_wheel_and_make_available};
 
@@ -31,20 +31,16 @@ pub(crate) struct PipHashes {
     pub sha256: String,
 }
 
-static DID_INIT_PIP: AtomicBool = AtomicBool::new(false);
 async fn ensure_has_pip() {
-    if let Ok(_) = DID_INIT_PIP.compare_exchange(
-        false,
-        true,
-        std::sync::atomic::Ordering::Relaxed,
-        std::sync::atomic::Ordering::Relaxed,
-    ) {
+    static PIP_ONCE: tokio::sync::OnceCell<()> = OnceCell::const_new();
+
+    PIP_ONCE.get_or_init(|| async {
         // Make sure we have 23.0
         install_wheel_and_make_available(
             "https://files.pythonhosted.org/packages/ab/43/508c403c38eeaa5fc86516eb13bb470ce77601b6d2bbcdb16e26328d0a15/pip-23.0-py3-none-any.whl",
             "b5f88adff801f5ef052bcdef3daa31b55eb67b0fccd6d0106c206fa248e0463c"
         ).await;
-    }
+    }).await;
 }
 
 /// Effectively run
@@ -100,10 +96,15 @@ pub(crate) async fn get_pip_deps_report(requirements_file_path: PathBuf) -> PipR
 
 #[cfg(test)]
 mod tests {
-    use crate::pip_utils::get_pip_deps_report;
+    use tokio::process::Command;
+
+    use crate::{
+        pip_utils::{ensure_has_pip, get_pip_deps_report},
+        python_utils::get_executable_path,
+    };
 
     #[tokio::test]
-    async fn test_get_torch_deps() {
+    async fn test_get_lightgbm_deps() {
         let tempdir = tempfile::tempdir().unwrap();
 
         let requirements_file_path = tempdir.path().join("requirements.txt");
@@ -129,5 +130,21 @@ mod tests {
             .any(|item| item.download_info.url.contains("joblib")));
 
         println!("{:#?}", report);
+    }
+
+    /// Ensure that the correct version of pip is available in subprocesses
+    #[tokio::test]
+    async fn test_pip_subprocess_version() {
+        ensure_has_pip().await;
+
+        let output = Command::new(get_executable_path().unwrap().as_str())
+            .args(["-c", "import pip; print(pip.__version__)"])
+            .output()
+            .await
+            .unwrap()
+            .stdout;
+
+        let p = String::from_utf8(output).unwrap();
+        assert_eq!("23.0", p.trim());
     }
 }
