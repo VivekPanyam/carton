@@ -46,7 +46,14 @@ async fn ensure_has_pip() {
 /// Effectively run
 /// `python3 -m pip install --dry-run --ignore-installed --report {output_file} -r {requirements_file_path}`
 /// and load the output
-pub(crate) async fn get_pip_deps_report(requirements_file_path: PathBuf) -> PipReport {
+pub(crate) async fn get_pip_deps_report<F, P>(fs: &F, requirements_file_path: P) -> PipReport
+where
+    F: lunchbox::WritableFileSystem + Sync,
+    F::FileType: lunchbox::types::WritableFile + Unpin,
+    P: AsRef<lunchbox::path::Path>,
+{
+    let requirements_file_path = requirements_file_path.as_ref();
+
     // Make sure we have pip 23.0
     ensure_has_pip().await;
 
@@ -72,7 +79,7 @@ pub(crate) async fn get_pip_deps_report(requirements_file_path: PathBuf) -> PipR
             "--report",
             output_file_path.to_str().unwrap(),
             "-r",
-            requirements_file_path.to_str().unwrap(),
+            requirements_file_path.as_str(),
         ])
         .stdout(std::fs::File::create(log_dir.path().join("stdout.log")).unwrap())
         .stderr(std::fs::File::create(log_dir.path().join("stderr.log")).unwrap())
@@ -110,7 +117,8 @@ mod tests {
         let requirements_file_path = tempdir.path().join("requirements.txt");
         std::fs::write(&requirements_file_path, "lightgbm==3.3.5").unwrap();
 
-        let report = get_pip_deps_report(requirements_file_path).await;
+        let fs = lunchbox::LocalFS::new().unwrap();
+        let report = get_pip_deps_report(&fs, requirements_file_path.to_str().unwrap()).await;
 
         assert!(report
             .install

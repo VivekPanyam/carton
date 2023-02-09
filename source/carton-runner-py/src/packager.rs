@@ -1,5 +1,5 @@
+use lunchbox::path::LunchboxPathUtils;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use tokio::process::Command;
 use url::Url;
 
@@ -78,10 +78,17 @@ impl LockfileEntry {
 
 /// Generates a lockfile in a python project based on the requirements.txt
 /// Avoids unnecessarily regenerating
-pub async fn update_or_generate_lockfile(code_dir: &Path) {
+pub async fn update_or_generate_lockfile<F, P>(fs: &F, code_dir: P)
+where
+    F: lunchbox::WritableFileSystem + Sync,
+    F::FileType: lunchbox::types::WritableFile + Unpin,
+    P: AsRef<lunchbox::path::Path>,
+{
+    let code_dir = code_dir.as_ref();
+
     // Load the requirements.txt file
     let requirements_file_path = code_dir.join("requirements.txt");
-    let requirements_file = tokio::fs::read(&requirements_file_path).await.unwrap();
+    let requirements_file = fs.read(&requirements_file_path).await.unwrap();
 
     // Generate a hash of the requirements.txt
     let mut hasher = Sha256::new();
@@ -98,10 +105,10 @@ pub async fn update_or_generate_lockfile(code_dir: &Path) {
 
     // Check if we already have a lockfile
     let lockfile_path = code_dir.join(".carton/carton.lock");
-    if lockfile_path.exists() {
+    if lockfile_path.exists(fs).await {
         // Load the file
         let old_lockfile: CartonLock =
-            toml::from_slice(&tokio::fs::read(&lockfile_path).await.unwrap()).unwrap();
+            toml::from_slice(&fs.read(&lockfile_path).await.unwrap()).unwrap();
 
         if old_lockfile.orig_deps_hash != lockfile.orig_deps_hash {
             // If orig_deps_hash doesn't match the one we just generated, we have to start from scratch
@@ -119,7 +126,7 @@ pub async fn update_or_generate_lockfile(code_dir: &Path) {
         }
     }
 
-    let locked_deps = get_pip_deps_report(requirements_file_path).await;
+    let locked_deps = get_pip_deps_report(fs, requirements_file_path).await;
 
     // Utils
     let is_pypi = |item: &PipInstallInfo| {
@@ -162,11 +169,11 @@ pub async fn update_or_generate_lockfile(code_dir: &Path) {
 
         let relative_path = format!(".carton/bundled_wheels/{sha256}/{fname}");
         let bundled_path = code_dir.join(&relative_path);
-        if !bundled_path.exists() {
-            tokio::fs::create_dir_all(bundled_path.parent().unwrap())
+        if !bundled_path.exists(fs).await {
+            fs.create_dir_all(bundled_path.parent().unwrap())
                 .await
                 .unwrap();
-            let mut outfile = tokio::fs::File::create(&bundled_path).await.unwrap();
+            let mut outfile = fs.create(&bundled_path).await.unwrap();
 
             // Download and copy to the target file
             let mut res = client.get(&item.download_info.url).send().await.unwrap();
@@ -253,10 +260,10 @@ pub async fn update_or_generate_lockfile(code_dir: &Path) {
             item.file_name().to_str().unwrap()
         );
         let bundled_path = code_dir.join(&relative_path);
-        tokio::fs::create_dir_all(bundled_path.parent().unwrap())
+        fs.create_dir_all(bundled_path.parent().unwrap())
             .await
             .unwrap();
-        let mut outfile = tokio::fs::File::create(&bundled_path).await.unwrap();
+        let mut outfile = fs.create(&bundled_path).await.unwrap();
         tokio::io::copy(&mut buf.as_slice(), &mut outfile)
             .await
             .unwrap();
@@ -289,10 +296,10 @@ pub async fn update_or_generate_lockfile(code_dir: &Path) {
 
 ";
     let serialized = toml::to_string_pretty(&lockfile).unwrap();
-    tokio::fs::create_dir_all(lockfile_path.parent().unwrap())
+    fs.create_dir_all(lockfile_path.parent().unwrap())
         .await
         .unwrap();
-    tokio::fs::write(lockfile_path, header.to_string() + &serialized)
+    fs.write(lockfile_path, header.to_string() + &serialized)
         .await
         .unwrap();
 }
@@ -308,7 +315,8 @@ mod tests {
         let requirements_file_path = tempdir.path().join("requirements.txt");
         std::fs::write(&requirements_file_path, "xgboost==1.7.3").unwrap();
 
-        update_or_generate_lockfile(tempdir.path()).await;
+        let fs = lunchbox::LocalFS::new().unwrap();
+        update_or_generate_lockfile(&fs, tempdir.path().to_str().unwrap()).await;
 
         let lockfile: CartonLock = toml::from_slice(
             &tokio::fs::read(&tempdir.path().join(".carton/carton.lock"))

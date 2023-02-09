@@ -360,6 +360,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
+ "lunchbox",
  "ndarray",
  "numpy",
  "path-clean",
