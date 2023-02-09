@@ -13,7 +13,7 @@ use std::{io::Result, pin::Pin, sync::Arc};
 use tokio::io::{AsyncRead, AsyncSeek, AsyncWrite};
 
 // The RPC path on the wire
-pub type RPCPath = lunchbox::path::PathBuf;
+pub type RPCPath = String;
 
 // A handle to a file
 pub type FileHandle = u64;
@@ -329,9 +329,9 @@ trait TypeConversion<T> {
     fn convert(self) -> T;
 }
 
-impl<T: PathType> TypeConversion<lunchbox::path::PathBuf> for T {
-    fn convert(self) -> lunchbox::path::PathBuf {
-        self.as_ref().to_relative_path_buf()
+impl<T: PathType> TypeConversion<String> for T {
+    fn convert(self) -> String {
+        self.as_ref().as_str().to_owned()
     }
 }
 

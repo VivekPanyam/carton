@@ -134,3 +134,29 @@ impl Transport for SerdeTransport {
         SerdeTransportServer { inner }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{RequestMessageType, ResponseMessageType};
+
+    #[test]
+    fn test_bincode() {
+        // Request
+        let ser = bincode::serialize(&RequestMessageType {
+            rpc_id: 0,
+            msg: crate::rpc::AnywhereRPCRequest::Canonicalize { path: "".into() },
+        })
+        .unwrap();
+
+        let _: RequestMessageType = bincode::deserialize(&ser).unwrap();
+
+        // Response
+        let ser = bincode::serialize(&ResponseMessageType {
+            rpc_id: 0,
+            msg: crate::rpc::AnywhereRPCResponse::Canonicalize { res: "".into() },
+        })
+        .unwrap();
+
+        let _: ResponseMessageType = bincode::deserialize(&ser).unwrap();
+    }
+}
