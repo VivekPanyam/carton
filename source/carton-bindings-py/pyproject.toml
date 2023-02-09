@@ -8,3 +8,6 @@ requires-python = ">=3.7"
 
 [tool.maturin]
 python-source = "python"
+
+# See https://pyo3.rs/main/faq#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror
+features = ["pyo3/extension-module"]
