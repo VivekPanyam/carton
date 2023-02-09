@@ -13,6 +13,9 @@ pub struct CartonToml {
     /// The name of the model
     pub(crate) model_name: Option<String>,
 
+    /// A short description (should be 100 characters or less)
+    pub(crate) short_description: Option<String>,
+
     /// The model description
     pub(crate) model_description: Option<String>,
 

@@ -28,6 +28,9 @@ spec_version = 1
 model_name = "super_awesome_test_model"
 
 # Optional
+short_description = "A short description that should be less than or equal to 100 characters."
+
+# Optional
 model_description = """
 Some description of the model that can be as detailed as you want it to be
 

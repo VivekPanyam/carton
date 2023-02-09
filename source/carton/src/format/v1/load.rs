@@ -84,6 +84,7 @@ where
     // Create a CartonInfo struct
     let info = CartonInfo {
         model_name: config.model_name,
+        short_description: config.short_description,
         model_description: config.model_description,
         required_platforms: convert_opt_vec(config.required_platforms),
         inputs: convert_opt_vec(config.input),
