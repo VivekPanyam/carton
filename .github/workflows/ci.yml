@@ -35,6 +35,11 @@ jobs:
           submodules: recursive
       - run: cargo build --verbose
       - run: cargo test --verbose
+      - name: Upload `carton_logs`
+        uses: actions/upload-artifact@v3
+        with:
+          name: tmp_carton_logs
+          path: /tmp/carton_logs
   build_wasm:
     name: WASM Build ${{ matrix.target }}
     runs-on: ubuntu-latest
