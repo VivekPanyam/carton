@@ -1,4 +1,4 @@
-use crate::rpc::AnywhereRPCClient;
+use crate::{read_dir_ops::SerializedDirEntry, rpc::AnywhereRPCClient};
 use async_trait::async_trait;
 use futures::FutureExt;
 use lunchbox::{
@@ -9,7 +9,7 @@ use lunchbox::{
     },
 };
 
-use std::{io::Result, pin::Pin, sync::Arc};
+use std::{collections::VecDeque, io::Result, pin::Pin, sync::Arc};
 use tokio::io::{AsyncRead, AsyncSeek, AsyncWrite};
 
 // The RPC path on the wire
@@ -220,9 +220,16 @@ impl<const W: bool, const S: bool> lunchbox::ReadableFileSystem for AnywhereFS<W
     type ReadDirPollerType = AnywhereFSReadDirPoller;
     async fn read_dir(
         &self,
-        _path: impl PathType,
+        path: impl PathType,
     ) -> Result<ReadDir<Self::ReadDirPollerType, Self>> {
-        todo!()
+        let out = self.client.read_dir_wrapper(path.convert()).await?;
+
+        Ok(ReadDir::new(
+            AnywhereFSReadDirPoller {
+                entries: out.into(),
+            },
+            self,
+        ))
     }
 
     async fn read_link(&self, path: impl PathType) -> Result<PathBuf> {
@@ -238,16 +245,20 @@ impl<const W: bool, const S: bool> lunchbox::ReadableFileSystem for AnywhereFS<W
     }
 }
 
-pub struct AnywhereFSReadDirPoller {}
+pub struct AnywhereFSReadDirPoller {
+    entries: VecDeque<SerializedDirEntry>,
+}
 
 impl<const W: bool, const S: bool> ReadDirPoller<AnywhereFS<W, S>> for AnywhereFSReadDirPoller {
     fn poll_next_entry<'a>(
         &mut self,
         _cx: &mut std::task::Context<'_>,
-        _fs: &'a AnywhereFS<W, S>,
+        fs: &'a AnywhereFS<W, S>,
     ) -> std::task::Poll<std::io::Result<Option<lunchbox::types::DirEntry<'a, AnywhereFS<W, S>>>>>
     {
-        todo!()
+        std::task::Poll::Ready(Ok(self.entries.pop_front().map(|item| {
+            lunchbox::types::DirEntry::new(fs, item.file_name, item.path.into())
+        })))
     }
 }
 

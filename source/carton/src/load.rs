@@ -102,6 +102,7 @@ async fn maybe_resolve_links<T>(fs: &Arc<T>, opts: LoadOpts, skip_runner: bool) 
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+    T::ReadDirPollerType: MaybeSend,
 {
     // Basically an overlay filesystem using the `LINKS` file and `MANIFEST` to decide where
     // to direct operations (if necessary)
@@ -130,6 +131,7 @@ async fn load_carton<T>(fs: &Arc<T>, opts: LoadOpts, skip_runner: bool) -> Retur
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+    T::ReadDirPollerType: MaybeSend,
 {
     // First, figure out which format version this is
     // Currently, there's only one so we always pass through to it
@@ -235,6 +237,7 @@ pub(crate) async fn load_model<T, U>(
 where
     T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+    T::ReadDirPollerType: MaybeSend,
     U: TensorStorage,
 {
     match runner {

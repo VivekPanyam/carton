@@ -77,6 +77,7 @@ impl Runner {
     where
         T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
         T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+        T::ReadDirPollerType: MaybeSend,
     {
         // Serve the filesystem
         let token = self.client.serve_readonly_fs(fs.clone()).await;
@@ -185,6 +186,7 @@ impl Runner {
     where
         T: lunchbox::WritableFileSystem + MaybeSend + MaybeSync + 'static,
         T::FileType: lunchbox::types::WritableFile + MaybeSend + MaybeSync + Unpin,
+        T::ReadDirPollerType: MaybeSend,
     {
         // Serve the filesystem
         let token = self.client.serve_writable_fs(fs.clone()).await;
