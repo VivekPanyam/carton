@@ -1,7 +1,4 @@
-use carton_runner_interface::{
-    server::init_runner,
-    types::{RPCRequestData, RPCResponseData},
-};
+use carton_runner_interface::server::{init_runner, RequestData, ResponseData};
 
 use packager::update_or_generate_lockfile;
 
@@ -18,14 +15,14 @@ async fn main() {
     while let Some(req) = server.get_next_request().await {
         let req_id = req.id;
         match req.data {
-            RPCRequestData::Load { .. } => {
+            RequestData::Load { .. } => {
                 // TODO: implement
                 server
-                    .send_response_for_request(req_id, RPCResponseData::Load)
+                    .send_response_for_request(req_id, ResponseData::Load)
                     .await
                     .unwrap();
             }
-            RPCRequestData::Pack { fs, input_path, .. } => {
+            RequestData::Pack { fs, input_path, .. } => {
                 let fs = server.get_writable_filesystem(fs).await.unwrap();
 
                 // Update or generate a lockfile in the input dir
@@ -35,7 +32,7 @@ async fn main() {
                 server
                     .send_response_for_request(
                         req_id,
-                        RPCResponseData::Pack {
+                        ResponseData::Pack {
                             output_path: input_path,
                         },
                     )
