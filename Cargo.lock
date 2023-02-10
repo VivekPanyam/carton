@@ -328,6 +328,7 @@ dependencies = [
  "dashmap",
  "js-sys",
  "libc",
+ "log",
  "lunchbox",
  "ndarray",
  "once_cell",

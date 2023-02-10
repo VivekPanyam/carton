@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use carton_runner_interface::slowlog::slowlog;
 use serde::Deserialize;
 use tokio::{process::Command, sync::OnceCell};
 
@@ -67,6 +68,8 @@ where
     let log_dir = tempfile::tempdir_in(logs_tmp_dir).unwrap();
     log::info!(target: "slowlog", "Finding transitive dependencies using `pip install --report`. This may take a while. See the `pip` logs in {:#?}", log_dir);
 
+    let mut sl = slowlog("`pip install --report`", 5).await;
+
     // Run pip in a new process to isolate it a little bit from our embedded interpreter
     let success = Command::new(get_executable_path().unwrap().as_str())
         .args([
@@ -87,6 +90,8 @@ where
         .await
         .expect("Failed to run pip")
         .success();
+
+    sl.done();
 
     if !success {
         // Don't delete the log dir if it failed

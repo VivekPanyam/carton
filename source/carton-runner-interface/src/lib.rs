@@ -25,6 +25,7 @@ pub mod runner;
 
 if_not_wasm! {
     pub mod server;
+    pub mod slowlog;
 }
 
 if_not_wasm! {
