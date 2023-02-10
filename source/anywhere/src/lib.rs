@@ -4,6 +4,7 @@ use rpc::ServerBuilder;
 
 mod file_ops;
 pub mod path;
+mod read_dir_ops;
 pub mod rpc;
 mod serialize;
 pub mod transport;

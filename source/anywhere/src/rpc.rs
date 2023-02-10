@@ -38,6 +38,7 @@ use serde::{Deserialize, Serialize};
 use crate::file_ops::ReadableFileOps;
 use crate::file_ops::SeekableFileOps;
 use crate::file_ops::WritableFileOps;
+use crate::read_dir_ops::{ReadDirOps, SerializedDirEntry};
 use crate::serialize::{IoError, SeekFromDef, SerializableMetadata, SerializableRelativePathBuf};
 use crate::transport::Transport;
 use crate::types;
@@ -150,7 +151,7 @@ macro_rules! autoimpl {
                 }
 
                 // impl "Maybe" for "Allow" when T meets the required traits and is allowed
-                impl <'a, T: $( $required_traits + )+> [<Maybe $section_name>]<ServerContext<T>> for [< Allow $section_name >]<'a, T, true> where T::FileType: MaybeSend + MaybeSync $( + $( $filetype_required_traits + )+ )?
+                impl <'a, T: $( $required_traits + )+> [<Maybe $section_name>]<ServerContext<T>> for [< Allow $section_name >]<'a, T, true> where T::ReadDirPollerType: MaybeSend, T::FileType: MaybeSend + MaybeSync $( + $( $filetype_required_traits + )+ )?
                 {
                     $(
                         fn $fn_name <'b, 'c: 'b> ( &'b self, context: &'c ServerContext<T>,  $($arg_name: $arg_type),* ) -> BoxFuture<'b, std::io::Result<$res_type>> {
@@ -336,7 +337,7 @@ where
 
 autoimpl! {
     // The following methods need a readable filesystem
-    SECTION: Read requires ReadableFileSystem, ReadableFileOps, MaybeSync; filetype requires ReadableFile, Unpin
+    SECTION: Read requires ReadableFileSystem, ReadDirOps, ReadableFileOps, MaybeSync; filetype requires ReadableFile, Unpin
     {
         // // Get filesystem capabilities given a token
         // async fn get_fs_type() -> std::io::Result<Capabilities>;
@@ -358,7 +359,7 @@ autoimpl! {
         async fn canonicalize(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableRelativePathBuf")] PathBuf>;
         async fn metadata(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableMetadata")] Metadata>;
         async fn read(path: RPCPath) -> std::io::Result<Vec<u8>>;
-        // async fn read_dir(path: RPCPath) -> std::io::Result<ReadDir<Self::ReadDirPollerType, Self>>;
+        async fn read_dir_wrapper(path: RPCPath) -> std::io::Result<Vec<SerializedDirEntry>>;
         async fn read_link(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableRelativePathBuf")]PathBuf>;
         async fn read_to_string(path: RPCPath) -> std::io::Result<String>;
         async fn symlink_metadata(path: RPCPath) -> std::io::Result<#[serde(with = "SerializableMetadata")] Metadata>;

@@ -78,6 +78,7 @@ impl Client {
     where
         T: lunchbox::ReadableFileSystem + MaybeSend + MaybeSync + 'static,
         T::FileType: lunchbox::types::ReadableFile + MaybeSend + MaybeSync + Unpin,
+        T::ReadDirPollerType: MaybeSend,
     {
         let (tx, rx, id) = self.fs_multiplexer.get_new_stream().await;
 
@@ -100,6 +101,7 @@ impl Client {
     where
         T: lunchbox::WritableFileSystem + MaybeSend + MaybeSync + 'static,
         T::FileType: lunchbox::types::WritableFile + MaybeSend + MaybeSync + Unpin,
+        T::ReadDirPollerType: MaybeSend,
     {
         let (tx, rx, id) = self.fs_multiplexer.get_new_stream().await;
 
