@@ -1,9 +1,6 @@
 use std::{collections::HashMap, sync::atomic::AtomicU64};
 
-use carton_runner_interface::{
-    server::init_runner,
-    types::{RPCRequestData, RPCResponseData, SealHandle},
-};
+use carton_runner_interface::server::{init_runner, RequestData, ResponseData, SealHandle};
 
 #[tokio::main]
 async fn main() {
@@ -15,19 +12,19 @@ async fn main() {
     while let Some(req) = server.get_next_request().await {
         let req_id = req.id;
         match req.data {
-            RPCRequestData::Load { .. } => {
+            RequestData::Load { .. } => {
                 server
-                    .send_response_for_request(req_id, RPCResponseData::Load)
+                    .send_response_for_request(req_id, ResponseData::Load)
                     .await
                     .unwrap();
             }
 
-            RPCRequestData::Pack { input_path, .. } => {
+            RequestData::Pack { input_path, .. } => {
                 // Just return the input path
                 server
                     .send_response_for_request(
                         req_id,
-                        RPCResponseData::Pack {
+                        ResponseData::Pack {
                             output_path: input_path,
                         },
                     )
@@ -35,32 +32,32 @@ async fn main() {
                     .unwrap();
             }
 
-            RPCRequestData::Seal { tensors } => {
+            RequestData::Seal { tensors } => {
                 // Generate a token and store the tensors
                 let handle =
                     SealHandle::new(token_gen.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
                 sealed_tensors.insert(handle, tensors);
                 server
-                    .send_response_for_request(req_id, RPCResponseData::Seal { handle })
+                    .send_response_for_request(req_id, ResponseData::Seal { handle })
                     .await
                     .unwrap();
             }
 
-            RPCRequestData::InferWithTensors { tensors } => {
+            RequestData::InferWithTensors { tensors } => {
                 // Let's just return the input tensors for now
                 server
-                    .send_response_for_request(req_id, RPCResponseData::Infer { tensors })
+                    .send_response_for_request(req_id, ResponseData::Infer { tensors })
                     .await
                     .unwrap();
             }
 
-            RPCRequestData::InferWithHandle { handle } => {
+            RequestData::InferWithHandle { handle } => {
                 // TODO: return an error instead of using unwrap
                 let tensors = sealed_tensors.remove(&handle).unwrap();
 
                 // Let's just return the input tensors for now
                 server
-                    .send_response_for_request(req_id, RPCResponseData::Infer { tensors })
+                    .send_response_for_request(req_id, ResponseData::Infer { tensors })
                     .await
                     .unwrap();
             }

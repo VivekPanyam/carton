@@ -1,18 +1,18 @@
 pub use carton_macros::for_each_carton_type;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, marker::PhantomData};
+use std::collections::HashMap;
 
 use super::{alloc_inline::InlineTensorStorage, comms::Comms};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RPCRequest {
+pub(crate) struct RPCRequest {
     pub id: RpcId,
 
     pub data: RPCRequestData,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RPCResponse {
+pub(crate) struct RPCResponse {
     pub id: RpcId,
 
     pub data: RPCResponseData,
@@ -22,7 +22,7 @@ pub(crate) type RpcId = u64;
 
 // Used in multiplexer
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
-pub struct StreamID(pub(crate) u64);
+pub(crate) struct StreamID(pub(crate) u64);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub struct FsToken(pub(crate) StreamID);
@@ -52,7 +52,7 @@ pub(crate) struct FdId(pub(crate) u64);
 // (from the perspective of a runner)
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum RPCRequestData {
+pub(crate) enum RPCRequestData {
     Load {
         /// This filesystem points to a folder that is of the same structure as the output of `Pack` (for a particular runner)
         /// For a readonly filesystem
@@ -100,7 +100,7 @@ pub enum RPCRequestData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum RPCResponseData {
+pub(crate) enum RPCResponseData {
     // Doesn't return anything on successful load
     Load,
 
@@ -140,7 +140,7 @@ pub enum RunnerOpt {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
-pub struct SealHandle(pub(crate) u64);
+pub(crate) struct SealHandle(pub(crate) u64);
 
 impl SealHandle {
     pub fn new(v: u64) -> Self {
@@ -185,50 +185,18 @@ for_each_carton_type! {
     )*
 }
 
-// If we're running in wasm, wrap inner and derive serialize and deserialize normally (because we can't use shared memory)
-if_wasm! {
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct Handle<T> {
-        inner: T
-    }
-
-    impl Handle<Tensor> {
-        pub(crate) async fn new(inner: Tensor, runner: &Comms) -> Self {
-            Self { inner }
-        }
-
-        pub(crate) async fn into_inner(self, comms: &Comms) -> Tensor {
-            self.inner
-        }
-    }
+// For now, we'll always serialize inline, but if we enable shared memory, we can handle that here
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct Handle<T> {
+    inner: T,
 }
 
-if_not_wasm! {
-    // This stores info about a shared memory region
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct Handle<T> {
-        // The ID of the file descriptor backing this item
-        fd_id: FdId,
-
-        // The size in bytes of the region
-        size_bytes: u64,
-
-        _pd: PhantomData<T>
-    }
-}
-
-#[cfg(not(target_family = "wasm"))]
 impl Handle<Tensor> {
-    pub(crate) async fn new(t: Tensor, comms: &Comms) -> Self {
-        // Actually build or get the shared memory region backing the tensor
-
-        // let fd_id = runner.send_fd(fd).await;
-
-        todo!()
+    pub(crate) async fn new(inner: Tensor, runner: &Comms) -> Self {
+        Self { inner }
     }
 
     pub(crate) async fn into_inner(self, comms: &Comms) -> Tensor {
-        // Get the referenced shared memory chunk and make a tensor
-        todo!()
+        self.inner
     }
 }
