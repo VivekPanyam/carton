@@ -169,8 +169,6 @@ required_framework_version = "=1.12.1"
 runner_compat_version = 2
 
 # Optional
-# Nothing here must be required to run the model
-# Runners are required to be able to correctly run the model even if this section is removed
 # These options are handled by the runner (the "torchscript" runner in this case) and are different
 # for every runner
 # These can be overridden at runtime.
