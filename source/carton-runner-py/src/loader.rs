@@ -6,19 +6,11 @@ use pyo3::prelude::*;
 
 use crate::{
     env::EnvironmentMarkers,
+    model::Model,
     packager::CartonLock,
     python_utils::add_to_sys_path,
     wheel::{install_wheel_and_make_available, unzip_file},
 };
-
-pub(crate) struct Model {
-    // We store these to ensure that the relevant files don't get deleted while the model still exists
-    _model_dir: tempfile::TempDir,
-    _temp_packages: tempfile::TempDir,
-
-    // The model returned from the entrypoint
-    pub model: PyObject,
-}
 
 pub(crate) async fn load<F>(
     fs: F,
@@ -168,14 +160,10 @@ where
                 .call0()
                 .unwrap();
 
-            model.into()
+            Model::new(model_dir_outer, temp_packages, model)
         });
 
-        Ok(Model {
-            _model_dir: model_dir_outer,
-            _temp_packages: temp_packages,
-            model,
-        })
+        Ok(model)
     } else {
         Err("Expected runner options of `entrypoint_package` and `entrypoint_fn` to be set, but no options were set. This means the model was likely not packaged correctly or options were removed when loading the model.".into())
     }

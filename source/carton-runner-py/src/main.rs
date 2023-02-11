@@ -4,6 +4,7 @@ use packager::update_or_generate_lockfile;
 
 mod env;
 mod loader;
+mod model;
 mod packager;
 mod pip_utils;
 mod python_utils;
@@ -58,7 +59,64 @@ async fn main() {
                     .await
                     .unwrap();
             }
-            _ => todo!(),
+            RequestData::Seal { tensors } => {
+                // Call `model.seal`
+                match model.as_mut().unwrap().seal(tensors) {
+                    Ok(handle) => server
+                        .send_response_for_request(req_id, ResponseData::Seal { handle })
+                        .await
+                        .unwrap(),
+                    Err(e) => server
+                        .send_response_for_request(
+                            req_id,
+                            ResponseData::Error {
+                                e: format!("Error calling `seal` method on model: {e}"),
+                            },
+                        )
+                        .await
+                        .unwrap(),
+                }
+            }
+            RequestData::InferWithTensors { tensors } => {
+                // Call `model.infer_with_tensors`
+                match model.as_mut().unwrap().infer_with_tensors(tensors) {
+                    Ok(out) => server
+                        .send_response_for_request(req_id, ResponseData::Infer { tensors: out })
+                        .await
+                        .unwrap(),
+                    Err(e) => server
+                        .send_response_for_request(
+                            req_id,
+                            ResponseData::Error {
+                                e: format!(
+                                    "Error calling `infer_with_tensors` method on model: {e}"
+                                ),
+                            },
+                        )
+                        .await
+                        .unwrap(),
+                }
+            }
+            RequestData::InferWithHandle { handle } => {
+                // Call `model.infer_with_handle`
+                match model.as_mut().unwrap().infer_with_handle(handle) {
+                    Ok(out) => server
+                        .send_response_for_request(req_id, ResponseData::Infer { tensors: out })
+                        .await
+                        .unwrap(),
+                    Err(e) => server
+                        .send_response_for_request(
+                            req_id,
+                            ResponseData::Error {
+                                e: format!(
+                                    "Error calling `infer_with_handle` method on model: {e}"
+                                ),
+                            },
+                        )
+                        .await
+                        .unwrap(),
+                }
+            }
         }
     }
 }

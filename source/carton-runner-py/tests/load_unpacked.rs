@@ -84,9 +84,22 @@ platform = "{}"
     tokio::fs::write(
         model_dir.path().join("main.py"),
         r#"
+import xgboost as xgb
+
+class Model:
+    def __init__(self):
+        pass
+
+    def infer_with_tensors(self, tensors):
+        pass
+
 def get_model():
     print("Loaded python model!")
-    return {}
+    expected_xgb_version = "1.7.3"
+    if xgb.__version__ != expected_xgb_version:
+        raise ValueError(f"Got an unexpected version of xgboost. Got {xgb.__version__} and expected {expected_xgb_version}")
+
+    return Model()
 "#,
     )
     .await
