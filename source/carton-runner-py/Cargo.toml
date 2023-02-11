@@ -24,6 +24,7 @@ url = "2.3.1"
 log = "0.4"
 libc = "0.2"
 lunchbox = { version = "0.1", features = ["serde"], default-features = false }
+bytesize = {version = "1.1.0"}
 
 [dev-dependencies]
 lunchbox = { version = "0.1", features = ["serde", "localfs"] }
