@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 carton-runner-interface = { path = "../carton-runner-interface" }
 tokio = { version = "1", features = ["full"] }
-pyo3 = { version = "0.17.3", features = ["auto-initialize"]}
+pyo3 = { version = "0.17.3"}
 pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
 numpy = "0.17"
 ndarray = { version = "0.15" }
@@ -25,6 +25,7 @@ log = "0.4"
 libc = "0.2"
 lunchbox = { version = "0.1", features = ["serde"], default-features = false }
 bytesize = {version = "1.1.0"}
+findshlibs = "0.10.2"
 
 [dev-dependencies]
 lunchbox = { version = "0.1", features = ["serde", "localfs"] }

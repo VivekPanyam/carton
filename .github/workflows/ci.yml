@@ -34,6 +34,8 @@ jobs:
           token: ${{ secrets.ZIPFS_READ }}
           submodules: recursive
       - uses: Swatinem/rust-cache@v2
+      - name: Setup environment
+        run: cd build && cargo run --verbose
       - run: cargo build --verbose
       - run: cargo test --verbose
       - name: Upload `carton_logs` on failure

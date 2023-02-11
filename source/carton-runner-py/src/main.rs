@@ -14,6 +14,9 @@ mod wheel;
 async fn main() {
     let mut server = init_runner().await;
 
+    // Setup the isolated python env
+    crate::python_utils::init();
+
     let mut model = None;
 
     while let Some(req) = server.get_next_request().await {
