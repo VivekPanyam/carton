@@ -66,7 +66,7 @@ where
     tokio::fs::create_dir_all(&logs_tmp_dir).await.unwrap();
 
     let log_dir = tempfile::tempdir_in(logs_tmp_dir).unwrap();
-    log::info!(target: "slowlog", "Finding transitive dependencies using `pip install --report`. This may take a while. See the `pip` logs in {:#?}", log_dir);
+    log::info!(target: "slowlog", "Finding transitive dependencies using `pip install --report`. This may take a while. See the `pip` logs in {:#?}", log_dir.path());
 
     let mut sl = slowlog("`pip install --report`", 5).await;
 

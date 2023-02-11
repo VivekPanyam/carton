@@ -302,6 +302,10 @@ pub async fn init_runner() -> Server {
         panic!("prctl failed")
     }
 
+    // Initialize logging
+    // TODO: pass through slowlog to the main process
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
     // TODO: run the FD passing channel on top of UDS and get the appropriate channels out
     Server::connect(&PathBuf::from(args.uds_path)).await
 }

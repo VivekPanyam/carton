@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use async_zip::read::fs::ZipFileReader;
+use carton_runner_interface::slowlog::slowlog;
 use lazy_static::lazy_static;
 use path_clean::PathClean;
 use pyo3::Python;
@@ -51,12 +52,29 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
     // Download and copy to the target file while computing the sha256
     let mut hasher = Sha256::new();
     let mut res = CLIENT.get(url).send().await.unwrap();
+
+    // Slow log on timeout
+    let mut sl = match res.content_length() {
+        Some(size) => {
+            slowlog(
+                format!("Downloading file '{url}' ({})", bytesize::ByteSize(size)),
+                5,
+            )
+            .await
+        }
+        None => slowlog(format!("Downloading file '{url}'"), 5).await,
+    };
+
     while let Some(chunk) = res.chunk().await.unwrap() {
+        // TODO: see if we should offload this to a blocking thread
         hasher.update(&chunk);
         tokio::io::copy(&mut chunk.as_ref(), &mut outfile)
             .await
             .unwrap();
     }
+
+    // Let the logging task know we're done downloading
+    sl.done();
 
     // Make sure the sha256 matches the expected value
     let actual_sha256 = format!("{:x}", hasher.finalize());
@@ -64,9 +82,13 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
     // TODO: return an error instead of asserting
     assert_eq!(sha256, actual_sha256);
 
+    let mut sl = slowlog(format!("Extracting file '{url}'"), 5).await;
+
     // Unzip
     let extraction_dir = tempdir.path().join("extraction");
     unzip_file(&download_path, &extraction_dir).await;
+
+    sl.done();
 
     // Move to the target directory. This should be atomic so it won't break anything
     // if multiple installs happen at the same time.
@@ -83,15 +105,10 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
     target_dir
 }
 
-pub async fn activate_bundled_wheel(url: &str) {
-    // Unzip into a user-specified temp dir
-
-    // Return the path to add to sys.path
-}
-
 // Based on https://github.com/Majored/rs-async-zip/blob/main/examples/file_extraction.rs
 /// Extracts everything from the ZIP archive to the output directory
-async fn unzip_file(archive: &Path, out_dir: &Path) {
+pub(crate) async fn unzip_file(archive: &Path, out_dir: &Path) {
+    let mut handles = Vec::new();
     let reader = ZipFileReader::new(archive)
         .await
         .expect("Failed to read zip file");
@@ -111,8 +128,6 @@ async fn unzip_file(archive: &Path, out_dir: &Path) {
         // https://docs.rs/async_zip/0.0.8/src/async_zip/read/mod.rs.html#63-65
         // https://github.com/python/cpython/blob/820ef62833bd2d84a141adedd9a05998595d6b6d/Lib/zipfile.py#L528
         let entry_is_dir = entry.filename().ends_with('/');
-
-        let mut entry_reader = reader.entry(index).await.expect("Failed to read ZipEntry");
 
         if entry_is_dir {
             // The directory may have been created if iteration is out of order.
@@ -138,10 +153,21 @@ async fn unzip_file(archive: &Path, out_dir: &Path) {
                 .open(&path)
                 .await
                 .expect("Failed to create extracted file");
-            tokio::io::copy(&mut entry_reader, &mut writer)
-                .await
-                .expect("Failed to copy to extracted file");
+
+            // Spawn a task to extract
+            let reader = reader.clone();
+            handles.push(tokio::spawn(async move {
+                let mut entry_reader = reader.entry(index).await.expect("Failed to read ZipEntry");
+                tokio::io::copy(&mut entry_reader, &mut writer)
+                    .await
+                    .expect("Failed to copy to extracted file");
+            }));
         }
+    }
+
+    // Wait until all the files are extracted
+    for handle in handles {
+        handle.await.unwrap();
     }
 }
 
