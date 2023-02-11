@@ -1,6 +1,6 @@
 use carton::{
     info::RunnerInfo,
-    types::{CartonInfo, GenericStorage, LoadOpts},
+    types::{CartonInfo, GenericStorage, LoadOpts, RunnerOpt},
     Carton,
 };
 use semver::VersionReq;
@@ -58,7 +58,19 @@ platform = "{}"
             runner_name: "python".into(),
             required_framework_version: VersionReq::parse("*").unwrap(),
             runner_compat_version: None,
-            opts: None,
+            opts: Some(
+                [
+                    (
+                        "entrypoint_package".into(),
+                        RunnerOpt::String("main".into()),
+                    ),
+                    (
+                        "entrypoint_fn".into(),
+                        RunnerOpt::String("get_model".into()),
+                    ),
+                ]
+                .into(),
+            ),
         },
         misc_files: None,
     };
@@ -69,7 +81,18 @@ platform = "{}"
         .await
         .unwrap();
 
-    // TODO: use `pack` instead of `load_unpacked` once `carton::format::v1::save` is implemented
+    tokio::fs::write(
+        model_dir.path().join("main.py"),
+        r#"
+def get_model():
+    print("Loaded python model!")
+    return {}
+"#,
+    )
+    .await
+    .unwrap();
+
+    // Pack and load the model
     let _model = Carton::load_unpacked(
         model_dir.path().to_str().unwrap().to_owned(),
         pack_opts,
