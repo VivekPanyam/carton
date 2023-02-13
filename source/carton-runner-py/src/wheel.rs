@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use async_zip::read::fs::ZipFileReader;
-use carton_runner_interface::slowlog::slowlog;
+use carton_runner_interface::slowlog::{slowlog, Progress};
 use lazy_static::lazy_static;
 use path_clean::PathClean;
 use sha2::{Digest, Sha256};
@@ -48,23 +48,21 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
     let mut res = CLIENT.get(url).send().await.unwrap();
 
     // Slow log on timeout
-    let mut sl = match res.content_length() {
-        Some(size) => {
-            slowlog(
-                format!("Downloading file '{url}' ({})", bytesize::ByteSize(size)),
-                5,
-            )
-            .await
-        }
-        None => slowlog(format!("Downloading file '{url}'"), 5).await,
-    };
+    let mut sl = slowlog(format!("Downloading file '{url}'"), 5).await;
 
+    if let Some(size) = res.content_length() {
+        sl.set_total(Some(bytesize::ByteSize(size)));
+    }
+
+    let mut downloaded = 0;
     while let Some(chunk) = res.chunk().await.unwrap() {
         // TODO: see if we should offload this to a blocking thread
         hasher.update(&chunk);
         tokio::io::copy(&mut chunk.as_ref(), &mut outfile)
             .await
             .unwrap();
+        downloaded += chunk.len() as u64;
+        sl.set_progress(Some(bytesize::ByteSize(downloaded)));
     }
 
     // Let the logging task know we're done downloading
@@ -76,7 +74,9 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
     // TODO: return an error instead of asserting
     assert_eq!(sha256, actual_sha256);
 
-    let mut sl = slowlog(format!("Extracting file '{url}'"), 5).await;
+    let mut sl = slowlog(format!("Extracting file '{url}'"), 5)
+        .await
+        .without_progress();
 
     // Unzip
     let extraction_dir = tempdir.path().join("extraction");

@@ -168,7 +168,9 @@ where
 
         log::info!(target: "slowlog", "Fetching and bundling non-pypi wheel: {:#?}", parsed);
 
-        let mut sl = slowlog(format!("Downloading file '{}'", &item.download_info.url), 5).await;
+        let mut sl = slowlog(format!("Downloading file '{}'", &item.download_info.url), 5)
+            .await
+            .without_progress();
 
         let relative_path = format!(".carton/bundled_wheels/{sha256}/{fname}");
         let bundled_path = code_dir.join(&relative_path);
@@ -215,7 +217,7 @@ where
         let log_dir = tempfile::tempdir_in(logs_tmp_dir).unwrap();
         log::info!(target: "slowlog", "Building wheels for non-wheel dependencies using `pip wheel`. This may take a while. See the `pip` logs in {:#?}", log_dir);
 
-        let mut sl = slowlog("`pip wheel`", 5).await;
+        let mut sl = slowlog("`pip wheel`", 5).await.without_progress();
 
         // Run pip in a new process to isolate it a little bit from our embedded interpreter
         let build_success = Command::new(get_executable_path().unwrap().as_str())
