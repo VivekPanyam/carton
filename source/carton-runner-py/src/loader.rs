@@ -1,15 +1,13 @@
 use std::collections::{HashMap, VecDeque};
 
 use carton_runner_interface::types::RunnerOpt;
+use carton_utils::archive::extract_zip;
 use lunchbox::path::{LunchboxPathUtils, PathBuf};
 use pyo3::prelude::*;
 
 use crate::{
-    env::EnvironmentMarkers,
-    model::Model,
-    packager::CartonLock,
-    python_utils::add_to_sys_path,
-    wheel::{install_wheel_and_make_available, unzip_file},
+    env::EnvironmentMarkers, model::Model, packager::CartonLock, python_utils::add_to_sys_path,
+    wheel::install_wheel_and_make_available,
 };
 
 pub(crate) async fn load<F>(
@@ -85,7 +83,7 @@ where
                         tokio::io::copy(&mut f, &mut target).await.unwrap();
 
                         // Unzip to our temp packages dir for this model
-                        unzip_file(&local_path, &temp_packages_dir).await;
+                        extract_zip(&local_path, &temp_packages_dir).await;
                     }));
                 } else {
                     return Err(format!("The .carton/carton.lock file references a file ({bundled_whl_path}) that does not exist. It is possible that the lockfile was added to version control but the referenced files were not. Please repackage the model and try again. TODO: link"));
