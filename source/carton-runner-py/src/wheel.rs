@@ -1,11 +1,11 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use async_zip::read::fs::ZipFileReader;
-use carton_runner_interface::slowlog::{slowlog, Progress};
-use carton_utils::archive::{extract_zip, with_atomic_extraction};
+use carton_runner_interface::slowlog::slowlog;
+use carton_utils::{
+    archive::{extract_zip, with_atomic_extraction},
+    download::uncached_download,
+};
 use lazy_static::lazy_static;
-use path_clean::PathClean;
-use sha2::{Digest, Sha256};
 
 use crate::python_utils::add_to_sys_path;
 
@@ -42,38 +42,28 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
     let tempdir = tempfile::tempdir().unwrap();
     let download_path = tempdir.path().join("download");
 
-    let mut outfile = tokio::fs::File::create(&download_path).await.unwrap();
-
-    // Download and copy to the target file while computing the sha256
-    let mut hasher = Sha256::new();
-    let mut res = CLIENT.get(url).send().await.unwrap();
-
     // Slow log on timeout
     let mut sl = slowlog(format!("Downloading file '{url}'"), 5).await;
 
-    if let Some(size) = res.content_length() {
-        sl.set_total(Some(bytesize::ByteSize(size)));
-    }
-
-    let mut downloaded = 0;
-    while let Some(chunk) = res.chunk().await.unwrap() {
-        // TODO: see if we should offload this to a blocking thread
-        hasher.update(&chunk);
-        tokio::io::copy(&mut chunk.as_ref(), &mut outfile)
-            .await
-            .unwrap();
-        downloaded += chunk.len() as u64;
-        sl.set_progress(Some(bytesize::ByteSize(downloaded)));
-    }
+    // Uncached because we don't want to store both compressed wheels and the unzipped versions below
+    uncached_download(
+        url,
+        sha256,
+        &download_path,
+        |total| {
+            if let Some(size) = total {
+                sl.set_total(Some(bytesize::ByteSize(size)));
+            }
+        },
+        |downloaded| {
+            sl.set_progress(Some(bytesize::ByteSize(downloaded)));
+        },
+    )
+    .await
+    .unwrap();
 
     // Let the logging task know we're done downloading
     sl.done();
-
-    // Make sure the sha256 matches the expected value
-    let actual_sha256 = format!("{:x}", hasher.finalize());
-
-    // TODO: return an error instead of asserting
-    assert_eq!(sha256, actual_sha256);
 
     let mut sl = slowlog(format!("Extracting file '{url}'"), 5)
         .await

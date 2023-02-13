@@ -407,11 +407,15 @@ dependencies = [
  "async_zip",
  "flate2",
  "infer",
+ "lazy_static",
  "libc",
  "log",
  "path-clean",
+ "reqwest",
+ "sha2",
  "tar",
  "tempfile",
+ "thiserror",
  "tokio",
 ]
 
