@@ -1,6 +1,74 @@
-use std::{ffi::OsStr, path::Path};
-
+use findshlibs::{SharedLibrary, TargetSharedLibrary};
 use pyo3::{PyResult, Python};
+use std::{ffi::OsStr, path::Path, sync::Once};
+
+/// Initialize python with an isolated environment
+/// This must be called before attempting to use python (otherwise any PyO3 code will panic)
+/// (safe to call multiple times)
+pub(crate) fn init() {
+    static INIT: Once = Once::new();
+    INIT.call_once(|| init_inner())
+}
+
+fn init_inner() {
+    // Explicitly ignore pythonpath because we want to run in an isolated environment
+    std::env::remove_var("PYTHONPATH");
+
+    // Isolate
+    std::env::set_var("PYTHONNOUSERSITE", "true");
+
+    // Get the loaded python library
+    let mut pythonlib = None;
+    TargetSharedLibrary::each(|shlib| {
+        let name = shlib.name().to_string_lossy();
+        log::trace!("Found library in memory: {name}");
+
+        if name.contains("libpython") {
+            if pythonlib.is_some() {
+                panic!("Found multiple python libraries loaded during python runner startup!");
+            }
+
+            pythonlib = Some(name.to_string());
+        }
+    });
+
+    let pythonlib = match pythonlib {
+        Some(s) => s,
+        None => panic!("Didn't find libpython in memory during python runner startup. This shouldn't happen so please file a github issue.")
+    };
+
+    // TODO: make this check more robust. Maybe look for a specific marker file?
+    if !pythonlib.contains("bundled_python") {
+        panic!("It seems like we're not using the bundled python interpreter! Found '{pythonlib}', but expected a path containing 'bundled_python'")
+    }
+
+    // Set PYTHONHOME
+    let pythonhome = std::path::Path::new(&pythonlib)
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    log::trace!("Setting PYTHONHOME to {pythonhome:?}");
+    std::env::set_var("PYTHONHOME", pythonhome);
+
+    // Start the interpreter
+    pyo3::prepare_freethreaded_python();
+
+    // Set sys.executable
+    Python::with_gil(|py| {
+        let info = py.version_info();
+        let executable = pythonhome.join(format!("bin/python{}.{}", info.major, info.minor));
+        log::trace!("Setting sys.executable to {executable:?}");
+        py.import("sys")
+            .unwrap()
+            .setattr("executable", executable.as_os_str())
+            .unwrap();
+
+        // Only does anything on mac
+        // Note: it's okay to set this after interpreter initialization because this is only used by subprocesses
+        std::env::set_var("PYTHONEXECUTABLE", "");
+    });
+}
 
 pub(crate) fn get_executable_path() -> PyResult<String> {
     Python::with_gil(|py| Python::import(py, "sys")?.getattr("executable")?.extract())

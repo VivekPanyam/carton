@@ -3,6 +3,10 @@ name = "carton-bindings-py"
 version = "0.1.0"
 edition = "2021"
 
+# Sets LD_LIBRARY_PATH so we can find libpython at runtime during tests
+# TODO: move it to a more shared location
+build = "../carton-runner-py/build.rs"
+
 [lib]
 name = "carton"
 crate-type = ["cdylib"]

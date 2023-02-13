@@ -4,24 +4,18 @@ use async_zip::read::fs::ZipFileReader;
 use carton_runner_interface::slowlog::slowlog;
 use lazy_static::lazy_static;
 use path_clean::PathClean;
-use pyo3::Python;
 use sha2::{Digest, Sha256};
 
 use crate::python_utils::add_to_sys_path;
 
 lazy_static! {
-    static ref PACKAGE_BASE_DIR: PathBuf = Python::with_gil(|py| {
-        let info = py.version_info();
-
-        let base = home::home_dir().unwrap().join(format!(
-            ".carton/pythonpackages/py{}{}/",
-            info.major, info.minor
-        ));
+    static ref PACKAGE_BASE_DIR: PathBuf = {
+        let base = home::home_dir().unwrap().join(".carton/pythonpackages/");
 
         std::fs::create_dir_all(&base).unwrap();
 
         base
-    });
+    };
     static ref CLIENT: reqwest::Client = reqwest::Client::new();
 }
 
@@ -181,6 +175,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_install_pip() {
+        crate::python_utils::init();
+
         let out = install_wheel(
             "https://files.pythonhosted.org/packages/ab/43/508c403c38eeaa5fc86516eb13bb470ce77601b6d2bbcdb16e26328d0a15/pip-23.0-py3-none-any.whl",
             "b5f88adff801f5ef052bcdef3daa31b55eb67b0fccd6d0106c206fa248e0463c"
@@ -196,6 +192,8 @@ mod tests {
     /// Ensure that wheels that we make available in this process are also available in subprocesses
     #[tokio::test]
     async fn test_install_pip_subprocess() {
+        crate::python_utils::init();
+
         install_wheel_and_make_available(
             "https://files.pythonhosted.org/packages/ab/43/508c403c38eeaa5fc86516eb13bb470ce77601b6d2bbcdb16e26328d0a15/pip-23.0-py3-none-any.whl",
             "b5f88adff801f5ef052bcdef3daa31b55eb67b0fccd6d0106c206fa248e0463c"
