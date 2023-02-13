@@ -68,7 +68,9 @@ where
     let log_dir = tempfile::tempdir_in(logs_tmp_dir).unwrap();
     log::info!(target: "slowlog", "Finding transitive dependencies using `pip install --report`. This may take a while. See the `pip` logs in {:#?}", log_dir.path());
 
-    let mut sl = slowlog("`pip install --report`", 5).await;
+    let mut sl = slowlog("`pip install --report`", 5)
+        .await
+        .without_progress();
 
     // Run pip in a new process to isolate it a little bit from our embedded interpreter
     let success = Command::new(get_executable_path().unwrap().as_str())
