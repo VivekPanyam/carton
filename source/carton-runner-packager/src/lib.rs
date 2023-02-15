@@ -1,7 +1,4 @@
-use std::{
-    future::Future,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use async_zip::{write::ZipFileWriter, ZipEntryBuilder};
 use carton_utils::{
@@ -10,7 +7,7 @@ use carton_utils::{
 };
 use chrono::{DateTime, Utc};
 use discovery::{get_runner_dir, Config, RunnerInfo};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::{ParseError, Url};
 
@@ -18,15 +15,7 @@ pub mod discovery;
 
 /// Package a runner along with additional list zip or tar files to download and unpack at installation time
 /// `upload_runner` is a function that is given the data for a `runner.zip` file along with its sha256 and returns a url
-pub async fn package<F, Fut>(
-    mut info: RunnerInfo,
-    mut additional: Vec<DownloadItem>,
-    upload_runner: F,
-) -> DownloadInfo
-where
-    F: FnOnce(Vec<u8>, String) -> Fut,
-    Fut: Future<Output = String>,
-{
+pub async fn package(mut info: RunnerInfo, additional: Vec<DownloadItem>) -> RunnerPackage {
     // Create a zip file in memory
     let mut zip = Vec::new();
     let mut writer = ZipFileWriter::new(&mut zip);
@@ -64,45 +53,8 @@ where
     // Close the writer
     writer.close().await.unwrap();
 
-    // Compute the sha256 of the zip file
-    let mut hasher = Sha256::new();
-    hasher.update(&zip);
-    let zip_sha256 = format!("{:x}", hasher.finalize());
-
-    // Upload the runner and get the url
-    // TODO: cloning the sha256 makes lifetimes for the closure simpler. Figure out if there's a way to do this more cleanly
-    let url = upload_runner(zip, zip_sha256.clone()).await;
-
-    // Insert the runner zip file at the beginning
-    additional.insert(
-        0,
-        DownloadItem {
-            url,
-            sha256: zip_sha256,
-            relative_path: "".into(),
-        },
-    );
-
-    // Compute the sha256 of the sha256s of all the items in `additional`
-    // to generate a unique id for this runner package
-    let mut hasher = Sha256::new();
-    for item in &additional {
-        hasher.update(&item.sha256);
-    }
-
-    let id = format!("{:x}", hasher.finalize());
-
-    // Create the download config
-    DownloadInfo {
-        runner_name: info.runner_name,
-        id,
-        framework_version: info.framework_version,
-        runner_compat_version: info.runner_compat_version,
-        runner_interface_version: info.runner_interface_version,
-        runner_release_date: info.runner_release_date,
-        download_info: additional,
-        platform: info.platform,
-    }
+    // This lets the user set the url or path and then get a `DownloadInfo` struct
+    RunnerPackage::new(zip, "".into(), info, additional)
 }
 
 // TODO: add slowlog for long running downloads
@@ -171,9 +123,99 @@ fn is_file_path(input: &str) -> bool {
     }
 }
 
+/// Represents a runner package
+#[derive(Serialize, Deserialize)]
+pub struct RunnerPackage {
+    // The sha256 and relative path of the main runner zip file
+    main_sha256: String,
+    main_relative_path: String,
+
+    /// Don't serialize or deserialize data
+    #[serde(skip)]
+    main_data: Vec<u8>,
+
+    /// The generated package id
+    package_id: String,
+    info: RunnerInfo,
+    additional: Vec<DownloadItem>,
+}
+
+impl RunnerPackage {
+    fn new(
+        data: Vec<u8>,
+        relative_path: String,
+        info: RunnerInfo,
+        additional: Vec<DownloadItem>,
+    ) -> Self {
+        // Compute the sha256 of the main zip file
+        let mut hasher = Sha256::new();
+        hasher.update(&data);
+        let zip_sha256 = format!("{:x}", hasher.finalize());
+
+        // Compute the sha256 of the sha256s of the main zip file and all the items in `additional`
+        // to generate a unique id for this runner package
+        let mut hasher = Sha256::new();
+        hasher.update(&zip_sha256);
+        for item in &additional {
+            hasher.update(&item.sha256);
+        }
+
+        let package_id = format!("{:x}", hasher.finalize());
+
+        RunnerPackage {
+            main_sha256: zip_sha256,
+            main_relative_path: relative_path,
+            main_data: data,
+            info,
+            additional,
+            package_id,
+        }
+    }
+
+    /// Returns the generated package id. This is derived from the hashes of all the contained
+    /// data files.
+    pub fn get_id(&self) -> &str {
+        &self.package_id
+    }
+
+    /// Gets the data of the main runner zip file
+    pub fn get_data(&self) -> &[u8] {
+        &self.main_data
+    }
+
+    /// Returns the sha256 of `data`
+    pub fn get_data_sha256(&self) -> &str {
+        &self.main_sha256
+    }
+
+    pub fn get_download_info(mut self, url: String) -> DownloadInfo {
+        // Insert the runner zip file at the beginning
+        self.additional.insert(
+            0,
+            DownloadItem {
+                url,
+                sha256: self.main_sha256,
+                relative_path: self.main_relative_path,
+            },
+        );
+
+        // Create the download config
+        DownloadInfo {
+            runner_name: self.info.runner_name,
+            id: self.package_id,
+            framework_version: self.info.framework_version,
+            runner_compat_version: self.info.runner_compat_version,
+            runner_interface_version: self.info.runner_interface_version,
+            runner_release_date: self.info.runner_release_date,
+            download_info: self.additional,
+            platform: self.info.platform,
+        }
+    }
+}
+
 /// Structs for the json blob representing a runner available for download
 /// See `docs/specification/runner.md` for more details
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct DownloadInfo {
     pub runner_name: String,
     pub id: String,
@@ -188,7 +230,7 @@ pub struct DownloadInfo {
     pub platform: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct DownloadItem {
     pub url: String,
     pub sha256: String,
