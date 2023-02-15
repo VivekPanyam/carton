@@ -395,6 +395,7 @@ name = "carton-runner-py"
 version = "0.0.1"
 dependencies = [
  "async_zip",
+ "bytes",
  "bytesize",
  "carton",
  "carton-runner-interface",
@@ -402,6 +403,7 @@ dependencies = [
  "carton-utils",
  "escargot",
  "findshlibs",
+ "flate2",
  "home",
  "lazy_static",
  "libc",
@@ -417,6 +419,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tar",
  "target-lexicon",
  "tempfile",
  "tokio",

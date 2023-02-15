@@ -11,15 +11,13 @@ use semver::VersionReq;
 #[tokio::test]
 async fn test_pack_python_model() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
-    println!("WORKSPACE: {workspace_root:?}");
 
     // Build the runner for a specific version of python
     let runner_path = escargot::CargoBuild::new()
         .package("carton-runner-py")
         .env(
             "PYO3_CONFIG_FILE",
-            workspace_root.join("build/python_configs/cpython3.10.9"),
+            manifest_dir.join("python_configs/cpython3.10.9"),
         )
         .run()
         .unwrap()
