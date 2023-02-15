@@ -70,7 +70,7 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
         .without_progress();
 
     // Unzip
-    with_atomic_extraction(&download_path, &target_dir, extract_zip).await;
+    with_atomic_extraction(&target_dir, |out_dir| extract_zip(download_path, out_dir)).await;
 
     sl.done();
 
@@ -88,8 +88,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_install_pip() {
-        crate::python_utils::init();
-
         let out = install_wheel(
             "https://files.pythonhosted.org/packages/ab/43/508c403c38eeaa5fc86516eb13bb470ce77601b6d2bbcdb16e26328d0a15/pip-23.0-py3-none-any.whl",
             "b5f88adff801f5ef052bcdef3daa31b55eb67b0fccd6d0106c206fa248e0463c"
@@ -105,8 +103,6 @@ mod tests {
     /// Ensure that wheels that we make available in this process are also available in subprocesses
     #[tokio::test]
     async fn test_install_pip_subprocess() {
-        crate::python_utils::init();
-
         install_wheel_and_make_available(
             "https://files.pythonhosted.org/packages/ab/43/508c403c38eeaa5fc86516eb13bb470ce77601b6d2bbcdb16e26328d0a15/pip-23.0-py3-none-any.whl",
             "b5f88adff801f5ef052bcdef3daa31b55eb67b0fccd6d0106c206fa248e0463c"

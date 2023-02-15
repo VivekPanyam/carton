@@ -160,12 +160,12 @@ where
 pub(crate) async fn discover_or_get_runner_and_launch<T>(
     info: &CartonInfo<T>,
     visible_device: &Device,
-) -> crate::error::Result<(Runner, crate::discovery::RunnerInfo)>
+) -> crate::error::Result<(Runner, carton_runner_packager::discovery::RunnerInfo)>
 where
     T: TensorStorage,
 {
     // TODO: maybe we want to just do this once at startup or cache it?
-    let local_runners = crate::discovery::discover_runners().await;
+    let local_runners = carton_runner_packager::discovery::discover_runners().await;
 
     // Filter the runners to ones that match our requirements
     let candidate = local_runners

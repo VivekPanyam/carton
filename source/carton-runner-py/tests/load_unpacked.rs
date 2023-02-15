@@ -1,15 +1,26 @@
+use std::{path::PathBuf, time::SystemTime};
+
 use carton::{
     info::RunnerInfo,
     types::{CartonInfo, GenericStorage, LoadOpts, RunnerOpt},
     Carton,
 };
+use carton_runner_packager::{discovery::RunnerInfo as PackageInfo, DownloadItem};
 use semver::VersionReq;
 
 #[tokio::test]
 async fn test_pack_python_model() {
-    // Make sure the py runner is built
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+    println!("WORKSPACE: {workspace_root:?}");
+
+    // Build the runner for a specific version of python
     let runner_path = escargot::CargoBuild::new()
         .package("carton-runner-py")
+        .env(
+            "PYO3_CONFIG_FILE",
+            workspace_root.join("build/python_configs/cpython3.10.9"),
+        )
         .run()
         .unwrap()
         .path()
@@ -17,33 +28,39 @@ async fn test_pack_python_model() {
         .to_string();
     println!("Runner Path: {}", runner_path);
 
-    println!("Creating runner.toml");
-    let runner_toml = format!(
-        r#"
-# This is a runner.toml that runs against the release runner
-version = 1
-
-[[runner]]
-runner_name = "python"
-framework_version = "1.0.0"
-runner_compat_version = 1
-runner_interface_version = 1
-runner_release_date = "1979-05-27T07:32:00Z"
-
-# A path to the runner binary. This can be absolute or relative to this file
-runner_path = "{runner_path}"
-
-# A target triple
-platform = "{}"
-"#,
-        target_lexicon::HOST.to_string()
-    );
-
+    // Create a tempdir to store packaging artifacts
     let tempdir = tempfile::tempdir().unwrap();
-    std::fs::write(tempdir.path().join("runner.toml"), runner_toml).unwrap();
+    let tempdir_path = tempdir.path();
 
-    // TODO don't do this
-    std::env::set_var("CARTON_RUNNER_DIR", tempdir.path().as_os_str());
+    let download_info = carton_runner_packager::package(
+        PackageInfo {
+            runner_name: "python".to_string(),
+            framework_version: semver::Version::new(3, 10, 9),
+            runner_compat_version: 1,
+            runner_interface_version: 1,
+            runner_release_date: SystemTime::now().into(),
+            runner_path,
+            platform: target_lexicon::HOST.to_string(),
+        },
+        vec![
+            DownloadItem {
+                url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.10.9+20230116-x86_64-unknown-linux-gnu-install_only.tar.gz".to_string(),
+                sha256: "d196347aeb701a53fe2bb2b095abec38d27d0fa0443f8a1c2023a1bed6e18cdf".to_string(),
+                relative_path: "./bundled_python".to_string()
+            }
+        ],
+        |data, _| async move {
+            let path = tempdir_path.join("runner.zip");
+            tokio::fs::write(&path, data).await.unwrap();
+            path.to_str().unwrap().to_owned()
+        },
+    )
+    .await;
+
+    // Now install the runner we just packaged into a tempdir
+    let runner_dir = tempfile::tempdir().unwrap();
+    std::env::set_var("CARTON_RUNNER_DIR", runner_dir.path());
+    carton_runner_packager::install(download_info, true).await;
 
     let pack_opts: CartonInfo<GenericStorage> = CartonInfo {
         model_name: None,

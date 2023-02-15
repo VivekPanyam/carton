@@ -53,6 +53,7 @@ pub async fn extract_zip<P: AsRef<Path>>(archive: P, out_dir: P) {
             let mut writer = tokio::fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
+                .mode(entry.unix_permissions().unwrap() as u32)
                 .open(&path)
                 .await
                 .expect("Failed to create extracted file");
@@ -133,9 +134,9 @@ pub async fn extract(archive: &Path, out_dir: &Path) {
 /// This calls the provided function `do_extract` with a temporary path to extract into and then moves that dir to `target_dir`
 /// This should be atomic so it won't cause broken output if multiple extractions happen at the same time.
 /// Note: if `target_dir` exists, this function doesn't do anything
-pub async fn with_atomic_extraction<F, Fut>(archive: &Path, target_dir: &Path, do_extract: F)
+pub async fn with_atomic_extraction<F, Fut>(target_dir: &Path, do_extract: F)
 where
-    F: FnOnce(PathBuf, PathBuf) -> Fut,
+    F: FnOnce(PathBuf) -> Fut,
     Fut: Future<Output = ()>,
 {
     if target_dir.exists() {
@@ -149,7 +150,7 @@ where
     let extraction_dir = tempdir.path().join("extraction");
 
     // Extract
-    do_extract(archive.to_owned(), extraction_dir.clone()).await;
+    do_extract(extraction_dir.clone()).await;
 
     // Move to the target directory. This should be atomic so it won't break anything
     // if multiple installs happen at the same time.

@@ -73,16 +73,12 @@ mod tests {
 
     #[test]
     fn get_current_environment() {
-        crate::python_utils::init();
-
         let env = EnvironmentMarkers::get_current().unwrap();
         println!("{:#?}", env);
     }
 
     #[test]
     fn serailize_empty() {
-        crate::python_utils::init();
-
         let env = EnvironmentMarkers::default();
         let serialized = toml::to_string_pretty(&env).unwrap();
         assert!(serialized.is_empty())

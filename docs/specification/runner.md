@@ -71,7 +71,7 @@ The carton library fetches a list of official runners from a well known URL (TOD
 [
     {
         "runner_name": "",
-        "manifest_sha256": "", // The sha256 of the MANIFEST file
+        "id": "", // A hash combining each of the sha256s in download_info. This is an implementation detail that could change
         "framework_version": "",
         "runner_compat_version": 1,
         "runner_interface_version": 1,
@@ -79,8 +79,7 @@ The carton library fetches a list of official runners from a well known URL (TOD
 
         // A list of URLs to zip, tar, or tar.gz files
         // The files are downloaded and unpacked based on `relative_path` below
-        // The resulting folder structure MUST have a runner.toml and a MANIFEST in the root directory
-        // The MANIFEST is in the same format as in the carton file format.
+        // The resulting folder structure MUST have a runner.toml in the root directory
         // Being able to split downloads into multiple files allows us to keep releases small and makes it more
         // feasible to have a regular release schedule.
         "download_info": [

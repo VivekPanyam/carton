@@ -1,0 +1,24 @@
+[package]
+name = "carton-runner-packager"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+carton-utils = { path = "../carton-utils" }
+tokio = { version = "1", features = ["full"] }
+toml = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+url = "2.3.1"
+log = "0.4"
+escargot = "0.5.7"
+semver = {version = "1.0.16"}
+target-lexicon = "0.12.5"
+chrono = {version = "0.4.23", features = ["serde"]}
+tempfile = "3.3.0"
+reqwest = { version = "0.11", features = ["json"] }
+async_zip = {version = "0.0.11", features = ["full"]}
+sha2 = "0.10.6"
+walkdir = "2.3.2"
+futures = "0.3"
+thiserror = "1"
