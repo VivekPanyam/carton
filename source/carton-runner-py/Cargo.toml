@@ -36,3 +36,11 @@ target-lexicon = "0.12.5"
 escargot = "0.5.7"
 carton-runner-packager = { path = "../carton-runner-packager" }
 pyo3 = { features = ["auto-initialize"] }
+
+[build-dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+flate2 = "1.0"
+tar = "0.4"
+bytes = "1"
+sha2 = "0.10.6"
