@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  runner_release_native:
+  nightly_release_native:
     name: Native Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     container:
@@ -32,16 +32,19 @@ jobs:
           submodules: recursive
       - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --verbose --target ${{ matrix.target }}
-      - run: cargo test --release --verbose --target ${{ matrix.target }}
-      - name: Build runners
-        run: rm -rf /tmp/runner_releases && mkdir -p /tmp/runner_releases && cargo run --release  --target ${{ matrix.target }} -p carton-runner-py --bin build_releases -- --output-path /tmp/runner_releases
+      - run: pip3 install -r ci/build_requirements.txt
+      - run: python3 ci/build.py --target ${{ matrix.target }} --release --nightly --runner_release_dir /tmp/runner_releases
       - name: Upload runners
         uses: actions/upload-artifact@v3
         with:
           name: runners-${{ matrix.target }}
           path: /tmp/runner_releases
-  runner_release_aarch64:
+      - name: Upload python wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: py-wheels-${{ matrix.target }}
+          path: target/wheels/
+  nightly_release_aarch64:
     name: "Native Build aarch64"
     runs-on: ubuntu-latest
     steps:
@@ -60,10 +63,15 @@ jobs:
         with:
           name: runners-aarch64
           path: /tmp/runner_releases
+      - name: Upload python wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: py-wheels-aarch64
+          path: /tmp/target/wheels/
 
   upload_nightly_builds:
     name: "Upload nightly builds"
-    needs: [runner_release_native, runner_release_aarch64]
+    needs: [nightly_release_native, nightly_release_aarch64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

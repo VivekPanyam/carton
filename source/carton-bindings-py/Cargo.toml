@@ -1,6 +1,6 @@
 [package]
 name = "carton-bindings-py"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [lib]
@@ -8,7 +8,7 @@ name = "carton"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.17.3" }
+pyo3 = { version = "0.17.3", features = ["abi3-py37"]}
 pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
 carton-core = { package = "carton", path = "../carton" }
 numpy = "0.17"

@@ -65,8 +65,8 @@ nightly_linux_task:
   alias: nightly_linux
   arm_container:
     dockerfile: ci/cirrus_ci.dockerfile
-    cpu: 8
-    memory: 32G
+    cpu: 4
+    memory: 16G
   submodules_script:
     # Init submodules
     - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
@@ -77,11 +77,12 @@ nightly_linux_task:
       - echo "nightly"
       - cat Cargo.lock
   build_and_test_script:
-    - cargo build --release --verbose --target aarch64-unknown-linux-gnu
-    - cargo test --release --verbose --target aarch64-unknown-linux-gnu
-    - rm -rf $CIRRUS_WORKING_DIR/runner_releases && mkdir -p $CIRRUS_WORKING_DIR/runner_releases && cargo run --release --target aarch64-unknown-linux-gnu -p carton-runner-py --bin build_releases -- --output-path $CIRRUS_WORKING_DIR/runner_releases
+    - pip3 install -r ci/build_requirements.txt
+    - python3 ci/build.py --target aarch64-unknown-linux-gnu --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases
   binaries_artifacts:
     path: "runner_releases/*"
+  wheels_artifacts:
+    path: "target/wheels/*"
   before_cache_script: rm -rf $CARGO_HOME/registry/index
 
 nightly_macos_task:
@@ -99,11 +100,12 @@ nightly_macos_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
   build_and_test_script:
     - source $HOME/.cargo/env
-    - cargo build --release --verbose --target aarch64-apple-darwin
-    - cargo test --release --verbose --target aarch64-apple-darwin
-    - rm -rf $CIRRUS_WORKING_DIR/runner_releases && mkdir -p $CIRRUS_WORKING_DIR/runner_releases && cargo run --release --target aarch64-apple-darwin -p carton-runner-py --bin build_releases -- --output-path $CIRRUS_WORKING_DIR/runner_releases
+    - pip3 install -r ci/build_requirements.txt
+    - python3 ci/build.py --target aarch64-apple-darwin --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases
   binaries_artifacts:
     path: "runner_releases/*"
+  wheels_artifacts:
+    path: "target/wheels/*"
 
 """
 
@@ -144,11 +146,20 @@ while True:
 
     time.sleep(10.0)
 
-print("Build complete! Downloading artifacts...")
+print("Build complete! Downloading runners...")
 res = requests.get(f"https://api.cirrus-ci.com/v1/artifact/build/{build_id}/binaries.zip", headers={"Authorization": CIRRUS_AUTH})
 
 with open("/tmp/binaries.zip", "wb") as f:
     f.write(res.content)
 
 with zipfile.ZipFile("/tmp/binaries.zip", 'r') as zip_ref:
+    zip_ref.extractall("/tmp")
+
+print("Downloading wheels...")
+res = requests.get(f"https://api.cirrus-ci.com/v1/artifact/build/{build_id}/wheels.zip", headers={"Authorization": CIRRUS_AUTH})
+
+with open("/tmp/wheels.zip", "wb") as f:
+    f.write(res.content)
+
+with zipfile.ZipFile("/tmp/wheels.zip", 'r') as zip_ref:
     zip_ref.extractall("/tmp")
