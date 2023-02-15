@@ -15,10 +15,12 @@ async fn test_pack_python_model() {
     // Build the runner for a specific version of python
     let runner_path = escargot::CargoBuild::new()
         .package("carton-runner-py")
+        .bin("carton-runner-py")
         .env(
             "PYO3_CONFIG_FILE",
             manifest_dir.join("python_configs/cpython3.10.9"),
         )
+        .current_release()
         .run()
         .unwrap()
         .path()
@@ -30,7 +32,7 @@ async fn test_pack_python_model() {
     let tempdir = tempfile::tempdir().unwrap();
     let tempdir_path = tempdir.path();
 
-    let download_info = carton_runner_packager::package(
+    let package = carton_runner_packager::package(
         PackageInfo {
             runner_name: "python".to_string(),
             framework_version: semver::Version::new(3, 10, 9),
@@ -47,13 +49,13 @@ async fn test_pack_python_model() {
                 relative_path: "./bundled_python".to_string()
             }
         ],
-        |data, _| async move {
-            let path = tempdir_path.join("runner.zip");
-            tokio::fs::write(&path, data).await.unwrap();
-            path.to_str().unwrap().to_owned()
-        },
     )
     .await;
+
+    // Write the zip file to our temp dir
+    let path = tempdir_path.join("runner.zip");
+    tokio::fs::write(&path, package.get_data()).await.unwrap();
+    let download_info = package.get_download_info(path.to_str().unwrap().to_owned());
 
     // Now install the runner we just packaged into a tempdir
     let runner_dir = tempfile::tempdir().unwrap();

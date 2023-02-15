@@ -1,0 +1,34 @@
+name: Runner Releases
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  runner_release_native:
+    name: Native Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --verbose
+      - run: cargo test --release --verbose
+      - name: Build runners
+        run: rm -rf /tmp/runner_releases && mkdir -p /tmp/runner_releases && cargo run --release -p carton-runner-py --bin build_releases -- --output-path /tmp/runner_releases
+      - name: Upload runners
+        uses: actions/upload-artifact@v3
+        with:
+          name: runners
+          path: /tmp/runner_releases
