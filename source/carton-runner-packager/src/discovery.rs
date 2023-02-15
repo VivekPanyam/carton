@@ -2,10 +2,11 @@
 //! See `docs/specification/runner.md` for more details
 
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use walkdir::WalkDir;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Config {
     /// Should be 1
     pub version: u64,
@@ -15,7 +16,7 @@ pub struct Config {
 }
 
 /// See `docs/specification/runner.md` for more details
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RunnerInfo {
     pub runner_name: String,
     pub framework_version: semver::Version,
@@ -30,10 +31,22 @@ pub struct RunnerInfo {
     pub platform: String,
 }
 
+pub(crate) fn get_runner_dir() -> String {
+    std::env::var("CARTON_RUNNER_DIR").unwrap_or("/usr/local/carton_runners".to_string())
+}
+
+#[derive(Debug, Error)]
+enum DiscoveryError {
+    #[error("IO error: {0}")]
+    IOError(#[from] std::io::Error),
+
+    #[error("Error parsing runner metadata: {0}")]
+    ConfigParsingError(#[from] toml::de::Error),
+}
+
 /// Discover all installed runners
 pub async fn discover_runners() -> Vec<RunnerInfo> {
-    let runner_base_dir =
-        std::env::var("CARTON_RUNNER_DIR").unwrap_or("/usr/local/carton_runners".to_string());
+    let runner_base_dir = get_runner_dir();
 
     // Find runner.toml files
     let mut runner_tomls = Vec::new();
@@ -74,7 +87,7 @@ pub async fn discover_runners() -> Vec<RunnerInfo> {
                 .to_owned();
         }
 
-        Ok::<_, crate::error::CartonError>(config)
+        Ok::<_, DiscoveryError>(config)
     });
 
     // Join and flatten

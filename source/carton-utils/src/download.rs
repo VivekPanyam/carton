@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 use sha2::{Digest, Sha256};
-use std::{future::Future, path::Path};
+use std::path::Path;
 
 use crate::error::{DownloadError, Result};
 

@@ -277,11 +277,11 @@ dependencies = [
  "bytes",
  "carton-macros",
  "carton-runner-interface",
+ "carton-runner-packager",
  "chrono",
  "console-subscriber",
  "criterion",
  "escargot",
- "futures",
  "lazy_static",
  "lunchbox",
  "ndarray",
@@ -296,7 +296,6 @@ dependencies = [
  "tokio",
  "toml",
  "url",
- "walkdir",
  "zipfs",
 ]
 
@@ -368,6 +367,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "carton-runner-packager"
+version = "0.0.1"
+dependencies = [
+ "async_zip",
+ "carton-utils",
+ "chrono",
+ "escargot",
+ "futures",
+ "log",
+ "reqwest",
+ "semver 1.0.16",
+ "serde",
+ "serde_json",
+ "sha2",
+ "target-lexicon",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toml",
+ "url",
+ "walkdir",
+]
+
+[[package]]
 name = "carton-runner-py"
 version = "0.0.1"
 dependencies = [
@@ -375,6 +398,7 @@ dependencies = [
  "bytesize",
  "carton",
  "carton-runner-interface",
+ "carton-runner-packager",
  "carton-utils",
  "escargot",
  "findshlibs",

@@ -28,9 +28,8 @@ sha2 = "0.10.6"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 nvml-wrapper = "0.8.0"
-walkdir = "2.3.2"
-futures = "0.3"
 lunchbox = { version = "0.1", features = ["serde", "localfs"]}
+carton-runner-packager = { path = "../carton-runner-packager" }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 lunchbox = { version = "0.1", features = ["serde"]}

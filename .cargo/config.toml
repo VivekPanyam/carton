@@ -6,7 +6,3 @@ rustflags = ["--cfg", "tokio_unstable"]
 # Set a default target so that build caches are saved correctly when switching targets
 # https://doc.rust-lang.org/cargo/guide/build-cache.html
 target = ["x86_64-unknown-linux-gnu"]
-
-[env]
-# We'll default to python 3.10
-PYO3_CONFIG_FILE = { value = "build/python_configs/cpython3.10.9", relative = true }

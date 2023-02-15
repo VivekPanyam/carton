@@ -119,8 +119,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_lightgbm_deps() {
-        crate::python_utils::init();
-
         let tempdir = tempfile::tempdir().unwrap();
 
         let requirements_file_path = tempdir.path().join("requirements.txt");
@@ -152,8 +150,6 @@ mod tests {
     /// Ensure that the correct version of pip is available in subprocesses
     #[tokio::test]
     async fn test_pip_subprocess_version() {
-        crate::python_utils::init();
-
         ensure_has_pip().await;
 
         let output = Command::new(get_executable_path().unwrap().as_str())

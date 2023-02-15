@@ -321,8 +321,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_lockfile() {
-        crate::python_utils::init();
-
         let tempdir = tempfile::tempdir().unwrap();
 
         let requirements_file_path = tempdir.path().join("requirements.txt");
