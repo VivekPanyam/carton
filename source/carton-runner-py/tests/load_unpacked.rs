@@ -7,26 +7,55 @@ use carton::{
 };
 use carton_runner_packager::{discovery::RunnerInfo as PackageInfo, DownloadItem};
 use semver::VersionReq;
+use tokio::process::Command;
+
+// Include the list of python releases we want to build against
+include!("../src/bin/build_releases/python_versions.rs");
 
 #[tokio::test]
 async fn test_pack_python_model() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
     // Build the runner for a specific version of python
+    let target_version = PYTHON_VERSIONS.first().unwrap();
     let runner_path = escargot::CargoBuild::new()
         .package("carton-runner-py")
         .bin("carton-runner-py")
         .env(
             "PYO3_CONFIG_FILE",
-            manifest_dir.join("python_configs/cpython3.10.9"),
+            manifest_dir.join(format!(
+                "python_configs/cpython{}.{}.{}",
+                target_version.major, target_version.minor, target_version.micro
+            )),
         )
         .current_release()
+        .current_target()
         .run()
         .unwrap()
         .path()
         .display()
         .to_string();
     println!("Runner Path: {}", runner_path);
+
+    // Patch the runner on mac
+    #[cfg(target_os = "macos")]
+    assert!(Command::new("install_name_tool")
+        .args(&[
+            "-change",
+            &format!(
+                "/install/lib/libpython{}.{}.dylib",
+                target_version.major, target_version.minor
+            ),
+            &format!(
+                "@rpath/libpython{}.{}.dylib",
+                target_version.major, target_version.minor
+            ),
+            &runner_path,
+        ])
+        .status()
+        .await
+        .unwrap()
+        .success());
 
     // Create a tempdir to store packaging artifacts
     let tempdir = tempfile::tempdir().unwrap();
@@ -35,20 +64,22 @@ async fn test_pack_python_model() {
     let package = carton_runner_packager::package(
         PackageInfo {
             runner_name: "python".to_string(),
-            framework_version: semver::Version::new(3, 10, 9),
+            framework_version: semver::Version::new(
+                target_version.major as _,
+                target_version.minor as _,
+                target_version.micro as _,
+            ),
             runner_compat_version: 1,
             runner_interface_version: 1,
             runner_release_date: SystemTime::now().into(),
             runner_path,
             platform: target_lexicon::HOST.to_string(),
         },
-        vec![
-            DownloadItem {
-                url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.10.9+20230116-x86_64-unknown-linux-gnu-install_only.tar.gz".to_string(),
-                sha256: "d196347aeb701a53fe2bb2b095abec38d27d0fa0443f8a1c2023a1bed6e18cdf".to_string(),
-                relative_path: "./bundled_python".to_string()
-            }
-        ],
+        vec![DownloadItem {
+            url: target_version.url.to_string(),
+            sha256: target_version.sha256.to_string(),
+            relative_path: "./bundled_python".to_string(),
+        }],
     )
     .await;
 

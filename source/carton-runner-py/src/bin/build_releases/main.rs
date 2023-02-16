@@ -5,6 +5,7 @@ use std::{path::PathBuf, time::SystemTime};
 use carton_runner_packager::{discovery::RunnerInfo, DownloadItem};
 use clap::Parser;
 use python_versions::{PythonVersion, PYTHON_VERSIONS};
+use tokio::process::Command;
 mod python_versions;
 
 #[derive(Parser, Debug)]
@@ -39,12 +40,27 @@ async fn main() {
                 manifest_dir.join(format!("python_configs/cpython{major}.{minor}.{micro}")),
             )
             .current_release()
+            .current_target()
             .run()
             .unwrap()
             .path()
             .display()
             .to_string();
         println!("Runner Path: {}", runner_path);
+
+        // Patch the runner on mac
+        #[cfg(target_os = "macos")]
+        assert!(Command::new("install_name_tool")
+            .args(&[
+                "-change",
+                &format!("/install/lib/libpython{major}.{minor}.dylib",),
+                &format!("@rpath/libpython{major}.{minor}.dylib",),
+                &runner_path,
+            ])
+            .status()
+            .await
+            .unwrap()
+            .success());
 
         let package = carton_runner_packager::package(
             RunnerInfo {

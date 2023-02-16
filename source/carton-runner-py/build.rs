@@ -13,7 +13,16 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     // Add the bundled python lib dir to the binary's rpath
+    #[cfg(not(target_os = "macos"))]
     println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN/bundled_python/python/lib");
+
+    #[cfg(target_os = "macos")]
+    println!("cargo:rustc-link-arg=-Wl,-rpath,@loader_path/bundled_python/python/lib");
+
+    #[cfg(target_os = "macos")]
+    println!(
+        "cargo:rustc-link-arg=-Wl,-rpath,/Library/Developer/CommandLineTools/Library/Frameworks"
+    );
 }
 
 // Include the list of python releases we want to build against

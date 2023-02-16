@@ -7,6 +7,7 @@ pub struct PythonVersion {
 }
 
 /// Lists the python releases we want to build against
+#[cfg(not(target_os = "macos"))]
 pub const PYTHON_VERSIONS: [PythonVersion; 4] = [
         PythonVersion {
             major: 3,
@@ -35,5 +36,71 @@ pub const PYTHON_VERSIONS: [PythonVersion; 4] = [
             micro: 16,
             url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.9.16+20230116-x86_64-unknown-linux-gnu-install_only.tar.gz",
             sha256: "7ba397787932393e65fc2fb9fcfabf54f2bb6751d5da2b45913cb25b2d493758",
+        },
+    ];
+
+/// Lists the python releases we want to build against
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub const PYTHON_VERSIONS: [PythonVersion; 4] = [
+        PythonVersion {
+            major: 3,
+            minor: 10,
+            micro: 9,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.10.9+20230116-aarch64-apple-darwin-install_only.tar.gz",
+            sha256: "018d05a779b2de7a476f3b3ff2d10f503d69d14efcedd0774e6dab8c22ef84ff",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 11,
+            micro: 1,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.11.1+20230116-aarch64-apple-darwin-install_only.tar.gz",
+            sha256: "4918cdf1cab742a90f85318f88b8122aeaa2d04705803c7b6e78e81a3dd40f80",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 8,
+            micro: 16,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.8.16+20230116-aarch64-apple-darwin-install_only.tar.gz",
+            sha256: "d1f408569d8807c1053939d7822b082a17545e363697e1ce3cfb1ee75834c7be",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 9,
+            micro: 16,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.9.16+20230116-aarch64-apple-darwin-install_only.tar.gz",
+            sha256: "d732d212d42315ac27c6da3e0b69636737a8d72086c980daf844344c010cab80",
+        },
+    ];
+
+/// Lists the python releases we want to build against
+#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+pub const PYTHON_VERSIONS: [PythonVersion; 4] = [
+        PythonVersion {
+            major: 3,
+            minor: 10,
+            micro: 9,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.10.9+20230116-x86_64-apple-darwin-install_only.tar.gz",
+            sha256: "0e685f98dce0e5bc8da93c7081f4e6c10219792e223e4b5886730fd73a7ba4c6",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 11,
+            micro: 1,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.11.1+20230116-x86_64-apple-darwin-install_only.tar.gz",
+            sha256: "20a4203d069dc9b710f70b09e7da2ce6f473d6b1110f9535fb6f4c469ed54733",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 8,
+            micro: 16,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.8.16+20230116-x86_64-apple-darwin-install_only.tar.gz",
+            sha256: "484ba901f64fc7888bec5994eb49343dc3f9d00ed43df17ee9c40935aad4aa18",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 9,
+            micro: 16,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.9.16+20230116-x86_64-apple-darwin-install_only.tar.gz",
+            sha256: "3948384af5e8d4ee7e5ccc648322b99c1c5cf4979954ed5e6b3382c69d6db71e",
         },
     ];
