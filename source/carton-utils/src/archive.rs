@@ -155,7 +155,11 @@ where
     // Move to the target directory. This should be atomic so it won't break anything
     // if multiple installs happen at the same time.
     match tokio::fs::rename(&extraction_dir, &target_dir).await {
-        Err(e) if e.raw_os_error() == Some(libc::ENOTEMPTY) => {
+        Err(e)
+            if e.raw_os_error() == Some(libc::ENOTEMPTY)
+                || e.raw_os_error() == Some(libc::EEXIST) =>
+        {
+            // See https://man7.org/linux/man-pages/man2/rename.2.html
             // This can happen if another installation created the target directory before we called
             // rename.
             // We don't need to do anything here
