@@ -1,91 +1,54 @@
-use std::{path::PathBuf, time::SystemTime};
+use std::path::PathBuf;
 
 use carton::{
     info::RunnerInfo,
     types::{CartonInfo, GenericStorage, LoadOpts, RunnerOpt},
     Carton,
 };
-use carton_runner_packager::{discovery::RunnerInfo as PackageInfo, DownloadItem};
+use carton_runner_packager::RunnerPackage;
 use semver::VersionReq;
 use tokio::process::Command;
 
-// Include the list of python releases we want to build against
-include!("../src/bin/build_releases/python_versions.rs");
-
 #[tokio::test]
 async fn test_pack_python_model() {
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-
-    // Build the runner for a specific version of python
-    let target_version = PYTHON_VERSIONS.first().unwrap();
-    let runner_path = escargot::CargoBuild::new()
-        .package("carton-runner-py")
-        .bin("carton-runner-py")
-        .env(
-            "PYO3_CONFIG_FILE",
-            manifest_dir.join(format!(
-                "python_configs/cpython{}.{}.{}",
-                target_version.major, target_version.minor, target_version.micro
-            )),
-        )
-        .current_release()
-        .current_target()
-        .run()
-        .unwrap()
-        .path()
-        .display()
-        .to_string();
-    println!("Runner Path: {}", runner_path);
-
-    // Patch the runner on mac
-    #[cfg(target_os = "macos")]
-    assert!(Command::new("install_name_tool")
-        .args(&[
-            "-change",
-            &format!(
-                "/install/lib/libpython{}.{}.dylib",
-                target_version.major, target_version.minor
-            ),
-            &format!(
-                "@rpath/libpython{}.{}.dylib",
-                target_version.major, target_version.minor
-            ),
-            &runner_path,
-        ])
-        .status()
-        .await
-        .unwrap()
-        .success());
+    // Get the path of the builder
+    let builder_path = PathBuf::from(env!("CARGO_BIN_EXE_build_releases"));
 
     // Create a tempdir to store packaging artifacts
     let tempdir = tempfile::tempdir().unwrap();
     let tempdir_path = tempdir.path();
 
-    let package = carton_runner_packager::package(
-        PackageInfo {
-            runner_name: "python".to_string(),
-            framework_version: semver::Version::new(
-                target_version.major as _,
-                target_version.minor as _,
-                target_version.micro as _,
-            ),
-            runner_compat_version: 1,
-            runner_interface_version: 1,
-            runner_release_date: SystemTime::now().into(),
-            runner_path,
-            platform: target_lexicon::HOST.to_string(),
-        },
-        vec![DownloadItem {
-            url: target_version.url.to_string(),
-            sha256: target_version.sha256.to_string(),
-            relative_path: "./bundled_python".to_string(),
-        }],
-    )
-    .await;
+    // Run the builder
+    let status = Command::new(builder_path)
+        .args(&[
+            "--output-path",
+            tempdir_path.to_str().unwrap(),
+            "--single-release",
+        ])
+        .status()
+        .await
+        .unwrap();
+    assert!(status.success());
 
-    // Write the zip file to our temp dir
-    let path = tempdir_path.join("runner.zip");
-    tokio::fs::write(&path, package.get_data()).await.unwrap();
+    // Get a package
+    let package_config = std::fs::read_dir(&tempdir_path)
+        .unwrap()
+        .find_map(|item| {
+            if let Ok(item) = item {
+                if item.file_name().to_str().unwrap().ends_with(".json") {
+                    return Some(item);
+                }
+            }
+
+            None
+        })
+        .unwrap();
+
+    let package: RunnerPackage =
+        serde_json::from_slice(&std::fs::read(package_config.path()).unwrap()).unwrap();
+
+    // Get the zipfile path
+    let path = tempdir_path.join(format!("{}.zip", package.get_data_sha256()));
     let download_info = package.get_download_info(path.to_str().unwrap().to_owned());
 
     // Now install the runner we just packaged into a tempdir

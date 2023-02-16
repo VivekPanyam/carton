@@ -13,6 +13,10 @@ struct Args {
     /// The local folder to output to
     #[arg(long)]
     output_path: PathBuf,
+
+    // Only build one release (useful in tests)
+    #[arg(long)]
+    single_release: bool,
 }
 
 #[tokio::main]
@@ -81,9 +85,10 @@ async fn main() {
         .await;
 
         // Write the zip file to our output dir
-        let package_id = package.get_id();
         tokio::fs::write(
-            &args.output_path.join(format!("{package_id}.zip")),
+            &args
+                .output_path
+                .join(format!("{}.zip", package.get_data_sha256())),
             package.get_data(),
         )
         .await
@@ -91,10 +96,14 @@ async fn main() {
 
         // Write the package config so it can be loaded when the runner zip files will be uploaded
         tokio::fs::write(
-            &args.output_path.join(format!("{package_id}.json")),
+            &args.output_path.join(format!("{}.json", package.get_id())),
             serde_json::to_string_pretty(&package).unwrap(),
         )
         .await
-        .unwrap()
+        .unwrap();
+
+        if args.single_release {
+            break;
+        }
     }
 }
