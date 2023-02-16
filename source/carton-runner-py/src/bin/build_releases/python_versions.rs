@@ -7,7 +7,7 @@ pub struct PythonVersion {
 }
 
 /// Lists the python releases we want to build against
-#[cfg(not(target_os = "macos"))]
+#[cfg(all(not(target_os = "macos"), target_arch = "x86_64"))]
 pub const PYTHON_VERSIONS: [PythonVersion; 4] = [
         PythonVersion {
             major: 3,
@@ -36,6 +36,39 @@ pub const PYTHON_VERSIONS: [PythonVersion; 4] = [
             micro: 16,
             url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.9.16+20230116-x86_64-unknown-linux-gnu-install_only.tar.gz",
             sha256: "7ba397787932393e65fc2fb9fcfabf54f2bb6751d5da2b45913cb25b2d493758",
+        },
+    ];
+
+/// Lists the python releases we want to build against
+#[cfg(all(not(target_os = "macos"), target_arch = "aarch64"))]
+pub const PYTHON_VERSIONS: [PythonVersion; 4] = [
+        PythonVersion {
+            major: 3,
+            minor: 10,
+            micro: 9,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.10.9+20230116-aarch64-unknown-linux-gnu-install_only.tar.gz",
+            sha256: "2003750f40cd09d4bf7a850342613992f8d9454f03b3c067989911fb37e7a4d1",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 11,
+            micro: 1,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.11.1+20230116-aarch64-unknown-linux-gnu-install_only.tar.gz",
+            sha256: "debf15783bdcb5530504f533d33fda75a7b905cec5361ae8f33da5ba6599f8b4",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 8,
+            micro: 16,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.8.16+20230116-aarch64-unknown-linux-gnu-install_only.tar.gz",
+            sha256: "15d00bc8400ed6d94c665a797dc8ed7a491ae25c5022e738dcd665cd29beec42",
+        },
+        PythonVersion {
+            major: 3,
+            minor: 9,
+            micro: 16,
+            url: "https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.9.16+20230116-aarch64-unknown-linux-gnu-install_only.tar.gz",
+            sha256: "1ba520c0db431c84305677f56eb9a4254f5097430ed443e92fc8617f8fba973d",
         },
     ];
 
