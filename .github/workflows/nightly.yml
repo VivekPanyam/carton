@@ -3,7 +3,7 @@ name: Runner Releases
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 9 * * *'
 
 env:
   CARGO_TERM_COLOR: always
