@@ -297,11 +297,24 @@ pub async fn init_runner() -> Server {
     // NOTE: this technically shuts down if the thread that forked this process dies, but since
     // the parent should be running in tokio, this should be okay because if the parent's tokio
     // runtime goes down, we should go down.
-    // TODO: add an alternative on mac
     #[cfg(not(target_os = "macos"))]
     if unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } != 0 {
         panic!("prctl failed")
     }
+
+    // Watchdog on macos where we can't use PR_SET_PDEATHSIG
+    #[cfg(target_os = "macos")]
+    std::thread::spawn(|| {
+        loop {
+            let ppid = unsafe { libc::getppid() };
+            if ppid == 1 {
+                // The parent exited so we should exit
+                std::process::exit(0);
+            }
+
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+    });
 
     // Initialize logging
     // TODO: pass through slowlog to the main process
