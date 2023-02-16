@@ -29,9 +29,9 @@ jobs:
       - run: cargo build --release --verbose --target ${{ matrix.target }}
       - run: cargo test --release --verbose --target ${{ matrix.target }}
       - name: Build runners
-        run: rm -rf /tmp/runner_releases && mkdir -p /tmp/runner_releases && cargo run --release -p carton-runner-py --bin build_releases -- --output-path /tmp/runner_releases
+        run: rm -rf /tmp/runner_releases && mkdir -p /tmp/runner_releases && cargo run --release  --target ${{ matrix.target }} -p carton-runner-py --bin build_releases -- --output-path /tmp/runner_releases
       - name: Upload runners
         uses: actions/upload-artifact@v3
         with:
-          name: runners
+          name: runners-${{ matrix.target }}
           path: /tmp/runner_releases
