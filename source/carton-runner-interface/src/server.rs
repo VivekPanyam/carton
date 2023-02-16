@@ -297,8 +297,9 @@ pub async fn init_runner() -> Server {
     // NOTE: this technically shuts down if the thread that forked this process dies, but since
     // the parent should be running in tokio, this should be okay because if the parent's tokio
     // runtime goes down, we should go down.
-    let res = unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) };
-    if res != 0 {
+    // TODO: add an alternative on mac
+    #[cfg(not(target_os = "macos"))]
+    if unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } != 0 {
         panic!("prctl failed")
     }
 

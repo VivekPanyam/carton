@@ -14,8 +14,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os:
-          - ubuntu-latest
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -23,8 +26,8 @@ jobs:
           token: ${{ secrets.ZIPFS_READ }}
           submodules: recursive
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --verbose
-      - run: cargo test --release --verbose
+      - run: cargo build --release --verbose --target ${{ matrix.target }}
+      - run: cargo test --release --verbose --target ${{ matrix.target }}
       - name: Build runners
         run: rm -rf /tmp/runner_releases && mkdir -p /tmp/runner_releases && cargo run --release -p carton-runner-py --bin build_releases -- --output-path /tmp/runner_releases
       - name: Upload runners

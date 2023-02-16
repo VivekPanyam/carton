@@ -78,12 +78,40 @@ pub struct SHMRegion {
     len: usize,
 }
 
+/// Use memfd_create to create a new shm region
+#[cfg(not(target_os = "macos"))]
+unsafe fn memfd_create() -> RawFd {
+    libc::memfd_create(b"carton_memfd\0" as *const u8 as _, 0)
+}
+
+#[cfg(target_os = "macos")]
+unsafe fn memfd_create() -> RawFd {
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    // Generate a path
+    let shmpath = format!(
+        "/carton_shm_{}_{}\0",
+        std::process::id(),
+        COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    );
+
+    // memfd_create doesn't exist on mac so we'll use shm_open
+    let fd = libc::shm_open(
+        shmpath.as_ptr() as _,
+        libc::O_CREAT | libc::O_EXCL | libc::O_RDWR,
+        (libc::S_IRUSR | libc::S_IWUSR) as libc::c_uint,
+    );
+
+    libc::shm_unlink(shmpath.as_ptr() as _);
+
+    fd
+}
+
 impl SHMRegion {
     /// Allocate a new shared memory region
     fn new(size_bytes: usize) -> Arc<Self> {
         unsafe {
-            // Use memfd_create to create a new shm region
-            let fd = libc::memfd_create(b"carton_memfd\0" as *const u8 as _, 0);
+            let fd = memfd_create();
             if fd == -1 {
                 panic!("memfd_create failed")
             }

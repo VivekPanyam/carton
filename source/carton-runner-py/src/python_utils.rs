@@ -70,8 +70,15 @@ fn init_inner() {
     });
 }
 
+#[cfg(not(all(test, target_os = "macos")))]
 pub(crate) fn get_executable_path() -> PyResult<String> {
     Python::with_gil(|py| Python::import(py, "sys")?.getattr("executable")?.extract())
+}
+
+// TODO: make this more generic
+#[cfg(all(test, target_os = "macos"))]
+pub(crate) fn get_executable_path() -> PyResult<String> {
+    Ok("/Applications/Xcode.app/Contents/Developer/usr/bin/python3".into())
 }
 
 /// Adds a vec of paths to sys.path
