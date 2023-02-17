@@ -35,3 +35,22 @@ jobs:
         with:
           name: runners-${{ matrix.target }}
           path: /tmp/runner_releases
+  runner_release_aarch64:
+    name: "Native Build aarch64"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
+      - run: pip3 install gql[requests]
+      - name: Wait for Cirrus CI builds to finish
+        run: python3 ci/trigger_cirrus_build.py
+        env:
+          CIRRUS_AUTH: ${{ secrets.CIRRUS_AUTH }}
+      - name: Upload runners
+        uses: actions/upload-artifact@v3
+        with:
+          name: runners-aarch64
+          path: /tmp/runner_releases
