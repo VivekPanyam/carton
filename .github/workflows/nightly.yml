@@ -17,8 +17,10 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
+          # For now, don't run macos builds during nightly builds.
+          # TODO: reenable this when the repo is public
+          # - os: macos-latest
+          #   target: x86_64-apple-darwin
     steps:
       - name: Checkout
         uses: actions/checkout@v3
