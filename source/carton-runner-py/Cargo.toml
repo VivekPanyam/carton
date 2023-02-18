@@ -12,7 +12,7 @@ pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
 numpy = "0.17"
 ndarray = { version = "0.15" }
 lazy_static = "1.4.0"
-reqwest = { version = "0.11" }
+reqwest = { version = "0.11", features = ["native-tls-vendored"] }
 tempfile = "3.3.0"
 home = "0.5.4"
 sha2 = "0.10.6"
@@ -41,7 +41,7 @@ carton = { path = "../carton" }
 pyo3 = { features = ["auto-initialize"] }
 
 [build-dependencies]
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] }
 tokio = { version = "1", features = ["full"] }
 flate2 = "1.0"
 tar = "0.4"

@@ -16,7 +16,7 @@ semver = {version = "1.0.16", features = ["serde"]}
 target-lexicon = "0.12.5"
 chrono = {version = "0.4.23", features = ["serde"]}
 tempfile = "3.3.0"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] }
 async_zip = {version = "0.0.11", features = ["full"]}
 sha2 = "0.10.6"
 walkdir = "2.3.2"

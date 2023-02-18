@@ -133,6 +133,8 @@ pub async fn extract(archive: &Path, out_dir: &Path) {
 
 /// This calls the provided function `do_extract` with a temporary path to extract into and then moves that dir to `target_dir`
 /// This should be atomic so it won't cause broken output if multiple extractions happen at the same time.
+/// This temporary directory is created in `target_dir.parent()` (with a name that starts with `.tmp`). This is necessary because
+/// we need to ensure that the temp dir and the target are on the same device to avoid EXDEV errors when renaming.
 /// Note: if `target_dir` exists, this function doesn't do anything
 pub async fn with_atomic_extraction<F, Fut>(target_dir: &Path, do_extract: F)
 where
@@ -146,7 +148,10 @@ where
     }
 
     // Create a temp dir
-    let tempdir = tempfile::tempdir().unwrap();
+    let tempdir = tempfile::Builder::new()
+        .prefix(".tmp")
+        .tempdir_in(target_dir.parent().unwrap())
+        .unwrap();
     let extraction_dir = tempdir.path().join("extraction");
 
     // Extract

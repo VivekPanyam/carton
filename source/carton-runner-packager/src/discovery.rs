@@ -61,6 +61,14 @@ pub async fn discover_runners() -> Vec<RunnerInfo> {
             Some(Ok(entry)) => entry,
         };
 
+        if entry.depth() > 0
+            && entry.file_type().is_dir()
+            && entry.file_name().to_str().unwrap().starts_with(".tmp")
+        {
+            // Ignore directories that start with ".tmp" as these are in-progress extractions
+            it.skip_current_dir()
+        }
+
         if entry.file_name() == "runner.toml" {
             runner_tomls.push(entry.into_path());
 

@@ -12,6 +12,9 @@ jobs:
   runner_release_native:
     name: Native Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    container:
+      # TODO: only on linux
+      image: vpanyam/manylinux2014-rust-python310:x86_64
     strategy:
       matrix:
         include:
@@ -27,6 +30,7 @@ jobs:
         with:
           token: ${{ secrets.ZIPFS_READ }}
           submodules: recursive
+      - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --verbose --target ${{ matrix.target }}
       - run: cargo test --release --verbose --target ${{ matrix.target }}
