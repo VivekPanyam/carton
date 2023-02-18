@@ -58,8 +58,6 @@ CIRRUS_BUILD_CONFIG = """
 env:
   CARGO_TERM_COLOR: always
   CIRRUS_REPO_CLONE_TOKEN: ENCRYPTED[dd171eb99e384bce7789885bbe284ef3b59ae7aa37956f1c03d54074b064055d3754842f9688e4d494d01e8229a3e9eb]
-  # This defaults to /tmp which causes CrossesDevices errors when we try to rename temp files
-  CIRRUS_VOLUME: /something
 
 # Nightly release builds
 nightly_linux_task:
