@@ -7,9 +7,12 @@ use thiserror::Error;
 use walkdir::WalkDir;
 
 #[derive(Serialize, Deserialize)]
-pub struct Config {
+pub(crate) struct Config {
     /// Should be 1
     pub version: u64,
+
+    /// The ID this runner was installed as. This is set by the installation code
+    pub installation_id: Option<String>,
 
     /// A list of RunnerInfo structs
     pub runner: Vec<RunnerInfo>,
@@ -31,6 +34,14 @@ pub struct RunnerInfo {
     pub platform: String,
 }
 
+pub struct RunnerFilterConstraints {
+    pub runner_name: Option<String>,
+    pub framework_version_range: Option<semver::VersionReq>,
+    pub runner_compat_version: Option<u64>,
+    pub max_runner_interface_version: u64,
+    pub platform: String,
+}
+
 pub(crate) fn get_runner_dir() -> String {
     std::env::var("CARTON_RUNNER_DIR").unwrap_or("/usr/local/carton_runners".to_string())
 }
@@ -45,7 +56,7 @@ enum DiscoveryError {
 }
 
 /// Discover all installed runners
-pub async fn discover_runners() -> Vec<RunnerInfo> {
+pub async fn discover_runners(installation_id_filter: &Option<String>) -> Vec<RunnerInfo> {
     let runner_base_dir = get_runner_dir();
 
     // Find runner.toml files
@@ -102,7 +113,117 @@ pub async fn discover_runners() -> Vec<RunnerInfo> {
     futures::future::join_all(futs)
         .await
         .into_iter()
-        .filter_map(|item| item.ok()) // Ignore parse errors. TODO: log
+        .filter_map(|item| match item {
+            Ok(config) => {
+                if installation_id_filter.is_some() {
+                    if &config.installation_id != installation_id_filter {
+                        return None;
+                    }
+                }
+
+                return Some(config);
+            }
+            Err(_) => {
+                None // Ignore parse errors. TODO: log
+            }
+        })
         .flat_map(|config| config.runner)
         .collect()
+}
+
+/// Get an installed runner that matches the constraints (or None)
+pub async fn get_matching_installed_runner(
+    constraints: &RunnerFilterConstraints,
+    installation_id_filter: &Option<String>,
+) -> Option<RunnerInfo> {
+    let local_runners = discover_runners(installation_id_filter).await;
+
+    get_matching_runner(local_runners, constraints).await
+}
+
+pub(crate) trait FilterableAsRunner {
+    fn runner_name(&self) -> &str;
+    fn framework_version(&self) -> &semver::Version;
+    fn runner_compat_version(&self) -> u64;
+    fn runner_interface_version(&self) -> u64;
+    fn platform(&self) -> &str;
+    fn runner_release_date(&self) -> &DateTime<Utc>;
+}
+
+impl FilterableAsRunner for RunnerInfo {
+    fn runner_name(&self) -> &str {
+        &self.runner_name
+    }
+
+    fn framework_version(&self) -> &semver::Version {
+        &self.framework_version
+    }
+
+    fn runner_compat_version(&self) -> u64 {
+        self.runner_compat_version
+    }
+
+    fn runner_interface_version(&self) -> u64 {
+        self.runner_interface_version
+    }
+
+    fn platform(&self) -> &str {
+        &self.platform
+    }
+
+    fn runner_release_date(&self) -> &DateTime<Utc> {
+        &self.runner_release_date
+    }
+}
+
+/// Get an installed runner that matches the constraints (or None)
+pub(crate) async fn get_matching_runner<T>(
+    runners: impl IntoIterator<Item = T>,
+    constraints: &RunnerFilterConstraints,
+) -> Option<T>
+where
+    T: FilterableAsRunner,
+{
+    // Filter the runners to ones that match our requirements
+    runners
+        .into_iter()
+        .filter_map(|runner| {
+            // The runner name must be the same as the model we're trying to load
+            if let Some(runner_name) = &constraints.runner_name {
+                if runner_name != runner.runner_name() {
+                    return None;
+                }
+            }
+
+            // The runner's framework_version must satisfy the model's required range
+            if let Some(framework_version_range) = &constraints.framework_version_range {
+                if !framework_version_range.matches(runner.framework_version()) {
+                    return None;
+                }
+            }
+
+            // The runner compat version must be the same as the model we're trying to load
+            // (this is kind of like a version for the `model` directory)
+            // If an expected runner_compat_version was specified, check if it matches
+            if let Some(runner_compat_version) = constraints.runner_compat_version {
+                if runner_compat_version != runner.runner_compat_version() {
+                    return None;
+                }
+            }
+
+            // We need to be able to start the runner so its platform must match the requirements
+            if runner.platform() != constraints.platform {
+                return None;
+            }
+
+            // Finally, we must be able to communicate with the runner (so its interface
+            // version should be one we support)
+            if runner.runner_interface_version() > constraints.max_runner_interface_version {
+                return None;
+            }
+
+            Some(runner)
+        })
+        // Pick the newest one that matches the requirements
+        .max_by_key(|item| item.runner_release_date().clone())
 }
