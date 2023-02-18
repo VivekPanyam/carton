@@ -56,3 +56,27 @@ jobs:
         with:
           name: runners-aarch64
           path: /tmp/runner_releases
+
+  upload_nightly_builds:
+    name: "Upload nightly builds"
+    needs: [runner_release_native, runner_release_aarch64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
+      - run: mkdir /tmp/artifacts
+      - uses: actions/download-artifact@v3
+        with:
+          path: /tmp/artifacts
+      - name: Upload artifacts and generate config
+        run: cargo run --package carton-runner-packager --bin ci_upload_releases
+        env:
+          NIGHTLY_REPO_TOKEN: ${{ secrets.NIGHTLY_REPO_TOKEN }}
+          CARTON_NIGHTLY_S3_BUCKET: ${{ vars.CARTON_NIGHTLY_S3_BUCKET }}
+          CARTON_NIGHTLY_S3_REGION: ${{ vars.CARTON_NIGHTLY_S3_REGION }}
+          CARTON_NIGHTLY_S3_ENDPOINT: ${{ secrets.CARTON_NIGHTLY_S3_ENDPOINT }}
+          CARTON_NIGHTLY_ACCESS_KEY_ID: ${{ secrets.CARTON_NIGHTLY_ACCESS_KEY_ID }}
+          CARTON_NIGHTLY_SECRET_ACCESS_KEY: ${{ secrets.CARTON_NIGHTLY_SECRET_ACCESS_KEY }}

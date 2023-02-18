@@ -12,7 +12,7 @@ serde_json = "1"
 url = "2.3.1"
 log = "0.4"
 escargot = "0.5.7"
-semver = {version = "1.0.16"}
+semver = {version = "1.0.16", features = ["serde"]}
 target-lexicon = "0.12.5"
 chrono = {version = "0.4.23", features = ["serde"]}
 tempfile = "3.3.0"
@@ -22,3 +22,8 @@ sha2 = "0.10.6"
 walkdir = "2.3.2"
 futures = "0.3"
 thiserror = "1"
+base64 = "0.21.0"
+
+# Required by ci_upload_releases
+# TODO: split this out
+rust-s3 = "0.32.3"
