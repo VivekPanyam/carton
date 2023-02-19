@@ -164,54 +164,54 @@ pub(crate) async fn discover_or_get_runner_and_launch<T>(
 where
     T: TensorStorage,
 {
-    // TODO: maybe we want to just do this once at startup or cache it?
-    let local_runners = carton_runner_packager::discovery::discover_runners().await;
+    use carton_runner_packager::{
+        discovery::RunnerFilterConstraints,
+        fetch::{get_or_install_runner, RunnerInstallConstraints},
+    };
 
     // Filter the runners to ones that match our requirements
-    let candidate = local_runners
-        .into_iter()
-        .filter(|runner| {
-            // The runner name must be the same as the model we're trying to load
-            (runner.runner_name == info.runner.runner_name)
+    let filters = RunnerFilterConstraints {
+        runner_name: Some(info.runner.runner_name.clone()),
+        framework_version_range: Some(info.runner.required_framework_version.clone()),
+        runner_compat_version: info.runner.runner_compat_version,
+        max_runner_interface_version: MAX_SUPPORTED_INTERFACE_VERSION,
+        platform: target_lexicon::HOST.to_string(),
+    };
 
-            // The runner compat version must be the same as the model we're trying to load
-            // (this is kind of like a version for the `model` directory)
-            // If an expected runner_compat_version was specified, check if it matches
-            && (info.runner.runner_compat_version.map(|inner| inner == runner.runner_compat_version).unwrap_or(true))
+    let candidate = get_or_install_runner(
+        // TODO: make this configurable
+        "https://nightly.carton.run/v1/runners",
+        &RunnerInstallConstraints { id: None, filters },
+        false,
+    )
+    .await;
 
-            // The runner's framework_version must satisfy the model's required range
-            && (info
-                .runner
-                .required_framework_version
-                .matches(&runner.framework_version))
+    match candidate {
+        Ok(candidate) => {
+            // We have a runner we can use!
 
-            // Finally, we must be able to communicate with the runner (so it's interface
-            // version should be one we support)
-            && (runner.runner_interface_version <= MAX_SUPPORTED_INTERFACE_VERSION)
-        })
-        // Pick the newest one that matches the requirements
-        .max_by_key(|item| item.runner_release_date);
+            match candidate.runner_interface_version {
+                // Find the right interface to use
+                1 => {
+                    let runner = runner_interface_v1::Runner::new(
+                        &std::path::PathBuf::from(&candidate.runner_path),
+                        visible_device.clone().into(),
+                    )
+                    .await
+                    .unwrap();
 
-    if let Some(candidate) = candidate {
-        // We have a runner we can use!
-
-        match candidate.runner_interface_version {
-            // Find the right interface to use
-            1 => {
-                let runner = runner_interface_v1::Runner::new(
-                    &std::path::PathBuf::from(&candidate.runner_path),
-                    visible_device.clone().into(),
-                ).await.unwrap();
-
-                Ok((Runner::V1(runner), candidate))
-
-            },
-            version => unreachable!("This runner requires a newer interface ({version}) than we have. Shouldn't happen because of the check above."),
+                    Ok((Runner::V1(runner), candidate))
+                }
+                version => unreachable!(
+                    "This runner requires a newer interface ({version}) than we have. Shouldn't happen because we filtered above."
+                ),
+            }
         }
-    } else {
-        // We need to fetch a runner and retry
-
-        todo!()
+        Err(e) => {
+            // No matching runners
+            // TODO: return an error instead of panicking
+            panic!("No matching runner: {e}")
+        }
     }
 }
 

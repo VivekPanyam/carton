@@ -12,6 +12,7 @@ use sha2::{Digest, Sha256};
 use url::{ParseError, Url};
 
 pub mod discovery;
+pub mod fetch;
 
 /// Package a runner along with additional list zip or tar files to download and unpack at installation time
 /// `upload_runner` is a function that is given the data for a `runner.zip` file along with its sha256 and returns a url
@@ -35,6 +36,7 @@ pub async fn package(mut info: RunnerInfo, additional: Vec<DownloadItem>) -> Run
     info.runner_path = "./runner".into();
     let runner_toml = toml::to_string_pretty(&Config {
         version: 1,
+        installation_id: None, // This is set at install time
         runner: vec![info.clone()],
     })
     .unwrap();
@@ -107,6 +109,13 @@ pub async fn install(info: DownloadInfo, allow_local_files: bool) {
         for handle in handles {
             handle.await.unwrap();
         }
+
+        // Modify the runner.toml file to set the installation id
+        let runner_toml = runner_dir.join("runner.toml");
+        let data = tokio::fs::read(&runner_toml).await.unwrap();
+        let mut config: Config = toml::from_slice(&data).unwrap();
+        config.installation_id = Some(info.id);
+        tokio::fs::write(&runner_toml, toml::to_string_pretty(&config).unwrap()).await.unwrap();
     }).await;
 }
 
@@ -215,7 +224,7 @@ impl RunnerPackage {
 
 /// Structs for the json blob representing a runner available for download
 /// See `docs/specification/runner.md` for more details
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DownloadInfo {
     pub runner_name: String,
     pub id: String,
@@ -230,7 +239,7 @@ pub struct DownloadInfo {
     pub platform: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DownloadItem {
     pub url: String,
     pub sha256: String,
