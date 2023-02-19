@@ -64,6 +64,9 @@ pub async fn package(mut info: RunnerInfo, additional: Vec<DownloadItem>) -> Run
 pub async fn install(info: DownloadInfo, allow_local_files: bool) {
     let runner_base_dir = PathBuf::from(get_runner_dir());
 
+    // Create it if it doesn't exist
+    tokio::fs::create_dir_all(&runner_base_dir).await.unwrap();
+
     // TODO: validate that this joined path is safe
     let runner_dir = runner_base_dir.join(&info.id);
 
