@@ -13,3 +13,4 @@ pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
 carton-core = { package = "carton", path = "../carton" }
 numpy = "0.17"
 ndarray = { version = "0.15" }
+semver = {version = "1.0.16"}

@@ -366,6 +366,7 @@ dependencies = [
  "numpy",
  "pyo3",
  "pyo3-asyncio",
+ "semver 1.0.16",
 ]
 
 [[package]]

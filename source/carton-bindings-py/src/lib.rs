@@ -1,9 +1,15 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
-use carton_core::types::{Device, LoadOpts, RunnerOpt, Tensor, TensorStorage, TypedStorage};
+use carton_core::{
+    info::RunnerInfo,
+    types::{
+        Device, GenericStorage, LoadOpts, PackOpts, RunnerOpt, Tensor, TensorStorage, TypedStorage,
+    },
+};
 use ndarray::ShapeBuilder;
 use numpy::{PyArrayDyn, ToPyArray};
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
+use semver::VersionReq;
 
 #[derive(FromPyObject)]
 enum SupportedTensorType<'py> {
@@ -271,12 +277,62 @@ fn load(
     })
 }
 
+/// Load an unpacked model
+#[pyfunction]
+fn load_unpacked(
+    py: Python,
+    path: String,
+    runner_name: String,
+    required_framework_version: String,
+    opts: Option<HashMap<String, PyRunnerOpt>>,
+    visible_device: String,
+) -> PyResult<&PyAny> {
+    pyo3_asyncio::tokio::future_into_py(py, async move {
+        let pack_opts = PackOpts::<GenericStorage> {
+            model_name: None,
+            short_description: None,
+            model_description: None,
+            required_platforms: None,
+            inputs: None,
+            outputs: None,
+            self_tests: None,
+            examples: None,
+            runner: RunnerInfo {
+                runner_name,
+                required_framework_version: VersionReq::from_str(&required_framework_version)
+                    .map_err(|e| {
+                        PyValueError::new_err(format!("Invalid `required_framework_version`: {e}"))
+                    })?,
+                runner_compat_version: None,
+                opts: opts.map(|opts| opts.into_iter().map(|(k, v)| (k, v.into())).collect()),
+            },
+            misc_files: None,
+        };
+
+        // TODO: use something more specific than ValueError
+        let load_opts = LoadOpts {
+            visible_device: Device::maybe_from_str(&visible_device)
+                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+            ..Default::default()
+        };
+
+        let inner = carton_core::Carton::load_unpacked(path, pack_opts, load_opts)
+            .await
+            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+        Ok(Carton {
+            inner: Arc::new(inner),
+        })
+    })
+}
+
 /// A Python module implemented in Rust. The name of this function must match
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
 fn carton(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load, m)?)?;
+    m.add_function(wrap_pyfunction!(load_unpacked, m)?)?;
     m.add_class::<Carton>()?;
     Ok(())
 }
