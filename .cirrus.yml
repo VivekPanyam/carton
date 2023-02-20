@@ -8,8 +8,8 @@ linux_task:
   name: Native Build aarch64-unknown-linux-gnu
   arm_container:
     dockerfile: ci/cirrus_ci.dockerfile
-    cpu: 8
-    memory: 32G
+    cpu: 4
+    memory: 16G
   submodules_script:
     # Init submodules
     - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
@@ -19,8 +19,8 @@ linux_task:
       - rustc --version
       - cat Cargo.lock
   build_and_test_script:
-    - cargo build --verbose --target aarch64-unknown-linux-gnu
-    - cargo test --verbose --target aarch64-unknown-linux-gnu
+    - pip3 install -r ci/build_requirements.txt
+    - python3 ci/build.py --target aarch64-unknown-linux-gnu
   before_cache_script: rm -rf $CARGO_HOME/registry/index
 
 macos_task:
@@ -37,5 +37,5 @@ macos_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
   build_and_test_script:
     - source $HOME/.cargo/env
-    - cargo build --verbose --target aarch64-apple-darwin
-    - cargo test --verbose --target aarch64-apple-darwin
+    - pip3 install -r ci/build_requirements.txt
+    - python3 ci/build.py --target aarch64-apple-darwin

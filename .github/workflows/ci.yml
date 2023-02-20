@@ -43,8 +43,8 @@ jobs:
           submodules: recursive
       - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --verbose --target ${{ matrix.target }}
-      - run: cargo test --verbose --target ${{ matrix.target }}
+      - run: pip3 install -r ci/build_requirements.txt
+      - run: python3 ci/build.py --target ${{ matrix.target }}
       - name: Upload `carton_logs` on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
