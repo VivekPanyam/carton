@@ -36,7 +36,7 @@ struct MiscFileLoader<T> {
 impl<T> crate::info::MiscFileLoader for MiscFileLoader<T>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync,
-    T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
+    T::FileType: ReadableFile + MaybeSend + MaybeSync + Unpin + 'static,
 {
     async fn get(&self) -> crate::info::MiscFile {
         Box::new(self.fs.open(&self.path).await.unwrap())
@@ -46,7 +46,7 @@ where
 pub(crate) async fn load<T>(fs: &Arc<T>) -> Result<CartonInfoWithExtras<GenericStorage>>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-    T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
+    T::FileType: ReadableFile + MaybeSend + MaybeSync + Unpin + 'static,
 {
     // Load the toml file
     let toml = fs.read("/carton.toml").await?;
@@ -83,7 +83,7 @@ where
                         path: path.to_owned(),
                     };
 
-                    let mfl: crate::info::BoxedMiscFileLoader = Box::new(mfl);
+                    let mfl: crate::info::ArcMiscFileLoader = Arc::new(mfl);
 
                     ("@".to_owned() + path, mfl)
                 })
@@ -133,10 +133,10 @@ where
 }
 
 impl<F> ConvertFromWithContext<super::carton_toml::MiscFileReference, &Arc<F>>
-    for crate::info::BoxedMiscFileLoader
+    for crate::info::ArcMiscFileLoader
 where
     F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
-    F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
+    F::FileType: ReadableFile + MaybeSend + MaybeSync + Unpin + 'static,
 {
     fn from(item: super::carton_toml::MiscFileReference, fs: &Arc<F>) -> Self {
         let mfl = MiscFileLoader {
@@ -144,7 +144,7 @@ where
             path: item.0.strip_prefix("@").unwrap().to_owned(),
         };
 
-        Box::new(mfl)
+        Arc::new(mfl)
     }
 }
 
@@ -154,7 +154,7 @@ where
     C: Copy,
     PossiblyLoaded<crate::types::Tensor<GenericStorage>>:
         ConvertFromWithContext<super::carton_toml::TensorReference, C>,
-    crate::info::BoxedMiscFileLoader:
+    crate::info::ArcMiscFileLoader:
         ConvertFromWithContext<super::carton_toml::MiscFileReference, C>,
 {
     fn from(item: super::carton_toml::TensorOrMiscReference, context: C) -> Self {

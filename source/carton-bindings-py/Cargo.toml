@@ -8,9 +8,12 @@ name = "cartonml"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.17.3", features = ["abi3-py37"]}
-pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
+pyo3 = { version = "0.18", features = ["abi3-py37"]}
+pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
 carton-core = { package = "carton", path = "../carton" }
-numpy = "0.17"
+numpy = "0.18"
 ndarray = { version = "0.15" }
 semver = {version = "1.0.16"}
+target-lexicon = "0.12.5"
+tokio = { version = "1", features = ["io-util"] }
+async-trait = "0.1"

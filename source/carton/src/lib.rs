@@ -1,5 +1,5 @@
 pub mod carton;
-mod conversion_utils;
+pub mod conversion_utils;
 pub mod error;
 mod format;
 mod http;
