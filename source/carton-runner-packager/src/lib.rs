@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use async_zip::{write::ZipFileWriter, ZipEntryBuilder};
 use carton_utils::{
@@ -62,7 +62,7 @@ pub async fn package(mut info: RunnerInfo, additional: Vec<DownloadItem>) -> Run
 // TODO: add slowlog for long running downloads
 /// Install the runner if it doesn't already exist
 pub async fn install(info: DownloadInfo, allow_local_files: bool) {
-    let runner_base_dir = PathBuf::from(get_runner_dir());
+    let runner_base_dir = get_runner_dir();
 
     // Create it if it doesn't exist
     tokio::fs::create_dir_all(&runner_base_dir).await.unwrap();

@@ -11,7 +11,9 @@ use crate::python_utils::add_to_sys_path;
 
 lazy_static! {
     static ref PACKAGE_BASE_DIR: PathBuf = {
-        let base = home::home_dir().unwrap().join(".carton/pythonpackages/");
+        let base = carton_utils::config::CONFIG
+            .runner_data_dir
+            .join("python/packages/");
 
         std::fs::create_dir_all(&base).unwrap();
 
