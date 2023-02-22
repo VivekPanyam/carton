@@ -5,6 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use async_trait::async_trait;
 use carton_macros::for_each_carton_type;
 use lunchbox::types::{MaybeSend, MaybeSync};
 use target_lexicon::Triple;
@@ -55,7 +56,7 @@ where
     /// Misc files that can be referenced by the description. The key is a string
     /// starting with `@misc/` followed by a normalized path (i.e one that does not
     /// reference parent directories, etc)
-    pub misc_files: Option<HashMap<String, PossiblyLoaded<MiscFile>>>,
+    pub misc_files: Option<HashMap<String, BoxedMiscFileLoader>>,
 }
 
 /// An internal struct used when loading models. It contains extra things like the
@@ -187,12 +188,24 @@ pub type MiscFile = Box<dyn AsyncRead>;
 #[cfg(not(target_family = "wasm"))]
 pub type MiscFile = Box<dyn AsyncRead + Send + Sync>;
 
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
+pub trait MiscFileLoader {
+    async fn get(&self) -> MiscFile;
+}
+
+#[cfg(target_family = "wasm")]
+pub type BoxedMiscFileLoader = Box<dyn MiscFileLoader>;
+
+#[cfg(not(target_family = "wasm"))]
+pub type BoxedMiscFileLoader = Box<dyn MiscFileLoader + Send + Sync>;
+
 pub enum TensorOrMisc<T>
 where
     T: TensorStorage,
 {
     Tensor(PossiblyLoaded<Tensor<T>>),
-    Misc(PossiblyLoaded<MiscFile>),
+    Misc(BoxedMiscFileLoader),
 }
 
 pub struct RunnerInfo {

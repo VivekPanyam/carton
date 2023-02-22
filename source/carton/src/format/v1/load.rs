@@ -2,9 +2,9 @@
 //! This module does a lot of type conversions to map from the types in the toml file to the ones in
 //! crate::types and crate::info
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use lunchbox::types::{MaybeSend, MaybeSync, ReadableFile};
 use lunchbox::ReadableFileSystem;
 use sha2::{Digest, Sha256};
@@ -26,12 +26,21 @@ where
     todo!()
 }
 
-async fn load_misc_from_fs<T>(fs: &T, path: &str) -> crate::info::MiscFile
+struct MiscFileLoader<T> {
+    fs: Arc<T>,
+    path: String,
+}
+
+#[cfg_attr(target_family = "wasm", async_trait(?Send))]
+#[cfg_attr(not(target_family = "wasm"), async_trait)]
+impl<T> crate::info::MiscFileLoader for MiscFileLoader<T>
 where
-    T: ReadableFileSystem,
+    T: ReadableFileSystem + MaybeSend + MaybeSync,
     T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
 {
-    Box::new(fs.open(path).await.unwrap())
+    async fn get(&self) -> crate::info::MiscFile {
+        Box::new(self.fs.open(&self.path).await.unwrap())
+    }
 }
 
 pub(crate) async fn load<T>(fs: &Arc<T>) -> Result<CartonInfoWithExtras<GenericStorage>>
@@ -69,13 +78,14 @@ where
             misc_file_paths
                 .into_iter()
                 .map(|path| {
-                    let fs = fs.clone();
-                    let owned_path = path.to_owned();
-                    let val = PossiblyLoaded::from_loader(Box::pin(async move {
-                        load_misc_from_fs(fs.as_ref(), &owned_path).await
-                    }));
+                    let mfl = MiscFileLoader {
+                        fs: fs.clone(),
+                        path: path.to_owned(),
+                    };
 
-                    ("@".to_owned() + path, val)
+                    let mfl: crate::info::BoxedMiscFileLoader = Box::new(mfl);
+
+                    ("@".to_owned() + path, mfl)
                 })
                 .collect(),
         )
@@ -123,16 +133,18 @@ where
 }
 
 impl<F> ConvertFromWithContext<super::carton_toml::MiscFileReference, &Arc<F>>
-    for PossiblyLoaded<crate::info::MiscFile>
+    for crate::info::BoxedMiscFileLoader
 where
     F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
 {
     fn from(item: super::carton_toml::MiscFileReference, fs: &Arc<F>) -> Self {
-        let fs = fs.clone();
-        PossiblyLoaded::from_loader(Box::pin(async move {
-            load_misc_from_fs(fs.as_ref(), item.0.strip_prefix("@").unwrap()).await
-        }))
+        let mfl = MiscFileLoader {
+            fs: fs.clone(),
+            path: item.0.strip_prefix("@").unwrap().to_owned(),
+        };
+
+        Box::new(mfl)
     }
 }
 
@@ -142,7 +154,7 @@ where
     C: Copy,
     PossiblyLoaded<crate::types::Tensor<GenericStorage>>:
         ConvertFromWithContext<super::carton_toml::TensorReference, C>,
-    PossiblyLoaded<crate::info::MiscFile>:
+    crate::info::BoxedMiscFileLoader:
         ConvertFromWithContext<super::carton_toml::MiscFileReference, C>,
 {
     fn from(item: super::carton_toml::TensorOrMiscReference, context: C) -> Self {
