@@ -457,7 +457,6 @@ dependencies = [
  "escargot",
  "findshlibs",
  "flate2",
- "home",
  "lazy_static",
  "libc",
  "log",
@@ -492,11 +491,14 @@ dependencies = [
  "log",
  "path-clean",
  "reqwest",
+ "serde",
  "sha2",
+ "shellexpand",
  "tar",
  "tempfile",
  "thiserror",
  "tokio",
+ "toml",
 ]
 
 [[package]]
@@ -1260,15 +1262,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest",
-]
-
-[[package]]
-name = "home"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "747309b4b440c06d57b0b25f2aee03ee9b5e5397d288c60e21fc709bb98a7408"
-dependencies = [
- "winapi",
 ]
 
 [[package]]
@@ -2630,6 +2623,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "900fba806f70c630b0a382d0d825e17a0f19fcd059a2ade1ff237bcddf446b31"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shellexpand"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd1c7ddea665294d484c39fd0c0d2b7e35bbfe10035c5fe1854741a57f6880e1"
+dependencies = [
+ "dirs",
 ]
 
 [[package]]

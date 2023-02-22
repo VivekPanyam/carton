@@ -1,6 +1,8 @@
 //! This module implements runner discovery
 //! See `docs/specification/runner.md` for more details
 
+use std::path::PathBuf;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -42,8 +44,8 @@ pub struct RunnerFilterConstraints {
     pub platform: String,
 }
 
-pub(crate) fn get_runner_dir() -> String {
-    std::env::var("CARTON_RUNNER_DIR").unwrap_or("/usr/local/carton_runners".to_string())
+pub(crate) fn get_runner_dir() -> &'static PathBuf {
+    &carton_utils::config::CONFIG.runner_dir
 }
 
 #[derive(Debug, Error)]

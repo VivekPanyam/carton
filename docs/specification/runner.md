@@ -12,7 +12,7 @@ Any breaking changes require a new version of the runner interface.
 
 ## Runner Discovery
 
-Carton searches the carton runners directory (set by the `CARTON_RUNNER_DIR` environment variable; defaults to `/usr/local/carton_runners`) for `runner.toml` files.
+Carton searches the carton runners directory (see [configuration](/docs/config.md); defaults to `~/.carton/runners`) for `runner.toml` files.
 
 These files describe at least one runner (usually exactly one):
 

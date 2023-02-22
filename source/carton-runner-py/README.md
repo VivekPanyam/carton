@@ -24,10 +24,12 @@ Packing a python carton works as follows:
 ## Loading process
 
 1. If the model contains a `.carton/carton.lock` file and we have a lockfile for the current [environment](https://peps.python.org/pep-0508/#environment-markers) (OS, arch, etc), do the following for each dependency:
-    - If we already have a package with the specified sha256 in `~/.carton/pythonpackages/{sha256}`, add it to `sys.path`
-    - Otherwise, if it's a PyPi wheel URL, download and unzip it to `~/.carton/pythonpackages/{sha256}`. Add that path to `sys.path`
+    - If we already have a package with the specified sha256 in `~/.carton/runner_data/python/packages/{sha256}`, add it to `sys.path`
+    - Otherwise, if it's a PyPi wheel URL, download and unzip it to `~/.carton/runner_data/python/packages/{sha256}`. Add that path to `sys.path`
     - If it's a bundled wheel, unzip it to a temp directory and add that directory to `sys.path`
 2. If we don't have a lockfile for the current environment, log a warning message and then run the packing process followed by step 1 above. This could be made more efficient, but it's mostly for convenience.
 3. Run the model's entrypoint
 
 There are some details skipped above (like making subprocesses work), but that's the gist of how it works.
+
+Note that the `~/.carton/runner_data/` directory location is [configurable](/docs/config.md).
