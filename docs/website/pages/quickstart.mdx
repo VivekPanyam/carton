@@ -1,0 +1,87 @@
+import { ButtonLink, ButtonGrid } from '@/components/buttonlink'
+import LanguageSelect from "@/components/languageselect";
+
+# Install
+
+<div className="flex items-center pb-5 space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
+
+```bash linePrompt='$'
+pip install cartonml --extra-index-url https://nightly.carton.run/python
+```
+&nbsp;
+# Load and run a model
+
+If you want to run an existing carton model (or "a carton" for short), you can just pass in a file path or URL.
+
+```python
+# TODO: actually make this a runnable example with correct output
+import asyncio
+import cartonml as carton
+
+async def main():
+    model = await carton.load("https://carton.pub/google-research/bert-base-uncased")
+    out = await model.infer("Today is a very good [MASK].")
+    print(out)
+    # day
+
+asyncio.run(main())
+```
+
+See the ["Loading a model"](/docs/loading) docs for more details.
+
+# Pack a model
+
+To create a carton, you need to pack a model from a supported framework. The below example packs an xgboost model.
+
+```python
+import asyncio
+import cartonml as carton
+
+async def main():
+    packed_model_path = await carton.pack(
+        "/path/to/model.xgboost",
+        runner_name="xgboost",
+        # `required_framework_version` is a semver version range.
+        # The below value means any 1.7.x version is okay.
+        required_framework_version="=1.7"
+    )
+
+asyncio.run(main())
+```
+
+The packing procedure can be slightly different depending on the framework the original model is in. See the ["Pack a model"](/docs/packing) docs for more details.
+
+# Load an unpacked model
+
+Carton also supports loading an unpacked model via the `load_unpacked` method. This is conceptually the same as `pack` followed by `load`, but is implemented more efficiently internally. It supports all the options that `load` and `pack` support.
+
+```python
+import asyncio
+import cartonml as carton
+
+async def main():
+    model = await carton.load_unpacked(
+        "/path/to/model.xgboost",
+        runner_name="xgboost",
+        # `required_framework_version` is a semver version range.
+        # The below value means any 1.7.x version is okay.
+        required_framework_version="=1.7"
+    )
+
+asyncio.run(main())
+```
+
+&nbsp;
+
+# Up next...
+
+<ButtonGrid>
+    <ButtonLink href="/docs/packing">Create your own model</ButtonLink>
+    <ButtonLink target="_blank" href="https://carton.pub">Browse existing ones</ButtonLink>
+</ButtonGrid>
+
+import DocsLayout from '@/components/docslayout'
+export default ({children}) => <DocsLayout className="prose-h1:font-light" title="Quickstart">{children}</DocsLayout>

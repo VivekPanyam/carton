@@ -1,0 +1,130 @@
+# Pack a Python model
+
+Packing arbitrary python code with Carton provides a lot of flexibility.
+
+Carton runs these models in embedded python interpreters that are isolated from any python installations on the system. Carton also makes it easy to reproducibly run models because users can specify a required python version and a `requirements.txt` for dependencies.
+
+To pack a model of this type, we need three things:
+
+- A directory with the code to package
+- A `requirements.txt` file in the root of that directory
+- An "entrypoint" function that returns a model
+
+
+### 1. Directory of code
+
+This should be a directory containing all the code and artifacts needed to run your model. Make sure that your code doesn't depend on hardcoded paths as your code may be in a different location at runtime.
+
+Please note that symlinks within this directory are currently not supported.
+
+### 2. Requirements
+
+The above directory should contain a `requirements.txt` file. All dependencies in this file will be available when the model is loaded at runtime.
+
+See ["How it Works"](https://github.com/VivekPanyam/carton/blob/main/source/carton-runner-py/README.md#how-it-works) for more details.
+
+### 3. Entrypoint
+
+An entrypoint is a function that Carton calls when your model is loaded. This function returns the model to run. The returned model must have an `infer_with_tensors` method that takes in a dict mapping strings to numpy arrays and returns a dict mapping strings to numpy arrays.
+
+For example, you may have a file named `carton_entrypoint.py` with the following contents:
+
+```python withLineNumbers highlight='5-8'
+class Model:
+    def __init__(self):
+        pass
+
+    def infer_with_tensors(self, tensors):
+        return {
+            "out": tensors["x"] * 2
+        }
+
+def get_model():
+    return Model()
+```
+
+This defines a simple model that doubles an input tensor named `x` and returns it as a tensor named `out`.
+
+### Packaging
+
+To pack this model, we'd do the following:
+
+```python
+import asyncio
+import cartonml as carton
+
+async def main():
+    packed_model_path = await carton.pack(
+        # Path to the code directory from above
+        "/path/to/code_dir",
+
+        # This model runs with the python runner
+        runner_name="python",
+
+        # `required_framework_version` is a semver version range.
+        #
+        # See https://docs.rs/semver/1.0.16/semver/enum.Op.html and
+        # https://docs.rs/semver/1.0.16/semver/struct.VersionReq.html
+        # We want to run this model with Python 3.10.
+        # The below value means any 3.10.x version is okay.
+        required_framework_version="=3.10",
+
+        # Options for the python runner (including entrypoint info) go here
+        runner_opts={
+            # `carton_entrypoint.py` from above
+            "entrypoint": "carton_entrypoint",
+
+            # The `get_model` function from above
+            "entrypoint_fn": "get_model",
+        }
+    )
+
+asyncio.run(main())
+```
+
+The model at `packed_model_path` can now be loaded from any programming language supported by Carton!
+
+# Options
+
+There are several options you can pass in when packing a model. The required ones are listed below.
+
+## Required arguments
+
+### `runner_name`
+
+The name of the runner to process this model with. For python models, this is `python`
+
+### `required_framework_version`
+
+This is a semver version range that specifies the versions of python that the model requires.
+
+For now, it's recommended to specify a single major and minor version. For example, `=3.10`, which means any 3.10.x version is okay.
+
+See https://docs.rs/semver/1.0.16/semver/enum.Op.html and https://docs.rs/semver/1.0.16/semver/struct.VersionReq.html for more details on version ranges.
+
+### `runner_opts`
+
+For python models, there are two options that can be specified here and both are required.
+
+- `entrypoint`: The name of the python package that contains your entrypoint function, relative to the root of the code dir. <br/>Ex: `carton_entrypoint` for `carton_entrypoint.py` <br/>Ex: `some.sub.module` for `some/sub/module.py`
+- `entrypoint_fn`: The name of the entrypoint function.<br/>Ex: `get_model`
+
+The sample code above shows usage of all of these options.
+
+## Other options
+
+There are several other options that can be used across all model types. They are not required, but may make it easier for others to use your model.
+
+See [here](/docs/packing/options) for more details.
+
+# Loading a model
+
+Loading a model is the same for all frameworks. Check out the "Loading a model" docs for more details.
+
+# Loading an unpacked model
+
+Carton also supports loading an unpacked model via the `load_unpacked` method. This is conceptually the same as `pack` followed by `load`, but is implemented more efficiently internally. It supports all the options that `load` and `pack` support.
+
+
+import DocsLayout from '@/components/docslayout'
+export default ({children}) => <DocsLayout>{children}</DocsLayout>

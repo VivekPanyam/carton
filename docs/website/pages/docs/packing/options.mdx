@@ -1,0 +1,256 @@
+# Packing Options
+
+These options are the same across all model types. They are not required, but may make it easier for others to use your model.
+
+See the [docs for specific frameworks](/docs/packing) for options specific to those frameworks.
+
+### `model_name`
+<div className='text-slate-500'>Type: string</div>
+
+The name of the model.
+
+```python
+await carton.pack(
+    # ...
+    model_name = "super_awesome_test_model",
+)
+```
+
+### `short_description`
+<div className='text-slate-500'>Type: string</div>
+
+A short description (should be 100 characters or less)
+
+```python
+await carton.pack(
+    # ...
+    short_description = "A short description that should be less than or equal to 100 characters.",
+)
+```
+
+### `model_description`
+<div className='text-slate-500'>Type: string</div>
+
+A detailed description that can contain markdown
+
+```python
+MODEL_DESCRIPTION = """
+Some description of the model that can be as detailed as you want it to be
+
+This can span multiple lines. It can use markdown, but shouldn't use arbitrary HTML
+(which will usually be treated as text instead of HTML when this is rendered)
+
+You can use images and links, but the paths must either be complete https
+URLs (e.g. https://example.com/image.png) or must reference a file in the misc folder (e.g `@misc/file.png`).
+See the `misc_files` section of this document for more details
+"""
+
+await carton.pack(
+    # ...
+    model_description = MODEL_DESCRIPTION,
+)
+```
+
+### `required_platforms`
+<div className='text-slate-500'>Type: list of target triples</div>
+
+A list of platforms this model supports. If empty or unspecified, all platforms are okay.
+
+```python
+await carton.pack(
+    # ...
+
+    # The contents of this list are target triples. For example:
+    # x86_64-unknown-linux-gnu
+    # aarch64-unknown-linux-gnu
+    # x86_64-apple-darwin
+    # aarch64-apple-darwin
+    required_platforms = [],
+)
+```
+
+### `inputs`
+<div className='text-slate-500'>Type: list of `TensorSpec`</div>
+
+A list of inputs for the model. Each item is a `TensorSpec`.
+
+A `TensorSpec` describes an input or output tensor of a model. It provides a name, data type, and shape of an input/output.
+
+Note: If you specify one input or output, you must specify all inputs and outputs
+
+```python
+from cartonml import TensorSpec
+
+input_x = TensorSpec(
+    # The name of the input or output
+    name="x",
+
+    # The datatype of the tensor.  Valid values are
+    # - float32
+    # - float64
+    # - string
+    # - int8
+    # - int16
+    # - int32
+    # - int64
+    # - uint8
+    # - uint16
+    # - uint32
+    # - uint64
+    dtype = "float32",
+
+    # A shape of none means the tensor can be of any shape
+    shape = None,
+
+    # A shape with 3 dims of any value
+    # Note: this also supports ragged/nested tensors
+    # shape = [None, None, None],
+
+    # A shape of an exact size
+    # shape = [2, 3, 512, 512],
+
+    # A scalar
+    # shape = [],
+
+    # A shape containing a "symbol"
+    # shape = ["batch_size", 3, 512, 512],
+
+    # A symbol is an arbitrary string that should resolve to the same value each time it's used.
+    # (i.e. at runtime, every dimension of size "batch_size" should
+    # resolve to the same concrete value)
+
+    # A symbol for the overall shape:
+    # shape = "input_shape",
+
+    # Optional
+    description = "The input image as a NCHW tensor"
+)
+
+await carton.pack(
+    # ...
+    inputs = [input_x],
+)
+```
+
+### `outputs`
+<div className='text-slate-500'>Type: list of `TensorSpec`</div>
+
+A list of outputs for the model. Each item is a `TensorSpec`. See the `inputs` section above for more details.
+
+Note: If you specify one input or output, you must specify all inputs and outputs
+
+```python
+await carton.pack(
+    # ...
+    outputs = [],
+)
+```
+
+### `self_tests`
+<div className='text-slate-500'>Type: list of `SelfTest`</div>
+
+A list of self tests. A `SelfTest` is a set of inputs (and optionally outputs) that are stored alongside the model and can be used to run a test.
+
+Note: `inputs` and `outputs` above must be specified in order to specify test data.
+
+```python
+from cartonml import SelfTest
+import numpy as np
+
+st = SelfTest(
+    # Optional
+    name = "a_self_test",
+
+    # Optional
+    description = "A self test",
+
+    # A dict mapping input tensor names to values
+    inputs = dict(x = np.ones(5, dtype=np.float32)),
+
+    # Optional
+    # If specified, the output will be compared using
+    # something conceptually similar to np.allclose
+    expected_out = dict(out = np.ones(5, dtype=np.float32) * 2)
+)
+
+await carton.pack(
+    # ...
+    self_tests = [st],
+)
+```
+
+### `examples`
+<div className='text-slate-500'>Type: list of `Example`</div>
+
+A list of examples. An `Example` is like a self-test, but it does not need to be runnable. Examples can reference numpy arrays, images, audio, etc.
+
+These may be rendered in model documentation. See the `MiscFile` section below for mode details on allowable file types.
+
+Note: `inputs` and `outputs` above must be specified in order to specify examples.
+
+```python
+from cartonml import Example
+import numpy as np
+
+# Read an input image
+with open('/path/to/input.png', 'rb') as f:
+    input_image = f.read()
+
+e = Example(
+    # Optional
+    name = "an_optional_name",
+
+    # Optional
+    description = "An example for classification of an image",
+
+    # A dict mapping input tensor names to values
+    inputs = dict(x = input_image),
+
+    # A dict mapping output tensor names to values
+    sample_out = dict(out = np.array(5))
+)
+
+await carton.pack(
+    # ...
+    examples = [e],
+)
+```
+
+
+
+### `misc_files`
+<div className='text-slate-500'>Type: map of name to `MiscFile`</div>
+
+`MiscFile`s are files referenced by markdown in the `model_description`. They don't affect model behavior, but may be rendered in generated model documentation.
+
+The following file types are allowed:
+- png
+- jpeg
+- mp3
+- mp4
+
+```python className='pb-5'
+# ...
+
+MODEL_DESCRIPTION = """
+This model has an interesting architecture:
+
+![Model Architecture](@misc/model_architecture.png)
+"""
+
+async def main():
+    with open('/path/to/model_architecture.png', 'rb') as f:
+        model_architecture = f.read()
+
+    await carton.pack(
+        # ...
+        model_description = MODEL_DESCRIPTION,
+        misc_files = {
+            "model_architecture.png": model_architecture
+        }
+    )
+
+```
+
+import DocsLayout from '@/components/docslayout'
+export default ({children}) => <DocsLayout>{children}</DocsLayout>

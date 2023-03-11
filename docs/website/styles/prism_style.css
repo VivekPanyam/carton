@@ -1,0 +1,77 @@
+pre {
+    @apply text-white bg-slate-900 overflow-x-auto rounded-md !important;
+    line-height: 1.7142857 !important;
+}
+
+.token.plain {
+    @apply text-white !important;
+}
+
+.token.tag,
+.token.class-name,
+.token.selector,
+.token.selector .class,
+.token.function {
+    @apply text-fuchsia-400 !important;
+}
+
+.token.attr-name,
+.token.keyword,
+.token.rule,
+.token.operator,
+.token.pseudo-class,
+.token.important {
+    @apply text-cyan-400 !important;
+}
+
+.token.attr-value,
+.token.class,
+.token.string,
+.token.number,
+.token.unit,
+.token.color {
+    @apply text-lime-300 !important;
+}
+
+.token.punctuation,
+.token.module,
+.token.property {
+    @apply text-sky-200 !important;
+}
+
+.token.atapply .token:not(.rule):not(.important) {
+    color: inherit;
+}
+
+.language-shell .token:not(.comment) {
+    color: inherit;
+}
+
+.language-css .token.function {
+    color: inherit;
+}
+
+.token.comment {
+    @apply text-neutral-400 !important;
+}
+
+.token.deleted:not(.prefix) {
+    @apply relative block -mx-4 px-4 !important;
+}
+
+.token.deleted:not(.prefix)::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 block bg-rose-400 bg-opacity-25 !important;
+}
+
+.token.deleted.prefix {
+    @apply text-neutral-400 select-none !important;
+}
+
+.token.inserted:not(.prefix) {
+    @apply block bg-emerald-700 bg-opacity-50 -mx-4 px-4 !important;
+}
+
+.token.inserted.prefix {
+    @apply text-emerald-200 text-opacity-75 select-none !important;
+}
