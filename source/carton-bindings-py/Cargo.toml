@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [lib]
-name = "carton"
+name = "cartonml"
 crate-type = ["cdylib"]
 
 [dependencies]

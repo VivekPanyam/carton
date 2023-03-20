@@ -330,7 +330,7 @@ fn load_unpacked(
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
-fn carton(_py: Python, m: &PyModule) -> PyResult<()> {
+fn cartonml(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load, m)?)?;
     m.add_function(wrap_pyfunction!(load_unpacked, m)?)?;
     m.add_class::<Carton>()?;
