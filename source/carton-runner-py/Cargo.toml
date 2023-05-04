@@ -7,9 +7,9 @@ edition = "2021"
 carton-runner-interface = { path = "../carton-runner-interface" }
 carton-utils = { path = "../carton-utils" }
 tokio = { version = "1", features = ["full"] }
-pyo3 = { version = "0.17.3"}
-pyo3-asyncio = { version = "0.17", features = ["attributes", "tokio-runtime"] }
-numpy = "0.17"
+pyo3 = { version = "0.18"}
+pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
+numpy = "0.18"
 ndarray = { version = "0.15" }
 lazy_static = "1.4.0"
 reqwest = { version = "0.11", features = ["native-tls-vendored"] }

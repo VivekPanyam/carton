@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     hash::Hash,
     pin::Pin,
+    str::FromStr,
     sync::{Arc, Mutex},
 };
 
@@ -56,7 +57,24 @@ where
     /// Misc files that can be referenced by the description. The key is a string
     /// starting with `@misc/` followed by a normalized path (i.e one that does not
     /// reference parent directories, etc)
-    pub misc_files: Option<HashMap<String, BoxedMiscFileLoader>>,
+    pub misc_files: Option<HashMap<String, ArcMiscFileLoader>>,
+}
+
+impl<T: TensorStorage> Clone for CartonInfo<T> {
+    fn clone(&self) -> Self {
+        Self {
+            model_name: self.model_name.clone(),
+            short_description: self.short_description.clone(),
+            model_description: self.model_description.clone(),
+            required_platforms: self.required_platforms.clone(),
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            self_tests: self.self_tests.clone(),
+            examples: self.examples.clone(),
+            runner: self.runner.clone(),
+            misc_files: self.misc_files.clone(),
+        }
+    }
 }
 
 /// An internal struct used when loading models. It contains extra things like the
@@ -146,7 +164,7 @@ impl<T> PossiblyLoadedInner<T> {
 
     async fn into_inner(self) -> T {
         // Run `get` to ensure we load the value
-        self.get();
+        self.get().await;
 
         // This unwrap is safe because we just ran get above
         self.inner.into_inner().unwrap()
@@ -171,6 +189,17 @@ where
     pub expected_out: Option<HashMap<String, PossiblyLoaded<Tensor<T>>>>,
 }
 
+impl<T: TensorStorage> Clone for SelfTest<T> {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            description: self.description.clone(),
+            inputs: self.inputs.clone(),
+            expected_out: self.expected_out.clone(),
+        }
+    }
+}
+
 pub struct Example<T>
 where
     T: TensorStorage,
@@ -181,12 +210,23 @@ where
     pub sample_out: HashMap<String, TensorOrMisc<T>>,
 }
 
+impl<T: TensorStorage> Clone for Example<T> {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            description: self.description.clone(),
+            inputs: self.inputs.clone(),
+            sample_out: self.sample_out.clone(),
+        }
+    }
+}
+
 // This isn't ideal, but since it's not on the critical path, it's probably okay
 #[cfg(target_family = "wasm")]
-pub type MiscFile = Box<dyn AsyncRead>;
+pub type MiscFile = Box<dyn AsyncRead + Unpin>;
 
 #[cfg(not(target_family = "wasm"))]
-pub type MiscFile = Box<dyn AsyncRead + Send + Sync>;
+pub type MiscFile = Box<dyn AsyncRead + Send + Sync + Unpin>;
 
 #[cfg_attr(target_family = "wasm", async_trait(?Send))]
 #[cfg_attr(not(target_family = "wasm"), async_trait)]
@@ -195,19 +235,29 @@ pub trait MiscFileLoader {
 }
 
 #[cfg(target_family = "wasm")]
-pub type BoxedMiscFileLoader = Box<dyn MiscFileLoader>;
+pub type ArcMiscFileLoader = Arc<dyn MiscFileLoader>;
 
 #[cfg(not(target_family = "wasm"))]
-pub type BoxedMiscFileLoader = Box<dyn MiscFileLoader + Send + Sync>;
+pub type ArcMiscFileLoader = Arc<dyn MiscFileLoader + Send + Sync>;
 
 pub enum TensorOrMisc<T>
 where
     T: TensorStorage,
 {
     Tensor(PossiblyLoaded<Tensor<T>>),
-    Misc(BoxedMiscFileLoader),
+    Misc(ArcMiscFileLoader),
 }
 
+impl<T: TensorStorage> Clone for TensorOrMisc<T> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Tensor(v) => Self::Tensor(v.clone()),
+            Self::Misc(v) => Self::Misc(v.clone()),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct RunnerInfo {
     /// The name of the runner to use
     pub runner_name: String,
@@ -239,7 +289,7 @@ pub enum RunnerOpt {
     Boolean(bool),
 }
 
-#[non_exhaustive]
+#[derive(Clone)]
 pub struct TensorSpec {
     pub name: String,
 
@@ -256,6 +306,7 @@ pub struct TensorSpec {
     pub internal_name: Option<String>,
 }
 
+#[derive(Clone)]
 pub enum Shape {
     /// Any shape
     Any,
@@ -269,6 +320,7 @@ pub enum Shape {
 }
 
 /// A dimension can be either a fixed value, a symbol, or any value
+#[derive(Clone)]
 pub enum Dimension {
     Value(u64),
     Symbol(String),
@@ -276,9 +328,32 @@ pub enum Dimension {
 }
 
 for_each_carton_type! {
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     pub enum DataType {
         $($CartonType,)*
+    }
+
+    impl FromStr for DataType {
+        type Err = String;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s {
+                $(
+                    $TypeStr => Ok(DataType::$CartonType),
+                )*
+                other => Err(format!("Invalid datatype: `{other}`"))
+            }
+        }
+    }
+
+    impl DataType {
+        pub fn to_str(&self) -> &'static str {
+            match self {
+                $(
+                    DataType::$CartonType => $TypeStr,
+                )*
+            }
+        }
     }
 }
 
