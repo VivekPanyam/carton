@@ -89,7 +89,7 @@ impl Carton {
 
     /// Pack a carton given a path and options. Returns the path of the output file
     #[cfg(not(target_family = "wasm"))]
-    pub async fn pack<T>(path: String, opts: PackOpts<T>) -> Result<std::path::PathBuf>
+    pub async fn pack<T>(path: String, mut opts: PackOpts<T>) -> Result<std::path::PathBuf>
     where
         T: TensorStorage,
     {
@@ -98,6 +98,11 @@ impl Carton {
         // Launch a runner
         let (runner, runner_info) =
             discover_or_get_runner_and_launch(&opts, &crate::types::Device::CPU).await?;
+
+        // Set the runner_compat_version if the user didn't
+        opts.runner
+            .runner_compat_version
+            .get_or_insert(runner_info.runner_compat_version);
 
         // Create a temp folder
         // SAFETY: this only needs to last until the end of this method so it's okay if we don't store `tempdir`

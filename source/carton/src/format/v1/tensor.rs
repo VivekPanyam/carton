@@ -41,7 +41,7 @@ struct StringsToml {
 
 pub(crate) fn save_tensors<T>(
     tensor_data_path: &std::path::Path,
-    tensors: HashMap<String, Tensor<T>>,
+    tensors: HashMap<String, &Tensor<T>>,
 ) -> crate::error::Result<()>
 where
     T: TensorStorage,
@@ -58,7 +58,7 @@ where
         if let Tensor::NestedTensor(items) = v {
             // Create a nested tensor to write out
             let mut nt = TensorInfo {
-                name: k.clone(),
+                name: k.strip_prefix("@tensor_data/").unwrap().to_owned(),
                 dtype: "nested".into(),
                 ..Default::default()
             };
@@ -101,7 +101,7 @@ where
 
             // Add it to the index
             index_toml.tensor.push(TensorInfo {
-                name: k.clone(),
+                name: k.strip_prefix("@tensor_data/").unwrap().to_owned(),
                 dtype: "string".into(),
                 shape: Some(t.view().shape().into_iter().map(|v| *v as u64).collect()),
                 file: Some(fname.clone()),
@@ -139,7 +139,7 @@ where
 
                             // Add it to the index
                             index_toml.tensor.push(TensorInfo {
-                                name: k.clone(),
+                                name: k.strip_prefix("@tensor_data/").unwrap().to_owned(),
                                 dtype: $TypeStr.into(),
                                 shape: Some(array.shape().into_iter().map(|v| *v as u64).collect()),
                                 file: Some(fname.clone()),

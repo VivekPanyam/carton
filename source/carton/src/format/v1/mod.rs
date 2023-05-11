@@ -2,7 +2,11 @@
 //! See `docs/specification/format.md` for more details
 mod carton_toml;
 mod load;
-mod save;
 mod tensor;
 pub(crate) use load::load;
+
+#[cfg(not(target_family = "wasm"))]
+mod save;
+
+#[cfg(not(target_family = "wasm"))]
 pub(crate) use save::save;

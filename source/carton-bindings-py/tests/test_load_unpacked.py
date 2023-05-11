@@ -126,7 +126,27 @@ class Test(unittest.IsolatedAsyncioTestCase):
 
     async def test_load_unpacked(self):
         """
-        Test of load_unpacked that uses most (if not all) of the documented arguments
+        Test load_unpacked. See _run_load_test for more details.
+        """
+        async def load(*args, **kwargs):
+            return await carton.load_unpacked(*args, **kwargs)
+
+        await self._run_load_test(load)
+
+    async def test_pack_load(self):
+        """
+        Test pack followed by load. See _run_load_test for more details.
+        """
+        async def load(*args, visible_device, **kwargs):
+            model_path = await carton.pack(*args, **kwargs)
+
+            return await carton.load(model_path, visible_device=visible_device)
+
+        await self._run_load_test(load)
+
+    async def _run_load_test(self, load_fn):
+        """
+        Utility to test pack, load, and load_unpacked that uses most (if not all) of the documented arguments
         """
         dir = tempfile.mkdtemp()
         with open(f'{dir}/requirements.txt', 'w') as f:
@@ -150,7 +170,7 @@ def get_model():
     return Model()
         """)
 
-        model = await carton.load_unpacked(
+        model = await load_fn(
             dir,
             runner_name = "python",
             required_framework_version = "=3.11",

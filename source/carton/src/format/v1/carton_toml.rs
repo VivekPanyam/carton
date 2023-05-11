@@ -8,7 +8,7 @@ use serde::{de::Visitor, Deserialize, Serialize};
 #[non_exhaustive]
 pub struct CartonToml {
     /// A number defining the carton spec version. Should be 1
-    spec_version: u64,
+    pub(crate) spec_version: u64,
 
     /// The name of the model
     pub(crate) model_name: Option<String>,

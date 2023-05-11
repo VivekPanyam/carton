@@ -54,9 +54,8 @@ where
     /// Information about the runner to use
     pub runner: RunnerInfo,
 
-    /// Misc files that can be referenced by the description. The key is a string
-    /// starting with `@misc/` followed by a normalized path (i.e one that does not
-    /// reference parent directories, etc)
+    /// Misc files that can be referenced by the description. The key is a normalized relative path
+    /// (i.e one that does not reference parent directories, etc)
     pub misc_files: Option<HashMap<String, ArcMiscFileLoader>>,
 }
 
