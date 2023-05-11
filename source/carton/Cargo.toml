@@ -25,6 +25,9 @@ async-trait = "0.1"
 runner_interface_v1 = { package = "carton-runner-interface", path = "../carton-runner-interface" }
 thiserror = "1"
 sha2 = "0.10.6"
+walkdir = "2.3.2"
+async_zip = {version = "0.0.11", features = ["chrono", "deflate", "zstd"]}
+path-clean = "0.1.0"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 nvml-wrapper = "0.8.0"

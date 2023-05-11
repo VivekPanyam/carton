@@ -2,6 +2,7 @@
 //! This module does a lot of type conversions to map from the types in the toml file to the ones in
 //! crate::types and crate::info
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -15,16 +16,6 @@ use crate::conversion_utils::{
 use crate::error::{CartonError, Result};
 use crate::info::{CartonInfoWithExtras, PossiblyLoaded};
 use crate::types::{CartonInfo, GenericStorage};
-
-async fn load_tensor_from_fs<T>(fs: &T, path: &str) -> crate::types::Tensor<GenericStorage>
-where
-    T: ReadableFileSystem,
-    T::FileType: ReadableFile + 'static,
-{
-    let f = fs.open(path).await.unwrap();
-    // Actually read the tensor and return it
-    todo!()
-}
 
 struct MiscFileLoader<T> {
     fs: Arc<T>,
@@ -85,11 +76,15 @@ where
 
                     let mfl: crate::info::ArcMiscFileLoader = Arc::new(mfl);
 
-                    ("@".to_owned() + path, mfl)
+                    (path.strip_prefix("misc/").unwrap().to_owned(), mfl)
                 })
                 .collect(),
         )
     };
+
+    let tensors =
+        super::tensor::load_tensors(fs, lunchbox::path::Path::new("tensor_data/")).await?;
+    let load_context = LoadContext { fs, tensors };
 
     // Create a CartonInfo struct
     let info = CartonInfo {
@@ -99,9 +94,9 @@ where
         required_platforms: convert_opt_vec(config.required_platforms),
         inputs: convert_opt_vec(config.input),
         outputs: convert_opt_vec(config.output),
-        self_tests: config.self_test.convert_into_with_context(fs),
+        self_tests: config.self_test.convert_into_with_context(&load_context),
         // TODO: reuse the misc files from above when loading examples
-        examples: config.example.convert_into_with_context(fs),
+        examples: config.example.convert_into_with_context(&load_context),
         runner: config.runner.into(),
         misc_files,
     };
@@ -118,29 +113,32 @@ where
     })
 }
 
-impl<F> ConvertFromWithContext<super::carton_toml::TensorReference, &Arc<F>>
+struct LoadContext<'a, F> {
+    fs: &'a Arc<F>,
+    tensors: HashMap<String, PossiblyLoaded<crate::types::Tensor<GenericStorage>>>,
+}
+
+impl<'a, F> ConvertFromWithContext<super::carton_toml::TensorReference, &LoadContext<'a, F>>
     for PossiblyLoaded<crate::types::Tensor<GenericStorage>>
 where
     F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
 {
-    fn from(item: super::carton_toml::TensorReference, fs: &Arc<F>) -> Self {
-        let fs = fs.clone();
-        PossiblyLoaded::from_loader(Box::pin(async move {
-            load_tensor_from_fs(fs.as_ref(), item.0.strip_prefix("@").unwrap()).await
-        }))
+    fn from(item: super::carton_toml::TensorReference, context: &LoadContext<F>) -> Self {
+        let key = item.0.strip_prefix("@tensor_data/").unwrap();
+        context.tensors[key].clone()
     }
 }
 
-impl<F> ConvertFromWithContext<super::carton_toml::MiscFileReference, &Arc<F>>
+impl<'a, F> ConvertFromWithContext<super::carton_toml::MiscFileReference, &LoadContext<'a, F>>
     for crate::info::ArcMiscFileLoader
 where
     F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     F::FileType: ReadableFile + MaybeSend + MaybeSync + Unpin + 'static,
 {
-    fn from(item: super::carton_toml::MiscFileReference, fs: &Arc<F>) -> Self {
+    fn from(item: super::carton_toml::MiscFileReference, context: &LoadContext<F>) -> Self {
         let mfl = MiscFileLoader {
-            fs: fs.clone(),
+            fs: context.fs.clone(),
             path: item.0.strip_prefix("@").unwrap().to_owned(),
         };
 

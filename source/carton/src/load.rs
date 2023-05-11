@@ -5,6 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use lazy_static::lazy_static;
 use lunchbox::{
+    chroot::ChrootFS,
     path::{LunchboxPathUtils, PathBuf},
     types::{MaybeSend, MaybeSync},
 };
@@ -148,8 +149,12 @@ where
         let (runner, _) =
             discover_or_get_runner_and_launch(&info_with_extras.info, &visible_device).await?;
 
+        // We need to pass in the `model` subdirectory as the filesystem root instead of
+        // fs directly.
+        let wrapped = Arc::new(ChrootFS::new(fs.clone(), "model".into()));
+
         // Load the model
-        load_model(fs, &runner, &info_with_extras, visible_device).await?;
+        load_model(&wrapped, &runner, &info_with_extras, visible_device).await?;
 
         Ok((info_with_extras, Some(runner)))
     }
