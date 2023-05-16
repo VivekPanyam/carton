@@ -1,0 +1,28 @@
+[package]
+edition = "2021"
+name = "carton-bindings-napi"
+version = "0.0.1"
+publish = false
+authors = ["Vivek Panyam <hello@vivekpanyam.com>"]
+description = "NodeJS bindings for Carton"
+license = "Apache-2.0"
+repository = "https://github.com/VivekPanyam/carton"
+keywords = []
+categories = []
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
+napi = { version = "2.12.0", default-features = false, features = ["napi4", "async"] }
+napi-derive = "2.12.2"
+carton-core = { package = "carton", path = "../carton" }
+ndarray = { version = "0.15", features = ["serde"] }
+serde_json = "1"
+semver = {version = "1.0.16", features = ["serde"]}
+target-lexicon = "0.12.5"
+async-trait = "0.1"
+
+[build-dependencies]
+napi-build = "2.0.1"

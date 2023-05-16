@@ -8,6 +8,7 @@ members = [
     "source/carton-bindings-c",
     "source/carton-bindings-cpp",
     "source/carton-bindings-py",
+    "source/carton-bindings-napi",
     "source/carton-bindings-nodejs",
     "source/carton-bindings-wasm",
     "source/carton-macros",

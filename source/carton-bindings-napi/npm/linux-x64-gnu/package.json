@@ -1,0 +1,21 @@
+{
+  "name": "@cartonml/carton-linux-x64-gnu",
+  "version": "0.0.0",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "carton.linux-x64-gnu.node",
+  "files": [
+    "carton.linux-x64-gnu.node"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">= 10"
+  },
+  "libc": [
+    "glibc"
+  ]
+}
