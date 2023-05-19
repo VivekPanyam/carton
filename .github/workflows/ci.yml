@@ -51,19 +51,31 @@ jobs:
         with:
           name: tmp_carton_logs
           path: /tmp/carton_logs
-  build_wasm:
-    name: WASM Build ${{ matrix.target }}
+  build_wasi:
+    name: WASM Build wasm32-wasi
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target:
-          - wasm32-wasi
-          - wasm32-unknown-unknown
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.ZIPFS_READ }}
           submodules: recursive
-      - run: rustup target add ${{ matrix.target }}
-      - run: cargo build -p carton --verbose --target ${{ matrix.target }}
+      - run: rustup target add wasm32-wasi
+      - run: cargo build -p carton --verbose --target wasm32-wasi
+  build_wasm:
+    name: WASM Build wasm32-unknown-unknown
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm install -g wasm-pack yarn@1.22.19
+      - run: >
+          cd source/carton-bindings-wasm && ./build.sh &&
+          cd tests && yarn install && node basic.js

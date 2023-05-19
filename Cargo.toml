@@ -7,9 +7,18 @@ members = [
     "source/carton-runner-interface",
     "source/carton-bindings-py",
     "source/carton-bindings-nodejs",
+    "source/carton-bindings-wasm",
     "source/carton-macros",
     "source/carton-runner-noop",
     "source/carton-runner-py",
     "source/carton-utils-py",
     "source/anywhere",
 ]
+
+[profile.release]
+lto = true
+debug = true
+
+[patch.crates-io]
+# Temporary patch while we're waiting for an upstream merge
+reqwest = { git = "https://github.com/VivekPanyam/reqwest.git", branch = "update_wasm_streams" }

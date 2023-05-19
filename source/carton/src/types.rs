@@ -1,7 +1,7 @@
-pub use carton_macros::for_each_carton_type;
-use carton_macros::for_each_numeric_carton_type;
+pub use carton_macros::{for_each_carton_type, for_each_numeric_carton_type};
 use lazy_static::lazy_static;
-use std::{collections::HashMap, marker::PhantomData};
+use serde::{de::Visitor, Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::conversion_utils::{ConvertFromWithContext, ConvertIntoWithContext};
 use lunchbox::types::{MaybeSend, MaybeSync};
@@ -11,7 +11,7 @@ use lunchbox::types::{MaybeSend, MaybeSync};
 pub struct SealHandle(pub(crate) u64);
 
 /// Options provided when loading a Carton
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct LoadOpts {
     /// Override the runner to use
     /// If not overridden, this is fetched from the carton metadata
@@ -59,11 +59,11 @@ lazy_static! {
 
 impl Device {
     #[cfg(target_family = "wasm")]
-    pub fn maybe_from_str(s: &str) -> Self {
+    pub fn maybe_from_str(s: &str) -> crate::error::Result<Self> {
         if s.to_lowercase() == "cpu" {
-            Device::CPU
+            Ok(Device::CPU)
         } else {
-            Device::GPU { uuid: None }
+            Ok(Device::GPU { uuid: None })
         }
     }
 
@@ -105,6 +105,49 @@ impl Device {
         // Fall back to CPU
         // TODO: warn or throw an error
         Device::CPU
+    }
+}
+
+impl ToString for Device {
+    fn to_string(&self) -> String {
+        match self {
+            Device::CPU => "cpu".into(),
+            Device::GPU { uuid } => uuid.as_ref().unwrap_or(&"gpu".into()).to_owned(),
+        }
+    }
+}
+
+impl Serialize for Device {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+struct DeviceDeserializeVisitor;
+impl<'de> Visitor<'de> for DeviceDeserializeVisitor {
+    type Value = Device;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a string that identifies a device")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Device::maybe_from_str(v).map_err(|e| E::custom(e))
+    }
+}
+
+impl<'de> Deserialize<'de> for Device {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(DeviceDeserializeVisitor)
     }
 }
 

@@ -1,0 +1,10 @@
+{
+    "name": "@cartonml/wasm",
+    "version": "0.0.1",
+    "files": [
+        "**/*"
+    ],
+    "main": "node/index.js",
+    "browser": "web/index.js",
+    "types": "web/index.d.ts"
+}
