@@ -1,4 +1,5 @@
 pub use carton_macros::for_each_carton_type;
+use carton_macros::for_each_numeric_carton_type;
 use lazy_static::lazy_static;
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -112,10 +113,12 @@ pub type PackOpts<T> = CartonInfo<T>;
 
 pub type CartonInfo<T> = crate::info::CartonInfo<T>;
 
-for_each_carton_type! {
+for_each_numeric_carton_type! {
     /// The core tensor type
     pub enum Tensor<Storage> where Storage: TensorStorage {
         $($CartonType(Storage::TypedStorage::<$RustType>),)*
+
+        String(Storage::TypedStringStorage),
 
         /// A Nested Tensor / Ragged Tensor
         /// Effectively a list of tensors. Most frameworks have constraints on what these tensors can
@@ -135,13 +138,14 @@ for_each_carton_type! {
     }
 }
 
-for_each_carton_type! {
+for_each_numeric_carton_type! {
     /// Implement conversions between tensor of different types
     impl<T, U, C> ConvertFromWithContext<Tensor<T>, C> for Tensor<U>
     where
         T: TensorStorage,
         U: TensorStorage,
         C: Copy,
+        U::TypedStringStorage: ConvertFromWithContext<T::TypedStringStorage, C>,
         $(
             U::TypedStorage<$RustType>: ConvertFromWithContext<T::TypedStorage<$RustType>, C>,
         )*
@@ -151,6 +155,7 @@ for_each_carton_type! {
                 $(
                     Tensor::$CartonType(item) => Self::$CartonType(item.convert_into_with_context(context)),
                 )*
+                Tensor::String(item) => Self::String(item.convert_into_with_context(context)),
                 Tensor::NestedTensor(item) => Self::NestedTensor(item.convert_into_with_context(context))
             }
         }
@@ -162,6 +167,8 @@ pub trait TensorStorage {
     type TypedStorage<T>: TypedStorage<T> + MaybeSend + MaybeSync
     where
         T: MaybeSend + MaybeSync;
+
+    type TypedStringStorage: TypedStorage<String> + MaybeSend + MaybeSync;
 }
 
 pub trait TypedStorage<T> {
@@ -177,6 +184,7 @@ pub type DataType = crate::info::DataType;
 pub struct GenericStorage;
 impl TensorStorage for GenericStorage {
     type TypedStorage<T> = ndarray::ArrayD<T>  where T: MaybeSend + MaybeSync;
+    type TypedStringStorage = ndarray::ArrayD<String>;
 }
 
 impl<T> TypedStorage<T> for ndarray::ArrayD<T> {
