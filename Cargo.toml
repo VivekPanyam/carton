@@ -10,5 +10,6 @@ members = [
     "source/carton-macros",
     "source/carton-runner-noop",
     "source/carton-runner-py",
+    "source/carton-utils-py",
     "source/anywhere",
 ]
