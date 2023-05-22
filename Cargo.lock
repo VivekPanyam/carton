@@ -366,6 +366,7 @@ version = "0.0.1"
 dependencies = [
  "async-trait",
  "carton",
+ "carton-utils-py",
  "ndarray",
  "numpy",
  "pyo3",
@@ -373,7 +374,6 @@ dependencies = [
  "semver 1.0.16",
  "target-lexicon",
  "tokio",
- "widestring",
 ]
 
 [[package]]
@@ -460,6 +460,7 @@ dependencies = [
  "carton-runner-interface",
  "carton-runner-packager",
  "carton-utils",
+ "carton-utils-py",
  "clap 4.1.1",
  "escargot",
  "findshlibs",
@@ -506,6 +507,16 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml",
+]
+
+[[package]]
+name = "carton-utils-py"
+version = "0.0.1"
+dependencies = [
+ "ndarray",
+ "numpy",
+ "pyo3",
+ "widestring",
 ]
 
 [[package]]
