@@ -9,6 +9,8 @@ impl TensorStorage for RunnerStorage {
     type TypedStorage<T> = TypedRunnerStorage<T>
     where
         T: MaybeSend + MaybeSync;
+
+    type TypedStringStorage = TypedRunnerStorage<String>;
 }
 
 pub enum TypedRunnerStorage<T> {

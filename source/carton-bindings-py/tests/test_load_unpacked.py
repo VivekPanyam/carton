@@ -64,13 +64,26 @@ class Test(unittest.IsolatedAsyncioTestCase):
             dict(
                 name = "a_self_test",
                 description = "A self test",
-                inputs = dict(a = np.ones(5, dtype=np.float32)),
-                expected_out = dict(y = np.ones(5, dtype=np.uint32))
+                inputs = dict(a = np.ones(5, dtype=np.float32), b = np.array([["Hello"], ["World"]])),
+                expected_out = dict(y = np.ones(5, dtype=np.uint32), z = np.array("Scalar String 💖"))
             ),
             dict(
                 name = "2 ",
                 inputs = dict(a = np.random.rand(5)),
                 expected_out = dict(y = np.random.randint(1, 5, 5, dtype=np.uint32))
+            ),
+            dict(
+                name = "unicode test",
+                description = "Testing a few different unicode strings",
+                inputs = dict(a = np.ones(5, dtype=np.float32), b = np.array([
+                    "Hello 💖 😂😍🎉👍 Unicode",
+
+                    # From https://www.cogsci.ed.ac.uk/~richard/unicode-sample.html
+                    "Some Telugu: గ ఘ ఙ చ ఛ జ ఝ ఞ ట ఠ డ ఢ ణ త థ ద ధ న ప ఫ బ భ మ య ర ఱ",
+
+                    "Let's 🤑 make 🙋😬 sure 👍 emojis ⚽ work 💼🙄 well 🤓🤒"
+                ])),
+                expected_out = dict(y = np.ones(5, dtype=np.uint32))
             )
         ]
 
@@ -100,7 +113,7 @@ class Test(unittest.IsolatedAsyncioTestCase):
             ),
             dict(
                 name = " s o me na me wi th spaces",
-                inputs = dict(f = np.array(5)),
+                inputs = dict(f = np.array(5), b = np.array(["Hello", "World"])),
                 sample_out = dict(y = self.model_architecture, z = np.random.rand(5))
             ),
         ]
@@ -229,14 +242,21 @@ def get_model():
                     name = "y",
                     dtype = "uint32",
                     shape = [2, 3, 512, 512],
-                    description = "Some description of the output"
+                    description = "Some description of the output with emoji! 🥳"
                 )
             ],
             self_tests = [
                 SelfTest(
                     name = "a_self_test",
                     description = "A self test",
-                    inputs = dict(a = np.ones(5, dtype=np.float32)),
+                    inputs = dict(a = np.ones(5, dtype=np.float32), b = np.array([
+                        "Hello 💖 😂😍🎉👍 Unicode",
+
+                        # From https://www.cogsci.ed.ac.uk/~richard/unicode-sample.html
+                        "Some Telugu: గ ఘ ఙ చ ఛ జ ఝ ఞ ట ఠ డ ఢ ణ త థ ద ధ న ప ఫ బ భ మ య ర ఱ",
+
+                        "Let's 🤑 make 🙋😬 sure 👍 emojis ⚽ work 💼🙄 well 🤓🤒"
+                    ])),
                     expected_out = dict(y = np.ones(5, dtype=np.uint32))
                 )
             ],
