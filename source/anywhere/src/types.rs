@@ -62,6 +62,7 @@ pub struct AnywhereFile<const IS_WRITABLE: bool, const IS_SEEKABLE: bool> {
 
 /// Implement AsyncRead for `AnywhereFile`s
 impl<const W: bool, const S: bool> AsyncRead for AnywhereFile<W, S> {
+    #[tracing::instrument(skip(self, cx, buf), fields(buf_remaining = buf.remaining()))]
     fn poll_read(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -113,25 +114,74 @@ impl<const W: bool, const S: bool> lunchbox::types::ReadableFile for AnywhereFil
 /// Implement AsyncWrite for writable `AnywhereFile`s
 impl<const S: bool> AsyncWrite for AnywhereFile<true, S> {
     fn poll_write(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
-        _buf: &[u8],
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
     ) -> std::task::Poll<std::result::Result<usize, std::io::Error>> {
-        todo!()
+        // Create a new future if we need to
+        if self.fut.write_fut.is_none() {
+            let client = self.client.clone();
+            let handle = self.handle;
+            let buf = buf.to_vec();
+            self.fut.write_fut = Some(Box::pin(
+                async move { client.write_data(handle, buf).await },
+            ));
+        }
+
+        // Check if the future is ready
+        match self.fut.write_fut.as_mut().unwrap().poll_unpin(cx) {
+            std::task::Poll::Ready(res) => {
+                self.fut.write_fut = None;
+
+                std::task::Poll::Ready(res)
+            }
+            std::task::Poll::Pending => std::task::Poll::Pending,
+        }
     }
 
     fn poll_flush(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::result::Result<(), std::io::Error>> {
-        todo!()
+        // Create a new future if we need to
+        if self.fut.flush_fut.is_none() {
+            let client = self.client.clone();
+            let handle = self.handle;
+            self.fut.flush_fut = Some(Box::pin(async move { client.write_flush(handle).await }));
+        }
+
+        // Check if the future is ready
+        match self.fut.flush_fut.as_mut().unwrap().poll_unpin(cx) {
+            std::task::Poll::Ready(res) => {
+                self.fut.flush_fut = None;
+
+                std::task::Poll::Ready(res)
+            }
+            std::task::Poll::Pending => std::task::Poll::Pending,
+        }
     }
 
     fn poll_shutdown(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut std::task::Context<'_>,
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::result::Result<(), std::io::Error>> {
-        todo!()
+        // Create a new future if we need to
+        if self.fut.shutdown_fut.is_none() {
+            let client = self.client.clone();
+            let handle = self.handle;
+            self.fut.shutdown_fut =
+                Some(Box::pin(async move { client.write_shutdown(handle).await }));
+        }
+
+        // Check if the future is ready
+        match self.fut.shutdown_fut.as_mut().unwrap().poll_unpin(cx) {
+            std::task::Poll::Ready(res) => {
+                self.fut.shutdown_fut = None;
+
+                std::task::Poll::Ready(res)
+            }
+            std::task::Poll::Pending => std::task::Poll::Pending,
+        }
     }
 }
 
