@@ -93,7 +93,7 @@ impl Device {
     }
 
     #[cfg(not(target_family = "wasm"))]
-    fn maybe_from_index(i: u32) -> Self {
+    pub fn maybe_from_index(i: u32) -> Self {
         if let Some(nvml) = NVML.as_ref() {
             if let Ok(device) = nvml.device_by_index(i) {
                 if let Ok(uuid) = device.uuid() {

@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use conversions::{
-    create_load_opts, create_pack_opts, CartonInfo, Example, LazyLoadedMiscFile, LazyLoadedTensor,
-    PyRunnerOpt, RunnerInfo, SelfTest, TensorSpec,
+    create_load_opts, create_pack_opts, CartonInfo, Device, Example, LazyLoadedMiscFile,
+    LazyLoadedTensor, PyRunnerOpt, RunnerInfo, SelfTest, TensorSpec,
 };
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 use tensor::{tensor_to_py, SupportedTensorType};
@@ -79,7 +79,7 @@ impl Carton {
 fn load(
     py: Python,
     path: String,
-    visible_device: Option<String>,
+    visible_device: Option<Device>,
     override_runner_name: Option<String>,
     override_required_framework_version: Option<String>,
     override_runner_opts: Option<HashMap<String, PyRunnerOpt>>,
@@ -121,7 +121,7 @@ fn load_unpacked(
     self_tests: Option<Vec<SelfTest>>,
     examples: Option<Vec<Example>>,
     misc_files: Option<HashMap<String, Vec<u8>>>,
-    visible_device: Option<String>,
+    visible_device: Option<Device>,
 ) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let pack_opts = create_pack_opts(

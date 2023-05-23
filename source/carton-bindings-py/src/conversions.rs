@@ -17,7 +17,7 @@ use tokio::sync::Mutex;
 use crate::tensor::{tensor_to_py, PyTensorStorage, SupportedTensorType};
 
 pub(crate) fn create_load_opts(
-    visible_device: Option<String>,
+    visible_device: Option<Device>,
     override_runner_name: Option<String>,
     override_required_framework_version: Option<String>,
     override_runner_opts: Option<HashMap<String, PyRunnerOpt>>,
@@ -29,10 +29,19 @@ pub(crate) fn create_load_opts(
         // TODO: use something more specific than ValueError
         visible_device: match visible_device {
             None => carton_core::types::Device::default(),
-            Some(v) => carton_core::types::Device::maybe_from_str(&v)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?,
+            Some(v) => match v {
+                Device::Int(v) => carton_core::types::Device::maybe_from_index(v),
+                Device::String(v) => carton_core::types::Device::maybe_from_str(&v)
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?,
+            },
         },
     })
+}
+
+#[derive(FromPyObject)]
+pub(crate) enum Device {
+    Int(u32),
+    String(String),
 }
 
 pub(crate) fn create_pack_opts(
