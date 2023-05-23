@@ -171,6 +171,7 @@ where
 
         // TODO: maybe we need to clear the importlib cache
 
+        #[cfg(not(target_os = "macos"))]
         tracing::info_span!("preload_cuda").in_scope(|| {
             // Because of https://github.com/pytorch/pytorch/issues/101314, we need to attempt to preload cuda deps
             Python::with_gil(|py| {

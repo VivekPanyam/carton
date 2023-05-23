@@ -206,6 +206,17 @@ impl Carton {
         Ok(crate::load::get_carton_info(&url_or_path).await?.info)
     }
 
+    /// Shrink a packed carton by storing links to files instead of the files themselves when possible.
+    /// Takes a path to a packed carton along with a mapping from sha256 to a list of URLs
+    /// Returns the path to another packed carton
+    #[cfg(not(target_family = "wasm"))]
+    pub async fn shrink(
+        path: std::path::PathBuf,
+        urls: HashMap<String, Vec<String>>,
+    ) -> Result<std::path::PathBuf> {
+        crate::format::v1::links::create_links(path, urls).await
+    }
+
     /// Allocate a tensor
     pub async fn alloc_tensor(
         &self,
