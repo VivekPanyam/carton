@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-pyo3 = { version = "0.18", features = ["abi3-py37"]}
+pyo3 = { version = "0.18" }
 numpy = "0.18"
 ndarray = { version = "0.15" }
 widestring = "1.0.2"

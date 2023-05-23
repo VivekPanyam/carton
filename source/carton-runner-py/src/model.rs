@@ -4,8 +4,9 @@ use carton_runner_interface::{
     server::SealHandle,
     types::{Tensor, TensorStorage},
 };
+use carton_utils_py::tensor::PyStringArrayType;
 use numpy::{PyArrayDyn, ToPyArray};
-use pyo3::{FromPyObject, PyAny, PyObject, PyResult, Python, ToPyObject};
+use pyo3::{FromPyObject, PyAny, PyErr, PyObject, PyResult, Python, ToPyObject};
 
 enum SealImpl {
     /// Seal implemented in python
@@ -80,7 +81,7 @@ impl Model {
         }
     }
 
-    pub fn seal(&mut self, tensors: HashMap<String, Tensor>) -> PyResult<SealHandle> {
+    pub fn seal(&mut self, tensors: HashMap<String, Tensor>) -> Result<SealHandle, String> {
         // Convert to numpy arrays
         let tensors = to_numpy_arrays(tensors);
 
@@ -96,9 +97,13 @@ impl Model {
                 Ok(handle)
             }
         }
+        .map_err(pyerr_to_string_with_traceback)
     }
 
-    pub fn infer_with_handle(&mut self, handle: SealHandle) -> PyResult<HashMap<String, Tensor>> {
+    pub fn infer_with_handle(
+        &mut self,
+        handle: SealHandle,
+    ) -> Result<HashMap<String, Tensor>, String> {
         match &mut self.seal {
             SealImpl::Py(_) => {
                 // Seal being implemented implies that infer_with_handle is also implemented (as we checked in `new`)
@@ -125,12 +130,13 @@ impl Model {
                 })
             }
         }
+        .map_err(pyerr_to_string_with_traceback)
     }
 
     pub fn infer_with_tensors(
         &self,
         tensors: HashMap<String, Tensor>,
-    ) -> PyResult<HashMap<String, Tensor>> {
+    ) -> Result<HashMap<String, Tensor>, String> {
         // Convert to numpy arrays
         let tensors = to_numpy_arrays(tensors);
 
@@ -162,16 +168,22 @@ impl Model {
                     panic!("`infer_with_tensors` wasn't implemented and `seal` wasn't implemented either");
                 }
             }
-        }
+        }.map_err(pyerr_to_string_with_traceback)
     }
+}
+
+pub(crate) fn pyerr_to_string_with_traceback(e: PyErr) -> String {
+    let error_value = e.to_string();
+    let traceback = Python::with_gil(|py| e.traceback(py).map(|t| t.format().unwrap()));
+
+    format!("{}\n{}", error_value, traceback.unwrap_or_default())
 }
 
 #[derive(FromPyObject)]
 enum PythonTensorType<'py> {
     Float(&'py PyArrayDyn<f32>),
     Double(&'py PyArrayDyn<f64>),
-    // TODO: handle this
-    // String(&'py PyArrayDyn<PyString>),
+
     I8(&'py PyArrayDyn<i8>),
     I16(&'py PyArrayDyn<i16>),
     I32(&'py PyArrayDyn<i32>),
@@ -181,6 +193,8 @@ enum PythonTensorType<'py> {
     U16(&'py PyArrayDyn<u16>),
     U32(&'py PyArrayDyn<u32>),
     U64(&'py PyArrayDyn<u64>),
+
+    String(PyStringArrayType<'py>),
 }
 
 trait ToTensorMap {
@@ -210,6 +224,12 @@ impl From<PythonTensorType<'_>> for Tensor {
             match value {
                 PythonTensorType::Float(item) => convert_tensor(item),
                 PythonTensorType::Double(item) => convert_tensor(item),
+                PythonTensorType::String(item) => {
+                    // TODO: this makes two copies... (one in to_ndarray and one in view().into())
+                    let arr = item.to_ndarray();
+                    let storage: TensorStorage<String> = arr.view().into();
+                    storage.into()
+                }
                 PythonTensorType::I8(item) => convert_tensor(item),
                 PythonTensorType::I16(item) => convert_tensor(item),
                 PythonTensorType::I32(item) => convert_tensor(item),
@@ -233,10 +253,7 @@ fn to_numpy_arrays(tensors: HashMap<String, Tensor>) -> HashMap<String, pyo3::Py
                 let transformed = match v {
                     Tensor::Float(item) => item.view().to_pyarray(py).to_object(py),
                     Tensor::Double(item) => item.view().to_pyarray(py).to_object(py),
-                    // Tensor::String(item) => item.view().to_pyarray(py).to_object(py),
-                    Tensor::String(_) => {
-                        panic!("String tensors not implemented yet in the python runner")
-                    }
+                    Tensor::String(item) => PyStringArrayType::from_ndarray(py, item.view()),
                     Tensor::I8(item) => item.view().to_pyarray(py).to_object(py),
                     Tensor::I16(item) => item.view().to_pyarray(py).to_object(py),
                     Tensor::I32(item) => item.view().to_pyarray(py).to_object(py),

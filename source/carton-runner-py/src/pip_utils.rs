@@ -41,6 +41,12 @@ async fn ensure_has_pip() {
             "https://files.pythonhosted.org/packages/ab/43/508c403c38eeaa5fc86516eb13bb470ce77601b6d2bbcdb16e26328d0a15/pip-23.0-py3-none-any.whl",
             "b5f88adff801f5ef052bcdef3daa31b55eb67b0fccd6d0106c206fa248e0463c"
         ).await;
+
+        // Make sure we have the `wheel` package
+        install_wheel_and_make_available(
+            "https://files.pythonhosted.org/packages/61/86/cc8d1ff2ca31a312a25a708c891cf9facbad4eae493b3872638db6785eb5/wheel-0.40.0-py3-none-any.whl",
+            "d236b20e7cb522daf2390fa84c55eea81c5c30190f90f29ae2ca1ad8355bf247"
+        ).await;
     }).await;
 }
 
@@ -161,5 +167,20 @@ mod tests {
 
         let p = String::from_utf8(output).unwrap();
         assert_eq!("23.0", p.trim());
+    }
+
+    #[tokio::test]
+    async fn test_wheel_subprocess() {
+        ensure_has_pip().await;
+
+        let output = Command::new(get_executable_path().unwrap().as_str())
+            .args(["-c", "import wheel; print(wheel.__version__)"])
+            .output()
+            .await
+            .unwrap()
+            .stdout;
+
+        let p = String::from_utf8(output).unwrap();
+        assert_eq!("0.40.0", p.trim());
     }
 }

@@ -464,6 +464,7 @@ dependencies = [
  "carton-runner-interface",
  "carton-runner-packager",
  "carton-utils",
+ "carton-utils-py",
  "clap 4.1.1",
  "escargot",
  "findshlibs",
@@ -487,6 +488,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml",
+ "tracing",
  "url",
 ]
 

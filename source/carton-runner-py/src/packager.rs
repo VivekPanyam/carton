@@ -215,7 +215,7 @@ where
         tokio::fs::create_dir_all(&logs_tmp_dir).await.unwrap();
 
         let log_dir = tempfile::tempdir_in(logs_tmp_dir).unwrap();
-        log::info!(target: "slowlog", "Building wheels for non-wheel dependencies using `pip wheel`. This may take a while. See the `pip` logs in {:#?}", log_dir);
+        log::info!(target: "slowlog", "Building wheels for non-wheel dependencies using `pip wheel`. This may take a while. See the `pip` logs in {:#?}", log_dir.path());
 
         let mut sl = slowlog("`pip wheel`", 5).await.without_progress();
 

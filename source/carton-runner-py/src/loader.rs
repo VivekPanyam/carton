@@ -1,15 +1,21 @@
 use std::collections::{HashMap, VecDeque};
 
-use carton_runner_interface::types::RunnerOpt;
+use carton_runner_interface::{slowlog::slowlog, types::RunnerOpt};
 use carton_utils::archive::extract_zip;
 use lunchbox::path::{LunchboxPathUtils, PathBuf};
 use pyo3::prelude::*;
+use tokio::io::{AsyncBufRead, AsyncRead, AsyncReadExt, AsyncWrite, BufReader};
+use tracing::Instrument;
 
 use crate::{
-    env::EnvironmentMarkers, model::Model, packager::CartonLock, python_utils::add_to_sys_path,
+    env::EnvironmentMarkers,
+    model::{pyerr_to_string_with_traceback, Model},
+    packager::CartonLock,
+    python_utils::add_to_sys_path,
     wheel::install_wheel_and_make_available,
 };
 
+#[tracing::instrument(skip(fs))]
 pub(crate) async fn load<F>(
     fs: F,
     runner_opts: Option<HashMap<String, RunnerOpt>>,
@@ -120,16 +126,37 @@ where
                     let target_path = filepath.to_path(&model_dir_path);
                     assert!(target_path.starts_with(&model_dir_path));
 
-                    let mut f = fs.open(filepath).await.unwrap();
+                    let f = fs.open(&filepath).await.unwrap();
                     tokio::fs::create_dir_all(target_path.parent().unwrap())
                         .await
                         .unwrap();
                     let mut target = tokio::fs::File::create(target_path).await.unwrap();
 
-                    handles.push(tokio::spawn(async move {
-                        // Copy the lunchbox file to a local one
-                        tokio::io::copy(&mut f, &mut target).await.unwrap();
-                    }));
+                    let mut sl = slowlog(format!("Loading file '{}'", &filepath), 5).await;
+
+                    let len = fs.metadata(&filepath).await.unwrap().len();
+                    sl.set_total(Some(bytesize::ByteSize(len)));
+
+                    // 1mb buffer
+                    let mut br = BufReader::with_capacity(1_000_000, f);
+
+                    handles.push(tokio::spawn(
+                        async move {
+                            // Copy the lunchbox file to a local one
+                            copy(&mut br, &mut target, 1_000_000, |progress| {
+                                sl.set_progress(Some(bytesize::ByteSize(progress)))
+                            })
+                            .await
+                            .unwrap();
+                            // tokio::io::copy_buf(&mut br, &mut target).await.unwrap();
+
+                            sl.done();
+                        }
+                        .instrument(tracing::trace_span!(
+                            "copy_file_to_local",
+                            filepath = filepath.as_str()
+                        )),
+                    ));
                 }
             }
         }
@@ -144,21 +171,39 @@ where
 
         // TODO: maybe we need to clear the importlib cache
 
+        tracing::info_span!("preload_cuda").in_scope(|| {
+            // Because of https://github.com/pytorch/pytorch/issues/101314, we need to attempt to preload cuda deps
+            Python::with_gil(|py| {
+                PyModule::from_code(py, include_str!("preload_cuda.py"), "", "")
+                    .unwrap()
+                    .getattr("preload_cuda_deps")
+                    .unwrap()
+                    .call0()
+                    .unwrap();
+            });
+        });
+
         let module_name = model_dir_path.file_name().unwrap().to_str().unwrap();
         let module_name = format!("{module_name}.{entrypoint_package}");
 
-        let model = Python::with_gil(|py| {
-            // Import the module
-            let module = PyModule::import(py, module_name.as_str()).unwrap();
+        // Change directory to the model dir
+        std::env::set_current_dir(&model_dir_path).unwrap();
 
-            // Get the entrypoint and run it to get the "model" that we'll use for inference
-            let model = module
-                .getattr(entrypoint_fn.as_str())
-                .unwrap()
-                .call0()
-                .unwrap();
+        let model = tracing::info_span!("run_entrypoint").in_scope(|| {
+            Python::with_gil(|py| {
+                // Import the module
+                let module = PyModule::import(py, module_name.as_str()).unwrap();
 
-            Model::new(model_dir_outer, temp_packages, model)
+                // Get the entrypoint and run it to get the "model" that we'll use for inference
+                let model = module
+                    .getattr(entrypoint_fn.as_str())
+                    .unwrap()
+                    .call0()
+                    .map_err(pyerr_to_string_with_traceback)
+                    .unwrap();
+
+                Model::new(model_dir_outer, temp_packages, model)
+            })
         });
 
         Ok(model)
@@ -172,5 +217,29 @@ fn get_runner_opt_string(opt: &RunnerOpt) -> Option<&String> {
         Some(item)
     } else {
         None
+    }
+}
+
+pub async fn copy<'a, R: AsyncRead + Unpin, W: AsyncWrite + Unpin>(
+    r: &'a mut R,
+    w: &'a mut W,
+    buf_size: usize,
+    mut progress_update: impl FnMut(/* downloaded */ u64),
+) -> std::io::Result<()> {
+    let mut downloaded = 0;
+
+    let mut buf = vec![0; buf_size];
+
+    loop {
+        let num_bytes = r.read(&mut buf).await?;
+
+        if num_bytes == 0 {
+            return Ok(());
+        }
+
+        let mut data = &buf[0..num_bytes];
+        tokio::io::copy_buf(&mut data, w).await?;
+        downloaded += num_bytes as u64;
+        progress_update(downloaded);
     }
 }
