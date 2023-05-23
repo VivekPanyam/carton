@@ -1,4 +1,5 @@
 use std::{
+    any::Any,
     collections::HashMap,
     path::{Path, PathBuf},
 };
@@ -6,6 +7,8 @@ use std::{
 use anywhere::types::{AnywhereFS, ReadOnlyFS, ReadWriteFS};
 use clap::Parser;
 use tokio::sync::mpsc::{self, error::SendError};
+use tracing_chrome::ChromeLayerBuilder;
+use tracing_subscriber::prelude::*;
 
 use crate::{
     do_not_modify::comms::Comms,
@@ -23,6 +26,9 @@ pub struct Server {
 
     outgoing: mpsc::Sender<RPCResponse>,
     incoming: mpsc::Receiver<RPCRequest>,
+
+    // Keep this alive while the serve is up
+    _keepalive: Vec<Box<dyn Any>>,
 }
 
 /// A handle that represents a map of sealed tensors
@@ -241,6 +247,7 @@ impl Server {
             fs_multiplexer,
             incoming: rx,
             outgoing: tx,
+            _keepalive: Vec::new(),
         }
     }
 
@@ -316,10 +323,33 @@ pub async fn init_runner() -> Server {
         }
     });
 
-    // Initialize logging
-    // TODO: pass through slowlog to the main process
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    let keepalive = match std::env::var("CARTON_RUNNER_TRACE_FILE") {
+        Ok(path) => {
+            // Setup tracing
+            let (chrome_layer, _guard) = ChromeLayerBuilder::new()
+                .file(path)
+                .include_args(true)
+                .build();
+            tracing_subscriber::registry().with(chrome_layer).init();
+
+            Some(_guard)
+        }
+        Err(_) => {
+            // Initialize logging
+            // TODO: pass through slowlog to the main process
+            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+                .init();
+
+            None
+        }
+    };
 
     // TODO: run the FD passing channel on top of UDS and get the appropriate channels out
-    Server::connect(&PathBuf::from(args.uds_path)).await
+    let mut s = Server::connect(&PathBuf::from(args.uds_path)).await;
+
+    if let Some(ka) = keepalive {
+        s._keepalive.push(Box::new(ka));
+    }
+
+    s
 }
