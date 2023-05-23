@@ -9,9 +9,14 @@ import cartonml as carton
 
 async def main():
     model = await carton.load("https://carton.pub/google-research/bert-base-uncased")
-    out = await model.infer("Today is a very good [MASK].")
+    out = await model.infer({
+        "input_sequences": np.array(["Today is a good [MASK]."])
+    })
     print(out)
-    # day
+    # {
+    #     'scores': array([[0.93568176, 0.01602578, 0.01426921, 0.00474347, 0.00451515]]),
+    #     'tokens': array([['day', 'morning', 'time', 'week', 'night']], dtype='<U7')
+    # }
 
 asyncio.run(main())
 ```
