@@ -16,6 +16,7 @@ serde_bytes = "0.11"
 relative-path = { features = ["serde"] }
 bincode = "1.3.3"
 lazy_static = "1.4.0"
+tracing = "0.1"
 
 [features]
 tcp = ["tokio/net"]

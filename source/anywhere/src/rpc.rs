@@ -200,6 +200,7 @@ macro_rules! autoimpl {
                 $(
                     // For each method
                     $(
+                        #[tracing::instrument(skip_all)]
                         pub async fn $fn_name (&self, $($arg_name: $arg_type),* ) -> std::io::Result<$res_type> {
                             let req = AnywhereRPCRequest::[<$fn_name:camel>] { $( $arg_name ),* };
                             let (tx, rx) = oneshot::channel();
