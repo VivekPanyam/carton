@@ -40,6 +40,9 @@ impl Runner {
         if let Device::GPU { uuid: Some(uuid) } = visible_device {
             // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#env-vars
             command.env("CUDA_VISIBLE_DEVICES", uuid);
+        } else {
+            // Hide all GPUs
+            command.env("CUDA_VISIBLE_DEVICES", "");
         }
 
         command
