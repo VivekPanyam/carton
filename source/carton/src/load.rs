@@ -1,6 +1,6 @@
 //! This module handles loading a carton
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use lazy_static::lazy_static;
@@ -16,7 +16,9 @@ use zipfs::{GetReader, ZipFS};
 use crate::{
     error::CartonError,
     http::HTTPFile,
+    httpfs::{FileInfo, HttpFS},
     info::CartonInfoWithExtras,
+    overlayfs::OverlayFS,
     types::{CartonInfo, Device, GenericStorage, LoadOpts, TensorStorage},
 };
 
@@ -123,7 +125,57 @@ where
         // Resolve links and then make an overlayfs and
         // pass through to load_carton
 
-        todo!()
+        // TODO: technically this should be in format::v1 because it's specific to the format
+
+        // Map from file path to sha256
+        let mut contents = HashMap::new();
+
+        // Note: not using `filter` so we can return errors easily
+        let manifest = fs.read_to_string("/MANIFEST").await?;
+        for line in manifest.lines() {
+            if let Some((file_path, sha256)) = line.rsplit_once("=") {
+                contents.insert(file_path, sha256);
+            } else {
+                return Err(CartonError::Other(
+                    "MANIFEST was not in the form {path}={sha256}",
+                ));
+            }
+        }
+
+        // Load links
+        let links = fs.read_to_string("/LINKS").await?;
+        let links: crate::format::v1::links::Links = toml::from_str(&links)?;
+
+        // Generate a mapping from file path to url
+        let file_mapping = contents
+            .into_iter()
+            .filter_map(|(path, sha256)| {
+                if let Some(urls) = links.urls.get(sha256) {
+                    if let Some(url) = urls.first() {
+                        Some((
+                            path.into(),
+                            FileInfo {
+                                url: url.clone(),
+                                sha256: sha256.to_owned(),
+                            },
+                        ))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Create an HttpFS to handle fetching links
+        let httpfs = Arc::new(HttpFS::new(CLIENT.clone(), file_mapping));
+
+        // Create an overlay filesystem that does URL fetching for the files in links
+        let overlay = Arc::new(OverlayFS::new(fs.clone(), httpfs));
+
+        // Continue loading the carton
+        load_carton(&overlay, opts, skip_runner).await
     }
 }
 

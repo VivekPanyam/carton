@@ -101,6 +101,11 @@ impl AsyncRead for HTTPFile {
             let client = self.client.clone();
             let range_start = self.seek_pos;
             let num_bytes = buf.remaining() as u64;
+
+            if range_start == self.file_len {
+                return Poll::Ready(Ok(()));
+            }
+
             self.curr_request = Some(Box::pin(async move {
                 fetch_range(&client, &url, range_start, num_bytes).await
             }));
@@ -132,7 +137,7 @@ async fn fetch_range(
     num_bytes: u64,
 ) -> bytes::Bytes {
     let range_end = range_start + num_bytes - 1;
-    client
+    let res = client
         .get(url)
         .header(
             reqwest::header::RANGE,
@@ -140,8 +145,12 @@ async fn fetch_range(
         )
         .send()
         .await
-        .unwrap()
-        .bytes()
-        .await
-        .unwrap()
+        .unwrap();
+
+    if !res.status().is_success() {
+        // TODO: return an error instead of panic
+        panic!("Error fetching URL {}: {}", url, res.status());
+    }
+
+    res.bytes().await.unwrap()
 }

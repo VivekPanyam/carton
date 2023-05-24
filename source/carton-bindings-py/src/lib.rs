@@ -210,6 +210,22 @@ fn get_model_info(py: Python, url_or_path: String) -> PyResult<&PyAny> {
     })
 }
 
+/// Shrink a packed carton by storing links to files instead of the files themselves when possible.
+/// Takes a path to a packed carton along with a mapping from sha256 to a list of URLs
+/// Returns the path to another packed carton
+#[pyfunction]
+fn shrink(
+    py: Python,
+    path: std::path::PathBuf,
+    urls: HashMap<String, Vec<String>>,
+) -> PyResult<&PyAny> {
+    pyo3_asyncio::tokio::future_into_py(py, async move {
+        Ok(carton_core::Carton::shrink(path, urls)
+            .await
+            .map_err(|e| PyValueError::new_err(e.to_string()))?)
+    })
+}
+
 /// A Python module implemented in Rust. The name of this function must match
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
@@ -219,6 +235,7 @@ fn cartonml(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pack, m)?)?;
     m.add_function(wrap_pyfunction!(load_unpacked, m)?)?;
     m.add_function(wrap_pyfunction!(get_model_info, m)?)?;
+    m.add_function(wrap_pyfunction!(shrink, m)?)?;
     m.add_class::<Carton>()?;
     m.add_class::<CartonInfo>()?;
     m.add_class::<TensorSpec>()?;
