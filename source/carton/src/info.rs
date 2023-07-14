@@ -9,6 +9,7 @@ use std::{
 use async_trait::async_trait;
 use carton_macros::for_each_carton_type;
 use lunchbox::types::{MaybeSend, MaybeSync};
+use serde::{de::Visitor, Deserialize, Serialize};
 use target_lexicon::Triple;
 use tokio::{io::AsyncRead, sync::OnceCell};
 
@@ -76,17 +77,17 @@ impl<T: TensorStorage> Clone for CartonInfo<T> {
     }
 }
 
-/// An internal struct used when loading models. It contains extra things like the
+/// A struct used when loading models. It contains extra things like the
 /// manifest hash
-pub(crate) struct CartonInfoWithExtras<T>
+pub struct CartonInfoWithExtras<T>
 where
     T: TensorStorage,
 {
-    pub(crate) info: CartonInfo<T>,
+    pub info: CartonInfo<T>,
 
     /// The sha256 of the MANIFEST file (if available)
     /// This should always be available unless we're running an unpacked model
-    pub(crate) manifest_sha256: Option<String>,
+    pub manifest_sha256: Option<String>,
 }
 
 #[cfg(target_family = "wasm")]
@@ -256,7 +257,7 @@ impl<T: TensorStorage> Clone for TensorOrMisc<T> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct RunnerInfo {
     /// The name of the runner to use
     pub runner_name: String,
@@ -280,7 +281,8 @@ pub struct RunnerInfo {
 }
 
 /// The types of options that can be passed to runners
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum RunnerOpt {
     Integer(i64),
     Double(f64),
@@ -288,7 +290,7 @@ pub enum RunnerOpt {
     Boolean(bool),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct TensorSpec {
     pub name: String,
 
@@ -305,7 +307,8 @@ pub struct TensorSpec {
     pub internal_name: Option<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Shape {
     /// Any shape
     Any,
@@ -319,7 +322,8 @@ pub enum Shape {
 }
 
 /// A dimension can be either a fixed value, a symbol, or any value
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Dimension {
     Value(u64),
     Symbol(String),
@@ -353,6 +357,40 @@ for_each_carton_type! {
                 )*
             }
         }
+    }
+}
+
+impl Serialize for DataType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.to_str())
+    }
+}
+
+struct DataTypeDeserializeVisitor;
+impl<'de> Visitor<'de> for DataTypeDeserializeVisitor {
+    type Value = DataType;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a datatype value")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        DataType::from_str(v).map_err(E::custom)
+    }
+}
+
+impl<'de> Deserialize<'de> for DataType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(DataTypeDeserializeVisitor)
     }
 }
 

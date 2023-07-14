@@ -197,13 +197,15 @@ impl Carton {
     }
 
     /// Get info for the loaded model
-    pub fn get_info(&self) -> &CartonInfo<GenericStorage> {
-        &self.info.info
+    pub fn get_info(&self) -> &CartonInfoWithExtras<GenericStorage> {
+        &self.info
     }
 
     /// Get info for a model
-    pub async fn get_model_info(url_or_path: String) -> Result<CartonInfo<GenericStorage>> {
-        Ok(crate::load::get_carton_info(&url_or_path).await?.info)
+    pub async fn get_model_info(
+        url_or_path: String,
+    ) -> Result<CartonInfoWithExtras<GenericStorage>> {
+        crate::load::get_carton_info(&url_or_path).await
     }
 
     /// Shrink a packed carton by storing links to files instead of the files themselves when possible.
@@ -239,5 +241,32 @@ impl Carton {
                 }
             }
         }
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
+mod tests {
+    use std::time::Instant;
+
+    use tokio::io::AsyncReadExt;
+
+    #[tokio::test]
+    async fn test_get() {
+        let start = Instant::now();
+        let info = super::Carton::get_model_info("https://assets.carton.pub/manifest_sha256/f1cae5143a92a44e3a7e1d9c32a0245065dfb6e0f1e91c18b5e44356d081dfb5".to_owned()).await.unwrap();
+        println!("Loaded model in {:#?}", start.elapsed());
+
+        let start = Instant::now();
+        let mut misc_file = info
+            .info
+            .misc_files
+            .unwrap()
+            .get("model_architecture.png")
+            .unwrap()
+            .get()
+            .await;
+        let mut buf = Vec::new();
+        misc_file.read_to_end(&mut buf).await.unwrap();
+        println!("Fetched misc file in {:#?}", start.elapsed());
     }
 }

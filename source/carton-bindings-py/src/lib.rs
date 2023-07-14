@@ -70,7 +70,7 @@ impl Carton {
     #[getter]
     fn info(&self) -> CartonInfo {
         // TODO: maybe cache this conversion?
-        (*self.inner.get_info()).clone().into()
+        (*self.inner.get_info()).info.clone().into()
     }
 }
 
@@ -203,6 +203,7 @@ fn get_model_info(py: Python, url_or_path: String) -> PyResult<&PyAny> {
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let out: CartonInfo = carton_core::Carton::get_model_info(url_or_path)
             .await
+            .map(|v| v.info)
             .map_err(|e| PyValueError::new_err(e.to_string()))?
             .into();
 
