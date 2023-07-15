@@ -413,6 +413,8 @@ impl GetReader for protocol::HttpURL {
     type R = crate::http::HTTPFile;
 
     async fn get(&self) -> Self::R {
-        HTTPFile::new(CLIENT.clone(), self.0.clone()).await.unwrap()
+        HTTPFile::new(CLIENT.clone(), self.0.clone(), true)
+            .await
+            .unwrap()
     }
 }

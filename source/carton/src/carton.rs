@@ -253,7 +253,10 @@ mod tests {
     #[tokio::test]
     async fn test_get() {
         let start = Instant::now();
-        let info = super::Carton::get_model_info("https://assets.carton.pub/manifest_sha256/f1cae5143a92a44e3a7e1d9c32a0245065dfb6e0f1e91c18b5e44356d081dfb5".to_owned()).await.unwrap();
+        let info =
+            super::Carton::get_model_info("https://carton.pub/cartonml/basic_test".to_owned())
+                .await
+                .unwrap();
         println!("Loaded model in {:#?}", start.elapsed());
 
         let start = Instant::now();
