@@ -5,6 +5,7 @@ use lazy_static::lazy_static;
 use std::{pin::Pin, sync::Arc, task::Poll};
 use tokio::io::{AsyncRead, AsyncSeek};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
+use url::Url;
 
 /// HTTPFile implements [`AsyncRead`] and [`AsyncSeek`] on top of HTTP requests.
 ///
@@ -60,13 +61,42 @@ struct CachedData {
 }
 
 impl HTTPFile {
-    pub async fn new(client: reqwest::Client, url: String) -> Result<HTTPFile> {
+    pub async fn new(
+        client: reqwest::Client,
+        url: String,
+        check_dl_header: bool,
+    ) -> Result<HTTPFile> {
+        let mut head_res = None;
+        let url = if check_dl_header {
+            // Temporary workaround while the site is not public
+            let mut parsed = Url::parse(&url).unwrap();
+            if parsed.host_str() == Some("carton.pub") {
+                parsed.set_host(Some("dl.carton.pub")).unwrap();
+                parsed.to_string()
+            } else {
+                // Check for an `x-carton-dl-url` header
+                let res = client.head(&url).send().await?;
+                match res.headers().get("x-carton-dl-url") {
+                    Some(v) => v.to_str().unwrap().to_owned(),
+                    None => {
+                        // We can reuse the head response since the URL didn't change
+                        head_res = Some(res);
+                        url
+                    }
+                }
+            }
+        } else {
+            url
+        };
+
         let cached_data = match FILE_INFO_CACHE.get(&url) {
             Some(len) => len.clone(),
             None => {
-                // TODO: because the registry site isn't public yet, we need to check for the `x-carton-dl-url` header
-                // _before_ following redirects. This can be removed after the site is made public
-                let res = client.head(&url).send().await?;
+                // Reuse the head response if we made a request earlier
+                let res = match head_res {
+                    Some(v) => v,
+                    None => client.head(&url).send().await?,
+                };
 
                 // TODO: maybe lazily fetch this
                 // TODO: include the URL in the error messages below
