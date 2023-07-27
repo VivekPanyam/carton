@@ -6,3 +6,6 @@ rustflags = ["--cfg", "tokio_unstable"]
 # Set a default target so that build caches are saved correctly when switching targets
 # https://doc.rust-lang.org/cargo/guide/build-cache.html
 target = ["x86_64-unknown-linux-gnu"]
+
+[env]
+LIBTORCH = {value = "./libtorch", relative = true}

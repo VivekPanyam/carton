@@ -65,6 +65,13 @@ if __name__ == "__main__":
     if args.nightly:
         update_version_numbers()
 
+    # This is hacky. TODO: improve this
+    if TARGET == "aarch64-unknown-linux-gnu" and sys.platform in ["linux", "linux2"]:
+        os.environ["LIBTORCH_CXX11_ABI"] = "0"
+
+    # Fetch deps (always in release mode)
+    run_command(["cargo", "run", "--release", "-p", "fetch-deps", "--target", TARGET])
+
     # Build everything
     run_command(["cargo", "build", RELEASE_FLAG, "--verbose", "--target", TARGET])
 
@@ -76,9 +83,14 @@ if __name__ == "__main__":
     run_command(py_bindings_cmd, cwd=os.path.join(os.getcwd(), "source/carton-bindings-py"))
 
     # Run tests
-    run_command(["cargo", "test", RELEASE_FLAG, "--verbose", "--target", TARGET])
+    run_command(["cargo", "test", RELEASE_FLAG, "--verbose", "--target", TARGET], env=dict(os.environ, RUST_LOG="info,carton=trace"))
 
     # Build the runner releases
     if args.runner_release_dir is not None:
         os.makedirs(args.runner_release_dir)
         run_command(["cargo", "run", RELEASE_FLAG, "--target", TARGET, "-p", "carton-runner-py", "--bin", "build_releases", "--", "--output-path", args.runner_release_dir])
+
+    # Show sccache stats
+    RUSTC_WRAPPER = os.getenv("RUSTC_WRAPPER", "")
+    if "sccache" in RUSTC_WRAPPER:
+        run_command([RUSTC_WRAPPER, "--show-stats"])

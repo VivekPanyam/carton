@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     container:
       # TODO: only on linux
-      image: vpanyam/manylinux2014-rust-python310:x86_64
+      image: vpanyam/manylinux_2_28-rust-python310:x86_64
     strategy:
       matrix:
         include:

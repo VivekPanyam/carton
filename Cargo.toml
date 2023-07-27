@@ -11,12 +11,14 @@ members = [
     "source/carton-macros",
     "source/carton-runner-noop",
     "source/carton-runner-py",
+    "source/carton-runner-rust-bert",
     "source/carton-utils-py",
     "source/anywhere",
+    "source/fetch-deps",
 ]
 
 [profile.release]
-lto = true
+lto = "thin"
 debug = true
 
 [patch.crates-io]

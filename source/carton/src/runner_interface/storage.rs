@@ -3,6 +3,7 @@
 use crate::types::{TensorStorage, TypedStorage};
 use lunchbox::types::{MaybeSend, MaybeSync};
 
+#[derive(Debug)]
 pub struct RunnerStorage;
 
 impl TensorStorage for RunnerStorage {
@@ -13,6 +14,7 @@ impl TensorStorage for RunnerStorage {
     type TypedStringStorage = TypedRunnerStorage<String>;
 }
 
+#[derive(Debug)]
 pub enum TypedRunnerStorage<T> {
     V1(runner_interface_v1::types::TensorStorage<T>),
 }
