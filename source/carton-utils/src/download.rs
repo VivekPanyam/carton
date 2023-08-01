@@ -1,18 +1,23 @@
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 
-use crate::error::{DownloadError, Result};
+use crate::{
+    archive::with_atomic_extraction,
+    config::CONFIG,
+    error::{DownloadError, Result},
+};
 
 lazy_static! {
     static ref CLIENT: reqwest::Client = reqwest::Client::new();
 }
 
 /// Download a file with progress updates
-pub async fn uncached_download(
+pub async fn uncached_download<P: AsRef<Path>>(
     url: &str,
     sha256: &str,
-    download_path: &Path,
+    download_path: P,
     mut on_content_len: impl FnMut(/* total */ Option<u64>),
     mut progress_update: impl FnMut(/* downloaded */ u64),
 ) -> Result<()> {
@@ -45,5 +50,55 @@ pub async fn uncached_download(
         });
     }
 
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize)]
+struct InfoJson {
+    url: String,
+}
+
+pub async fn cached_download<P: AsRef<Path>>(
+    url: &str,
+    sha256: &str,
+    download_path: P,
+    on_content_len: impl FnMut(/* total */ Option<u64>),
+    progress_update: impl FnMut(/* downloaded */ u64),
+) -> Result<()> {
+    // Create the cache dir if necessary
+    let files_cache_dir = CONFIG.cache_dir.join("files");
+    tokio::fs::create_dir_all(&files_cache_dir).await.unwrap();
+
+    // Download if necessary
+    // This is a noop if the target exists already
+    with_atomic_extraction(&files_cache_dir.join(sha256), |download_dir| async move {
+        // Create the download dir
+        tokio::fs::create_dir(&download_dir).await.unwrap();
+
+        // Download
+        uncached_download(
+            url,
+            sha256,
+            download_dir.join("file"),
+            on_content_len,
+            progress_update,
+        )
+        .await
+        .unwrap();
+
+        // Write the info.json file
+        let info = InfoJson {
+            url: url.to_owned(),
+        };
+        let serialized = serde_json::to_string_pretty(&info).unwrap();
+        tokio::fs::write(download_dir.join("info.json"), serialized)
+            .await
+            .unwrap();
+    })
+    .await;
+
+    // We now have the file in the cache.
+    let cached_path = files_cache_dir.join(sha256).join("file");
+    tokio::fs::copy(cached_path, download_path).await.unwrap();
     Ok(())
 }

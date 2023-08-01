@@ -10,3 +10,4 @@ Env var | config file key | default value | description
 --- | --- | --- | ---
 `CARTON_RUNNER_DIR` | `runner_dir` | `~/.carton/runners/` | The directory where runners are stored on disk
 `CARTON_RUNNER_DATA_DIR` | `runner_data_dir` | `~/.carton/runner_data/` | Runners can store caches or local data in `{runner_data_dir}/{runner_name}`
+`CARTON_CACHE_DIR` | `cache_dir` | `~/.carton/cache/` | A directory where carton can cache downloads
