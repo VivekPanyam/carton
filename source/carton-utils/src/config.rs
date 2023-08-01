@@ -26,6 +26,11 @@ pub struct CartonConfig {
     /// Defaults to `~/.carton/runner_data/`
     /// Env: CARTON_RUNNER_DATA_DIR
     pub runner_data_dir: PathBuf,
+
+    /// A directory where carton can cache downloads
+    /// Defaults to `~/.carton/cache/`
+    /// Env: CARTON_CACHE_DIR
+    pub cache_dir: PathBuf,
 }
 
 impl Default for CartonConfig {
@@ -35,6 +40,7 @@ impl Default for CartonConfig {
             runner_data_dir: shellexpand::tilde("~/.carton/runner_data/")
                 .to_string()
                 .into(),
+            cache_dir: shellexpand::tilde("~/.carton/cache/").to_string().into(),
         }
     }
 }
@@ -72,6 +78,10 @@ impl CartonConfig {
 
         if let Ok(v) = std::env::var("CARTON_RUNNER_DATA_DIR") {
             config.runner_data_dir = shellexpand::tilde(&v).to_string().into();
+        }
+
+        if let Ok(v) = std::env::var("CARTON_CACHE_DIR") {
+            config.cache_dir = shellexpand::tilde(&v).to_string().into();
         }
 
         config

@@ -3,7 +3,7 @@ use std::path::Path;
 use async_zip::{write::ZipFileWriter, ZipEntryBuilder};
 use carton_utils::{
     archive::{extract, with_atomic_extraction},
-    download::uncached_download,
+    download::cached_download,
 };
 use chrono::{DateTime, Utc};
 use discovery::{get_runner_dir, Config, RunnerInfo};
@@ -94,9 +94,7 @@ pub async fn install(info: DownloadInfo, allow_local_files: bool) {
                 let download_path = if is_file_path(&file.url) {
                     Path::new(&file.url)
                 } else {
-                    // Uncached download because there's probably not a significant overlap between these files
-                    // and other files we'll be downloading
-                    uncached_download(&file.url, &file.sha256, &download_path, |_| {}, |_| {})
+                    cached_download(&file.url, &file.sha256, &download_path, |_| {}, |_| {})
                         .await
                         .unwrap();
 
