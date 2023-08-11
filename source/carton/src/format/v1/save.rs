@@ -3,8 +3,10 @@ use std::path::Path;
 
 use async_zip::write::ZipFileWriter;
 use async_zip::ZipEntryBuilder;
+use runner_interface_v1::slowlog::slowlog;
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
+use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
 use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
@@ -55,6 +57,7 @@ where
     };
 
     // 1. Save all the misc files
+    log::trace!("Processing misc files...");
     let misc_dir = tempdir.path().join("misc");
     tokio::fs::create_dir(&misc_dir).await?;
     let mut misc_file_counter = 0;
@@ -68,6 +71,7 @@ where
     }
 
     // 2. Save all the tensors
+    log::trace!("Processing examples and self tests...");
     let mut tensors_to_save = HashMap::new();
     let mut counter = 0;
 
@@ -187,18 +191,22 @@ where
     super::tensor::save_tensors(&tensor_data_dir, loaded).unwrap();
 
     // 3. Generate a carton.toml file
+    log::trace!("Writing carton.toml");
     let serialized = toml::to_string_pretty(&config).unwrap();
     tokio::fs::write(tempdir.path().join("carton.toml"), serialized)
         .await
         .unwrap();
 
     // 4. Zip up all the files and folders
+    log::trace!("Creating ZipFileWriter");
     let (output_zip_file, output_zip_path) =
         tempfile::NamedTempFile::new().unwrap().keep().unwrap();
-    let mut output_zip_file = tokio::fs::File::from_std(output_zip_file);
+    let output_zip_file = tokio::fs::File::from_std(output_zip_file);
+    let mut output_zip_file = BufWriter::new(output_zip_file);
     let mut writer = ZipFileWriter::new(&mut output_zip_file);
 
     // Generate a MANIFEST as we're zipping files and folders
+    log::trace!("Packing metadata");
     let mut manifest_contents = BTreeMap::new();
     for entry in WalkDir::new(&tempdir) {
         let entry = entry.unwrap();
@@ -227,6 +235,7 @@ where
     }
 
     // Add the model dir
+    log::trace!("Packing model dir");
     for entry in WalkDir::new(&model_dir_path).follow_links(true) {
         let entry = entry.unwrap();
         if entry.file_type().is_dir() {
@@ -240,18 +249,38 @@ where
             .to_owned();
         let zip_entry = ZipEntryBuilder::new(relative_path.clone(), async_zip::Compression::Zstd);
 
+        log::trace!("About to pack {}", &relative_path);
+        let mut sl = slowlog(format!("Packaging file '{}'", &relative_path), 5)
+            .await
+            .without_progress();
+
         // Load the data and compute the sha256
         let mut hasher = Sha256::new();
         let data = tokio::fs::read(entry.path()).await.unwrap();
-        hasher.update(&data);
-        let sha256 = format!("{:x}", hasher.finalize());
+
+        log::trace!("Done reading file {}", &relative_path);
+
+        let (data, sha256) = tokio::task::spawn_blocking(move || {
+            hasher.update(&data);
+            (data, format!("{:x}", hasher.finalize()))
+        })
+        .await
+        .unwrap();
+
+        log::trace!("Computed sha256 of {}", &relative_path);
+
         manifest_contents.insert(relative_path, sha256);
 
         // Add the entry to the zip file
         writer.write_entry_whole(zip_entry, &data).await.unwrap();
+
+        log::trace!("Wrote to zip file");
+
+        sl.done();
     }
 
     // 5. Write the manifest to the zip file in alphabetical order (we're using a BTreeMap)
+    log::trace!("Writing manifest");
     let mut manifest_str = String::new();
     for (k, v) in manifest_contents {
         manifest_str += &format!("{k}={v}\n");
@@ -264,7 +293,9 @@ where
         .unwrap();
 
     // Finish writing the zip file
+    log::trace!("Closing zip file writer");
     writer.close().await.unwrap();
+    output_zip_file.flush().await.unwrap();
 
     // Return the output path
     Ok(output_zip_path)

@@ -32,6 +32,7 @@ pin-project = "1"
 tokio-util = {version = "0.7", features = ["compat"]}
 futures = "0.3"
 dashmap = "5.4.0"
+log = "0.4"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 nvml-wrapper = "0.8.0"
