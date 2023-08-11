@@ -214,7 +214,7 @@ impl Runner {
         InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
         Tensor: From<TensorStorage<T>>,
     {
-        Ok(crate::do_not_modify::alloc_inline::alloc_tensor(shape).into())
+        Ok(TensorStorage::new(shape).into())
     }
 
     // pub async fn infer_with_handle(

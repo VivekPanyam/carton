@@ -173,3 +173,12 @@ where
         pd: PhantomData,
     }
 }
+
+impl<T: Default + Clone> TensorStorage<T, InlineTensorStorage>
+where
+    InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
+{
+    pub fn new(shape: Vec<u64>) -> TensorStorage<T, InlineTensorStorage> {
+        alloc_tensor(shape)
+    }
+}
