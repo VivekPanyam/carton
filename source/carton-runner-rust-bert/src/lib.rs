@@ -4,15 +4,17 @@ use async_trait::async_trait;
 use carton_runner_interface::{slowlog::slowlog, types::Tensor};
 use lunchbox::{types::ReadableFile, ReadableFileSystem};
 use serde::{Deserialize, Serialize};
+use summarize::CartonSummarizationConfig;
 use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
 use translate::CartonTranslationConfig;
 
+pub mod summarize;
 pub mod translate;
 
 #[derive(Serialize, Deserialize)]
 pub enum ModelConfig {
     Translation(CartonTranslationConfig),
-    Summarization,
+    Summarization(CartonSummarizationConfig),
     ZeroShotClassification,
     SentimentAnalysis,
     NER,
