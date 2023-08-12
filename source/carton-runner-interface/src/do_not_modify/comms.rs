@@ -160,6 +160,9 @@ impl Comms {
                     {
                         break;
                     }
+                } else if num_bytes == 0 && num_fds == 0 {
+                    log::trace!("Got empty fd message");
+                    break;
                 }
             }
         });
@@ -176,10 +179,14 @@ impl Comms {
                 ic = incoming_rx.recv() => incoming_data = ic,
             }
 
+            if callback_req.is_none() && incoming_data.is_none() {
+                break;
+            }
+
             if let Some((requested_id, callback)) = callback_req {
                 // Check if we already have the requested id
                 if let Some(fd) = received.remove(&requested_id) {
-                    callback.send(fd);
+                    callback.send(fd).unwrap();
                 } else {
                     // Put the callback in waiting
                     waiting.insert(requested_id, callback);
@@ -189,7 +196,7 @@ impl Comms {
             if let Some((fd_id, fd)) = incoming_data {
                 // Something was already waiting on this
                 if let Some(callback) = waiting.remove(&fd_id) {
-                    callback.send(fd);
+                    callback.send(fd).unwrap();
                 } else {
                     // Put it in received
                     received.insert(fd_id, fd);
@@ -213,7 +220,7 @@ impl Comms {
         }
 
         let id = FdId(id);
-        self.outgoing_tx.send((id, fd)).await;
+        self.outgoing_tx.send((id, fd)).await.unwrap();
         id
     }
 
@@ -221,7 +228,7 @@ impl Comms {
     pub(crate) async fn wait_for_fd(&self, fd_id: FdId) -> RawFd {
         let (tx, rx) = oneshot::channel();
 
-        self.register_callbacks_tx.send((fd_id, tx)).await;
+        self.register_callbacks_tx.send((fd_id, tx)).await.unwrap();
 
         rx.await.unwrap()
     }
@@ -231,7 +238,7 @@ impl Comms {
     async fn create_bidi_stream(&self, id: FdId) -> UnixStream {
         let (one, two) = UnixStream::pair().unwrap();
         let fd = two.into_std().unwrap().into_raw_fd();
-        self.outgoing_tx.send((id, fd)).await;
+        self.outgoing_tx.send((id, fd)).await.unwrap();
         one
     }
 
