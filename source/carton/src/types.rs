@@ -52,11 +52,6 @@ pub enum Device {
     },
 }
 
-#[cfg(not(target_family = "wasm"))]
-lazy_static! {
-    static ref NVML: Option<nvml_wrapper::Nvml> = { nvml_wrapper::Nvml::init().ok() };
-}
-
 impl Device {
     #[cfg(target_family = "wasm")]
     pub fn maybe_from_str(s: &str) -> crate::error::Result<Self> {
@@ -94,17 +89,11 @@ impl Device {
 
     #[cfg(not(target_family = "wasm"))]
     pub fn maybe_from_index(i: u32) -> Self {
-        if let Some(nvml) = NVML.as_ref() {
-            if let Ok(device) = nvml.device_by_index(i) {
-                if let Ok(uuid) = device.uuid() {
-                    return Self::GPU { uuid: Some(uuid) };
-                }
-            }
+        match crate::cuda::get_uuid_for_device(i) {
+            Some(uuid) => Device::GPU { uuid: Some(uuid) },
+            // Fall back to CPU
+            None => Device::CPU,
         }
-
-        // Fall back to CPU
-        // TODO: warn or throw an error
-        Device::CPU
     }
 }
 
