@@ -334,6 +334,7 @@ dependencies = [
  "escargot",
  "futures",
  "lazy_static",
+ "log",
  "lunchbox",
  "ndarray",
  "nvml-wrapper",

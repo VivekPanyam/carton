@@ -115,12 +115,15 @@ impl Carton {
         let localfs = Arc::new(lunchbox::LocalFS::new().unwrap());
 
         // Ask the runner to pack the model
+        log::trace!("Asking runner to pack...");
         let model_dir_path = match runner {
             Runner::V1(runner) => runner
                 .pack(&localfs, path.as_ref(), temp_folder)
                 .await
                 .map_err(|e| CartonError::ErrorFromRunner(e))?,
         };
+
+        log::trace!("About to save the packed model...");
 
         // Save and package the model
         crate::format::v1::save(opts, model_dir_path.to_string().as_ref()).await
