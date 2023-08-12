@@ -10,3 +10,6 @@ mod overlayfs;
 mod runner_interface;
 pub mod types;
 pub use crate::carton::Carton;
+
+#[cfg(not(target_family = "wasm"))]
+mod cuda;

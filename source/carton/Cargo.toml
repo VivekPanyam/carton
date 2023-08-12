@@ -35,7 +35,9 @@ dashmap = "5.4.0"
 log = "0.4"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-nvml-wrapper = "0.8.0"
+dlopen = "0.1"
+dlopen_derive = "0.1"
+uuid = "1.3"
 lunchbox = { version = "0.1", features = ["serde", "localfs"]}
 carton-runner-packager = { path = "../carton-runner-packager" }
 
