@@ -4,7 +4,7 @@ use carton_runner_interface::{slowlog::slowlog, types::RunnerOpt};
 use carton_utils::archive::extract_zip;
 use lunchbox::path::{LunchboxPathUtils, PathBuf};
 use pyo3::prelude::*;
-use tokio::io::{AsyncBufRead, AsyncRead, AsyncReadExt, AsyncWrite, BufReader};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, BufReader};
 use tracing::Instrument;
 
 use crate::{

@@ -17,13 +17,7 @@ async fn main() {
         let req_id = req.id;
         match req.data {
             RequestData::Load {
-                fs,
-                runner_name,
-                required_framework_version,
-                runner_compat_version,
-                runner_opts,
-                visible_device,
-                carton_manifest_hash,
+                fs, runner_opts: _, ..
             } => {
                 // Load the model config
                 let fs = server.get_readonly_filesystem(fs).await.unwrap();
@@ -51,11 +45,7 @@ async fn main() {
                     .await
                     .unwrap();
             }
-            RequestData::Pack {
-                fs,
-                input_path,
-                temp_folder,
-            } => {
+            RequestData::Pack { input_path, .. } => {
                 // This should basically be a noop since the structure of the input folder should be the same as the target
                 // Just return the input path
                 server

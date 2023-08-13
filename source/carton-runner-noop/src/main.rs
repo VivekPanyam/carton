@@ -61,10 +61,6 @@ async fn main() {
                     .await
                     .unwrap();
             }
-            _ => {
-                // TODO: return an error instead of panicking
-                panic!("Got an unknown RPC message type!")
-            }
         }
     }
 }

@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 #[tokio::main]
 async fn main() {
+    #[allow(non_snake_case)]
     let API_KEY = std::env::var("NIGHTLY_REPO_TOKEN").expect("NIGHTLY_REPO_TOKEN should be in env");
 
     // First, get the current config and its blob sha

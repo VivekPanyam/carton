@@ -156,7 +156,7 @@ where
                             path.into(),
                             FileInfo {
                                 url: url.clone(),
-                                sha256: sha256.to_owned(),
+                                _sha256: sha256.to_owned(),
                             },
                         ))
                     } else {
@@ -363,11 +363,11 @@ fn parse_protocol(input: &str) -> LocatorWithProtocol {
         Ok(parsed) => match parsed.scheme() {
             "file" => LocatorWithProtocol::LocalFilePath(input.into()),
             "http" | "https" => LocatorWithProtocol::HttpURL(input.into()),
-            other => todo!(),
+            _other => todo!(),
         },
         // This is a file
         Err(ParseError::RelativeUrlWithoutBase) => LocatorWithProtocol::LocalFilePath(input.into()),
-        Err(e) => todo!(), //e,
+        Err(_e) => todo!(), //e,
     }
 }
 

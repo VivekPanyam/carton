@@ -93,7 +93,7 @@ where
 
     // Generate a hash of the requirements.txt
     let mut hasher = Sha256::new();
-    hasher.update(requirements_file);
+    hasher.update(&requirements_file);
 
     // Create a lockfile struct
     let mut lockfile = CartonLock::default();
@@ -127,7 +127,7 @@ where
         }
     }
 
-    let locked_deps = get_pip_deps_report(fs, requirements_file_path).await;
+    let locked_deps = get_pip_deps_report(String::from_utf8(requirements_file).unwrap()).await;
 
     // Utils
     let is_pypi = |item: &PipInstallInfo| {
@@ -315,6 +315,7 @@ where
         .unwrap();
 }
 
+#[cfg(test)]
 mod tests {
 
     use super::{update_or_generate_lockfile, CartonLock};

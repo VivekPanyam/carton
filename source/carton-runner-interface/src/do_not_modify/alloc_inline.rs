@@ -29,6 +29,7 @@ impl InlineAllocator {
         }
     }
 
+    #[cfg(feature = "benchmark")]
     pub(crate) fn without_pool() -> Self {
         Self {
             use_pool: false,
@@ -136,6 +137,7 @@ impl From<ndarray::ArrayViewD<'_, String>> for TensorStorage<String, InlineTenso
 }
 
 // Allocates a contiguous tensor with a shape and type
+#[cfg(feature = "benchmark")]
 pub fn alloc_tensor_no_pool<T: Default + Clone>(
     shape: Vec<u64>,
 ) -> TensorStorage<T, InlineTensorStorage>

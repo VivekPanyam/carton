@@ -65,6 +65,9 @@ if __name__ == "__main__":
     if args.nightly:
         update_version_numbers()
 
+    # Warnings as errors in CI
+    os.environ["RUSTFLAGS"] = "-Dwarnings"
+
     # This is hacky. TODO: improve this
     if TARGET == "aarch64-unknown-linux-gnu" and sys.platform in ["linux", "linux2"]:
         os.environ["LIBTORCH_CXX11_ABI"] = "0"

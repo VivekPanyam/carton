@@ -3,9 +3,6 @@ use crate::rpc::AnywhereRPCServer;
 pub mod framed;
 pub mod serde;
 
-#[cfg(feature = "tcp")]
-pub mod tcp;
-
 pub trait Transport {
     /// By convention, T should have an async `serve` method that consumes self.
     type Ret<A, B, C, D>;

@@ -11,7 +11,7 @@ use crate::{
     error::CartonError,
     info::CartonInfoWithExtras,
     load::Runner,
-    types::{CartonInfo, LoadOpts, PackOpts, SealHandle, Tensor},
+    types::{LoadOpts, PackOpts, SealHandle, Tensor},
 };
 
 pub struct Carton {
@@ -20,7 +20,7 @@ pub struct Carton {
 
     /// An optional temp dir. This is used in `load_unpacked` to make sure the directory doesn't get
     /// deleted while we need it
-    tempdir: Option<tempfile::TempDir>,
+    _tempdir: Option<tempfile::TempDir>,
 }
 
 impl Carton {
@@ -31,7 +31,7 @@ impl Carton {
         Ok(Self {
             info,
             runner: runner.unwrap(),
-            tempdir: None,
+            _tempdir: None,
         })
     }
 
@@ -195,7 +195,7 @@ impl Carton {
         Ok(Self {
             info: info_with_extras.convert_into(),
             runner,
-            tempdir: Some(tempdir),
+            _tempdir: Some(tempdir),
         })
     }
 
@@ -248,6 +248,7 @@ impl Carton {
 }
 
 #[cfg(not(target_family = "wasm"))]
+#[cfg(test)]
 mod tests {
     use std::time::Instant;
 

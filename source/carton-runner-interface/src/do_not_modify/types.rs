@@ -29,6 +29,7 @@ pub struct FsToken(pub(crate) StreamID);
 
 // Individual channels/streams to avoid head of line blocking
 #[allow(non_camel_case_types)]
+#[allow(dead_code)]
 #[repr(u8)]
 pub(crate) enum ChannelId {
     Rpc = 0,
@@ -142,12 +143,6 @@ pub enum RunnerOpt {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct SealHandle(pub(crate) u64);
 
-impl SealHandle {
-    pub fn new(v: u64) -> Self {
-        SealHandle(v)
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum Device {
@@ -192,11 +187,11 @@ pub(crate) struct Handle<T> {
 }
 
 impl Handle<Tensor> {
-    pub(crate) async fn new(inner: Tensor, runner: &Comms) -> Self {
+    pub(crate) async fn new(inner: Tensor, _comms: &Comms) -> Self {
         Self { inner }
     }
 
-    pub(crate) async fn into_inner(self, comms: &Comms) -> Tensor {
+    pub(crate) async fn into_inner(self, _comms: &Comms) -> Tensor {
         self.inner
     }
 }
