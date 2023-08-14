@@ -3642,7 +3642,9 @@ dependencies = [
 
 [[package]]
 name = "zipfs"
-version = "0.0.0"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4dd74aa0eb4eb4750c2bfca975dca09f4e8a4a5fe1c8c0817b0c97772d88ae8"
 dependencies = [
  "async-trait",
  "async_zip",
