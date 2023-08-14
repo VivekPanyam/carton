@@ -1,0 +1,18 @@
+steps:
+  - name: "Native Build x86_64-unknown-linux-gnu"
+    agents:
+      queue: default
+    command: "python3 ci/build.py --target x86_64-unknown-linux-gnu"
+    plugins:
+      - docker-compose#v3.7.0:
+          run: x86_64
+          config: ci/buildkite_compose.yml
+
+  - name: "Native Build aarch64-unknown-linux-gnu"
+    agents:
+      queue: arm64
+    command: "python3 ci/build.py --target aarch64-unknown-linux-gnu"
+    plugins:
+      - docker-compose#v3.7.0:
+          run: arm64
+          config: ci/buildkite_compose.yml

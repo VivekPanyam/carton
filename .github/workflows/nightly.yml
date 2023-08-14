@@ -32,7 +32,7 @@ jobs:
           submodules: recursive
       - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
-      - run: pip3 install -r ci/build_requirements.txt
+      - run: pip3 install toml maturin==0.14.13
       - run: python3 ci/build.py --target ${{ matrix.target }} --release --nightly --runner_release_dir /tmp/runner_releases
       - name: Upload runners
         uses: actions/upload-artifact@v3
