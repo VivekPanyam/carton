@@ -60,30 +60,30 @@ env:
   CIRRUS_REPO_CLONE_TOKEN: ENCRYPTED[d6e35d6af0f64a5b9867662226058191c97bdccd3e4161873dfa8d309e273bdd5895848a663de57a27440188b98005b5]
 
 # Nightly release builds
-nightly_linux_task:
-  name: Nightly Release Build aarch64-unknown-linux-gnu
-  alias: nightly_linux
-  arm_container:
-    dockerfile: ci/cirrus_ci.dockerfile
-    cpu: 4
-    memory: 16G
-  submodules_script:
-    # Init submodules
-    - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
-  target_cache:
-    folder: target
-    fingerprint_script:
-      - rustc --version
-      - echo "nightly"
-      - cat Cargo.lock
-  build_and_test_script:
-    - pip3 install -r ci/build_requirements.txt
-    - python3 ci/build.py --target aarch64-unknown-linux-gnu --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases
-  binaries_artifacts:
-    path: "runner_releases/*"
-  wheels_artifacts:
-    path: "target/wheels/*"
-  before_cache_script: rm -rf $CARGO_HOME/registry/index
+# nightly_linux_task:
+#   name: Nightly Release Build aarch64-unknown-linux-gnu
+#   alias: nightly_linux
+#   arm_container:
+#     dockerfile: ci/ci.dockerfile
+#     cpu: 4
+#     memory: 16G
+#   submodules_script:
+#     # Init submodules
+#     - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+#   target_cache:
+#     folder: target
+#     fingerprint_script:
+#       - rustc --version
+#       - echo "nightly"
+#       - cat Cargo.lock
+#   build_and_test_script:
+#     - pip3 install toml maturin==0.14.13
+#     - python3 ci/build.py --target aarch64-unknown-linux-gnu --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases
+#   binaries_artifacts:
+#     path: "runner_releases/*"
+#   wheels_artifacts:
+#     path: "target/wheels/*"
+#   before_cache_script: rm -rf $CARGO_HOME/registry/index
 
 nightly_macos_task:
   name: Nightly Release Build aarch64-apple-darwin
@@ -100,7 +100,7 @@ nightly_macos_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
   build_and_test_script:
     - source $HOME/.cargo/env
-    - pip3 install -r ci/build_requirements.txt
+    - pip3 install toml maturin==0.14.13
     - python3 ci/build.py --target aarch64-apple-darwin --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases
   binaries_artifacts:
     path: "runner_releases/*"

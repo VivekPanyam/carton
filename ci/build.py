@@ -71,7 +71,7 @@ if __name__ == "__main__":
     # Build wheels for the python bindings
     py_bindings_cmd = [sys.executable, "-m", "maturin", "build", RELEASE_FLAG, "--target", TARGET]
     if "linux" in TARGET:
-        py_bindings_cmd += ["--compatibility", "manylinux2014"]
+        py_bindings_cmd += ["--compatibility", "manylinux_2_28"]
 
     run_command(py_bindings_cmd, cwd=os.path.join(os.getcwd(), "source/carton-bindings-py"))
 

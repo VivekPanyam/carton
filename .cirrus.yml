@@ -4,24 +4,24 @@ env:
   CARGO_TERM_COLOR: always
   CIRRUS_REPO_CLONE_TOKEN: ENCRYPTED[d6e35d6af0f64a5b9867662226058191c97bdccd3e4161873dfa8d309e273bdd5895848a663de57a27440188b98005b5]
 
-linux_task:
-  name: Native Build aarch64-unknown-linux-gnu
-  arm_container:
-    dockerfile: ci/cirrus_ci.dockerfile
-    cpu: 4
-    memory: 16G
-  submodules_script:
-    # Init submodules
-    - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
-  target_cache:
-    folder: target
-    fingerprint_script:
-      - rustc --version
-      - cat Cargo.lock
-  build_and_test_script:
-    - pip3 install -r ci/build_requirements.txt
-    - python3 ci/build.py --target aarch64-unknown-linux-gnu
-  before_cache_script: rm -rf $CARGO_HOME/registry/index
+# linux_task:
+#   name: Native Build aarch64-unknown-linux-gnu
+#   arm_container:
+#     dockerfile: ci/ci.dockerfile
+#     cpu: 4
+#     memory: 16G
+#   submodules_script:
+#     # Init submodules
+#     - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
+#   target_cache:
+#     folder: target
+#     fingerprint_script:
+#       - rustc --version
+#       - cat Cargo.lock
+#   build_and_test_script:
+#     - pip3 install toml maturin==0.14.13
+#     - python3 ci/build.py --target aarch64-unknown-linux-gnu
+#   before_cache_script: rm -rf $CARGO_HOME/registry/index
 
 macos_task:
   name: Native Build aarch64-apple-darwin
@@ -37,5 +37,5 @@ macos_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
   build_and_test_script:
     - source $HOME/.cargo/env
-    - pip3 install -r ci/build_requirements.txt
+    - pip3 install toml maturin==0.14.13
     - python3 ci/build.py --target aarch64-apple-darwin
