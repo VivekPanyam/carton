@@ -2,12 +2,13 @@
 name = "carton-runner-rust-bert"
 version = "0.0.1"
 edition = "2021"
+publish = false
 
 [dependencies]
 carton-runner-interface = { path = "../carton-runner-interface" }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
-rust-bert = "0.21.0"
+rust-bert = { version = "0.21.0", default-features = false }
 lunchbox = { version = "0.1", features = ["serde"], default-features = false }
 tempfile = "3.3.0"
 ndarray = { version = "0.15", features = ["serde"] }

@@ -20,6 +20,18 @@ jobs:
           token: ${{ secrets.ZIPFS_READ }}
           submodules: recursive
       - run: cargo fmt --check
+  cargo-deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ZIPFS_READ }}
+          submodules: recursive
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check bans licenses sources
   # build_and_test_native:
   #   name: Native Build ${{ matrix.os }}
   #   runs-on: ${{ matrix.os }}

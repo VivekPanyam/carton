@@ -2,6 +2,7 @@
 name = "carton-runner-interface"
 version = "0.0.1"
 edition = "2021"
+publish = false
 
 [dependencies]
 tempfile = "3.3.0"

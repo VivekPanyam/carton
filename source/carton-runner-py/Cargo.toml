@@ -2,6 +2,7 @@
 name = "carton-runner-py"
 version = "0.0.1"
 edition = "2021"
+publish = false
 
 [dependencies]
 carton-runner-interface = { path = "../carton-runner-interface" }
@@ -12,7 +13,7 @@ pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
 numpy = "0.18"
 ndarray = { version = "0.15" }
 lazy_static = "1.4.0"
-reqwest = { version = "0.11", features = ["native-tls-vendored"] }
+reqwest = { version = "0.11", features = ["rustls-tls"], default-features = false }
 tempfile = "3.3.0"
 sha2 = "0.10.6"
 async_zip = {version = "0.0.11", features = ["full"]}
@@ -42,7 +43,7 @@ carton = { path = "../carton" }
 pyo3 = { features = ["auto-initialize"] }
 
 [build-dependencies]
-reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
 tokio = { version = "1", features = ["full"] }
 flate2 = "1.0"
 tar = "0.4"
