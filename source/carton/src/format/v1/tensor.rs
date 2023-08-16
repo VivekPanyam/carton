@@ -162,7 +162,7 @@ where
     Ok(())
 }
 
-fn bytes_per_elem<T>(array: &ndarray::ArrayViewD<T>) -> usize {
+fn bytes_per_elem<T>(_array: &ndarray::ArrayViewD<T>) -> usize {
     std::mem::size_of::<T>()
 }
 

@@ -34,7 +34,12 @@ where
         tokio::spawn(async move {
             while let Some((id, item)) = recv.recv().await {
                 if let Some(callback) = callbacks_clone.get(&id) {
-                    callback.value().send(item).await;
+                    callback
+                        .value()
+                        .send(item)
+                        .await
+                        .map_err(|_| "send failed")
+                        .unwrap();
                 } else {
                     panic!(
                         "Multiplexer got message for stream with unknown id {}",
@@ -79,7 +84,10 @@ where
         let send = self.send.clone();
         tokio::spawn(async move {
             while let Some(item) = send_rx.recv().await {
-                send.send((id, item)).await;
+                send.send((id, item))
+                    .await
+                    .map_err(|_| "send failed")
+                    .unwrap();
             }
         });
 

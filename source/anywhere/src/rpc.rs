@@ -143,7 +143,7 @@ macro_rules! autoimpl {
                 impl <'a, T, ContextType> [<Maybe $section_name>]<ContextType> for [< Allow $section_name >]<'a, T, false>
                 {
                     $(
-                        fn $fn_name <'b, 'c: 'b> ( &self, context: &ContextType, $($arg_name: $arg_type),* ) -> BoxFuture<std::io::Result<$res_type>> {
+                        fn $fn_name <'b, 'c: 'b> ( &self, _context: &ContextType, $( [<_ $arg_name >]: $arg_type),* ) -> BoxFuture<std::io::Result<$res_type>> {
                             // TODO: return an error instead of panicking
                             panic!("Tried calling {} on a filesystem that does not support it", stringify!($fn_name));
                         }
@@ -154,6 +154,7 @@ macro_rules! autoimpl {
                 impl <'a, T: $( $required_traits + )+> [<Maybe $section_name>]<ServerContext<T>> for [< Allow $section_name >]<'a, T, true> where T::ReadDirPollerType: MaybeSend, T::FileType: MaybeSend + MaybeSync $( + $( $filetype_required_traits + )+ )?
                 {
                     $(
+                        #[allow(unused_variables)]
                         fn $fn_name <'b, 'c: 'b> ( &'b self, context: &'c ServerContext<T>,  $($arg_name: $arg_type),* ) -> BoxFuture<'b, std::io::Result<$res_type>> {
                             // Pass through
                             // This is kinda hacky

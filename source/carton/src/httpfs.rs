@@ -203,7 +203,7 @@ pub(crate) struct FileInfo {
     pub url: String,
 
     // TODO: actually verify that the sha256 matches the expected value
-    pub sha256: String,
+    pub _sha256: String,
 }
 
 impl HasFileType for HttpFS {

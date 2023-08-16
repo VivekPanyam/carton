@@ -87,6 +87,7 @@ pub(crate) async fn create_links(
     Ok(output_zip_path)
 }
 
+#[cfg(test)]
 mod tests {
     use super::Links;
 

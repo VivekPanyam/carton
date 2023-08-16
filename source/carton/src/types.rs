@@ -1,5 +1,4 @@
 pub use carton_macros::{for_each_carton_type, for_each_numeric_carton_type};
-use lazy_static::lazy_static;
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::collections::HashMap;
 

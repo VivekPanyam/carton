@@ -6,7 +6,7 @@ use carton_runner_interface::{
 };
 use carton_utils_py::tensor::PyStringArrayType;
 use numpy::{PyArrayDyn, ToPyArray};
-use pyo3::{FromPyObject, PyAny, PyErr, PyObject, PyResult, Python, ToPyObject};
+use pyo3::{FromPyObject, PyAny, PyErr, PyObject, Python, ToPyObject};
 
 enum SealImpl {
     /// Seal implemented in python

@@ -5,7 +5,6 @@ use std::{path::PathBuf, time::SystemTime};
 use carton_runner_packager::{discovery::RunnerInfo, DownloadItem};
 use clap::Parser;
 use python_versions::{PythonVersion, PYTHON_VERSIONS};
-use tokio::process::Command;
 mod python_versions;
 
 #[derive(Parser, Debug)]
@@ -54,7 +53,7 @@ async fn main() {
 
         // Patch the runner on mac
         #[cfg(target_os = "macos")]
-        assert!(Command::new("install_name_tool")
+        assert!(tokio::process::Command::new("install_name_tool")
             .args(&[
                 "-change",
                 &format!("/install/lib/libpython{major}.{minor}.dylib",),

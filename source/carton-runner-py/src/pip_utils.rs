@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use carton_runner_interface::slowlog::slowlog;
 use serde::Deserialize;
 use tokio::{process::Command, sync::OnceCell};
@@ -53,20 +51,19 @@ async fn ensure_has_pip() {
 /// Effectively run
 /// `python3 -m pip install --dry-run --ignore-installed --report {output_file} -r {requirements_file_path}`
 /// and load the output
-pub(crate) async fn get_pip_deps_report<F, P>(fs: &F, requirements_file_path: P) -> PipReport
-where
-    F: lunchbox::WritableFileSystem + Sync,
-    F::FileType: lunchbox::types::WritableFile + Unpin,
-    P: AsRef<lunchbox::path::Path>,
-{
-    let requirements_file_path = requirements_file_path.as_ref();
-
+pub(crate) async fn get_pip_deps_report(requirements_file_contents: String) -> PipReport {
     // Make sure we have pip 23.0
     ensure_has_pip().await;
 
     // Create a file for the dependencies report
     let tempdir = tempfile::tempdir().unwrap();
     let output_file_path = tempdir.path().join("report.json");
+    let requirements_file_path = tempdir.path().join("requirements.txt");
+
+    // Write the requirements text contents to a file
+    tokio::fs::write(&requirements_file_path, requirements_file_contents)
+        .await
+        .unwrap();
 
     let logs_tmp_dir = std::env::temp_dir().join("carton_logs");
     tokio::fs::create_dir_all(&logs_tmp_dir).await.unwrap();
@@ -90,7 +87,7 @@ where
             "--report",
             output_file_path.to_str().unwrap(),
             "-r",
-            requirements_file_path.as_str(),
+            requirements_file_path.to_str().unwrap(),
         ])
         .stdout(std::fs::File::create(log_dir.path().join("stdout.log")).unwrap())
         .stderr(std::fs::File::create(log_dir.path().join("stderr.log")).unwrap())
@@ -125,13 +122,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_lightgbm_deps() {
-        let tempdir = tempfile::tempdir().unwrap();
+        let requirements_file_contents = "lightgbm==3.3.5".to_owned();
 
-        let requirements_file_path = tempdir.path().join("requirements.txt");
-        std::fs::write(&requirements_file_path, "lightgbm==3.3.5").unwrap();
-
-        let fs = lunchbox::LocalFS::new().unwrap();
-        let report = get_pip_deps_report(&fs, requirements_file_path.to_str().unwrap()).await;
+        let report = get_pip_deps_report(requirements_file_contents).await;
 
         assert!(report
             .install

@@ -27,6 +27,7 @@ enum ProcessType {
 
 pub(crate) struct Comms {
     // Used to generate IDs for file descriptors
+    #[allow(dead_code)]
     fd_id_gen: AtomicU64,
 
     // The type of the current process
@@ -206,6 +207,7 @@ impl Comms {
     }
 
     // Send an FD and return the id that can be used to access it on the other end
+    #[allow(dead_code)]
     pub(crate) async fn send_fd(&self, fd: RawFd) -> FdId {
         // id_gen * 2 for the primary process
         // id_gen * 2 + 1 for the secondary process
@@ -287,7 +289,7 @@ impl Comms {
 /// (and will delete it on drop)
 pub(crate) struct OwnedComms {
     // A folder that stores the UDS we communicate using
-    tempdir: tempfile::TempDir,
+    _tempdir: tempfile::TempDir,
 
     // The comms layer
     comms: Comms,
@@ -302,7 +304,7 @@ impl OwnedComms {
 
         (
             Self {
-                tempdir,
+                _tempdir: tempdir,
                 comms: Comms::bind(bind_path.as_path()).await,
             },
             bind_path,

@@ -5,8 +5,8 @@ use carton_runner_interface::_only_public_for_benchmarks_do_not_use::{
     InlineAllocator, InlineTensorStorage, SHMAllocator, SHMTensorStorage, TypedAlloc,
 };
 use criterion::{
-    criterion_group, criterion_main, measurement::Measurement, AxisScale, BenchmarkGroup,
-    BenchmarkId, Criterion, PlotConfiguration, Throughput,
+    criterion_group, criterion_main, measurement::Measurement, BenchmarkGroup, BenchmarkId,
+    Criterion, Throughput,
 };
 
 /// Note: this benchmark allocates *and fills* a tensor. Otherwise for large allocs, the allocation

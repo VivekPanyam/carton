@@ -1,13 +1,4 @@
-use std::{
-    fmt::Debug,
-    ops::{Deref, DerefMut},
-    sync::Arc,
-};
-
 use carton_macros::for_each_numeric_carton_type;
-use serde::{Deserialize, Serialize};
-
-use super::alloc_pool::{PoolAllocator, PoolItem};
 
 /// Numeric tensor types supported by this version of the runner interface
 pub(crate) trait NumericTensorType: Default + Copy {}
