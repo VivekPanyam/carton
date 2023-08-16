@@ -4,7 +4,9 @@ use std::{
     future::Future,
     io::Read,
     path::{Path, PathBuf},
+    sync::Arc,
 };
+use tokio::sync::Semaphore;
 
 use async_zip::read::fs::ZipFileReader;
 
@@ -16,6 +18,11 @@ pub async fn extract_zip<P: AsRef<Path>>(archive: P, out_dir: P) {
     let reader = ZipFileReader::new(archive)
         .await
         .expect("Failed to read zip file");
+
+    // We want to limit the number of open files
+    // This should let 64 file extractions run concurrently
+    let open_files_semaphore = Arc::new(Semaphore::new(64));
+
     for index in 0..reader.file().entries().len() {
         let entry = &reader.file().entries().get(index).unwrap().entry();
 
@@ -50,17 +57,22 @@ pub async fn extract_zip<P: AsRef<Path>>(archive: P, out_dir: P) {
                     .await
                     .expect("Failed to create parent directories");
             }
-            let mut writer = tokio::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .mode(entry.unix_permissions().unwrap() as u32)
-                .open(&path)
-                .await
-                .expect("Failed to create extracted file");
 
             // Spawn a task to extract
+            let open_files_semaphore = open_files_semaphore.clone();
             let reader = reader.clone();
+            let perms = entry.unix_permissions().unwrap() as u32;
             handles.push(tokio::spawn(async move {
+                // Limit number of open files
+                let _permit = open_files_semaphore.acquire().await.unwrap();
+
+                let mut writer = tokio::fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .mode(perms)
+                    .open(&path)
+                    .await
+                    .expect("Failed to create extracted file");
                 let mut entry_reader = reader.entry(index).await.expect("Failed to read ZipEntry");
                 tokio::io::copy(&mut entry_reader, &mut writer)
                     .await

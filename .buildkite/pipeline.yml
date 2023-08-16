@@ -2,7 +2,7 @@ steps:
   - name: "Native Build x86_64-unknown-linux-gnu"
     agents:
       queue: default
-    command: "python3 ci/build.py --target x86_64-unknown-linux-gnu"
+    command: "python3 ci/build.py --release --target x86_64-unknown-linux-gnu"
     plugins:
       - docker-compose#v3.7.0:
           run: x86_64
@@ -11,7 +11,7 @@ steps:
   - name: "Native Build aarch64-unknown-linux-gnu"
     agents:
       queue: arm64
-    command: "python3 ci/build.py --target aarch64-unknown-linux-gnu"
+    command: "python3 ci/build.py --release --target aarch64-unknown-linux-gnu"
     plugins:
       - docker-compose#v3.7.0:
           run: arm64

@@ -147,6 +147,7 @@ pub type CartonInfo<T> = crate::info::CartonInfo<T>;
 
 for_each_numeric_carton_type! {
     /// The core tensor type
+    #[derive(Debug)]
     pub enum Tensor<Storage> where Storage: TensorStorage {
         $($CartonType(Storage::TypedStorage::<$RustType>),)*
 
@@ -167,6 +168,19 @@ for_each_numeric_carton_type! {
         /// is the same:
         /// https://www.tensorflow.org/guide/ragged_tensor#what_you_can_store_in_a_ragged_tensor
         NestedTensor(Vec<Tensor<Storage>>)
+    }
+}
+
+for_each_carton_type! {
+    impl Clone for Tensor<GenericStorage> {
+        fn clone(&self) -> Self {
+            match self {
+                $(
+                    Self::$CartonType(item) => Self::$CartonType(item.clone()),
+                )*
+                Self::NestedTensor(item) => Self::NestedTensor(item.clone()),
+            }
+        }
     }
 }
 

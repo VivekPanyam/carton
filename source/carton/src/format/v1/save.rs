@@ -10,7 +10,7 @@ use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
 use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
-use crate::error::Result;
+use crate::error::{CartonError, Result};
 use crate::types::{CartonInfo, TensorStorage};
 
 use super::carton_toml::{CartonToml, TensorOrMiscReference};
@@ -41,6 +41,18 @@ where
 {
     // Create a tempdir
     let tempdir = TempDir::new().unwrap();
+
+    // Check that info.short_description is <= 100 characters
+    if let Some(desc) = &info.short_description {
+        if desc.len() > 100 {
+            // More than 100 bytes. Check if it's also more than 100 chars
+            if desc.chars().count() > 100 {
+                return Err(CartonError::Other(
+                    "The provided short_description is > 100 chars long.",
+                ));
+            }
+        }
+    }
 
     // Create the carton.toml we're going to write out
     let mut config = CartonToml {

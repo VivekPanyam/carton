@@ -1,0 +1,1 @@
+This runner runs models with [rust-bert](https://github.com/guillaume-be/rust-bert), a rust port of Huggingface Transformers
