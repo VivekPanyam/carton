@@ -35,7 +35,9 @@ async fn main() {
                     ModelConfig::SentimentAnalysis => todo!(),
                     ModelConfig::NER => todo!(),
                     ModelConfig::POSTagging => todo!(),
-                    ModelConfig::QuestionAnswering => todo!(),
+                    ModelConfig::QuestionAnswering(config) => {
+                        model = Some(Box::new(config.load(&fs).await))
+                    }
                     ModelConfig::KeywordExtraction => todo!(),
                     ModelConfig::TextClassification => todo!(),
                     ModelConfig::FillMask => todo!(),
