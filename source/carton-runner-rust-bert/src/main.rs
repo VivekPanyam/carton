@@ -28,7 +28,9 @@ async fn main() {
                     ModelConfig::Translation(config) => {
                         model = Some(Box::new(config.load(&fs).await))
                     }
-                    ModelConfig::Summarization => todo!(),
+                    ModelConfig::Summarization(config) => {
+                        model = Some(Box::new(config.load(&fs).await))
+                    }
                     ModelConfig::ZeroShotClassification => todo!(),
                     ModelConfig::SentimentAnalysis => todo!(),
                     ModelConfig::NER => todo!(),

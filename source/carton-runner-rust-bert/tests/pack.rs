@@ -55,11 +55,22 @@ async fn test_pack() {
     log::info!("Installed runner");
 
     // Pack models
-    let m2m100_path = carton_runner_rust_bert::translate::pack::pack_m2m100().await;
-    log::info!("Packed m2m100 model: {m2m100_path:#?}");
+    let (m2m100_path, bart_cnn_dm_path) = tokio::join!(
+        carton_runner_rust_bert::translate::pack::pack_m2m100(),
+        carton_runner_rust_bert::summarize::pack::pack_bart_cnn_dm(),
+    );
 
+    log::info!("Testing m2m100 model: {m2m100_path:#?}");
+    test_model(m2m100_path).await;
+
+    log::info!("Testing bart_cnn_dm model: {bart_cnn_dm_path:#?}");
+    test_model(bart_cnn_dm_path).await;
+}
+
+/// Note: this currently just runs the model and does not verify expected outputs
+async fn test_model(model_path: PathBuf) {
     let model = carton::Carton::load(
-        m2m100_path.to_str().unwrap().to_owned(),
+        model_path.to_str().unwrap().to_owned(),
         LoadOpts {
             visible_device: carton::types::Device::maybe_from_index(0),
             ..Default::default()
@@ -88,5 +99,5 @@ async fn test_pack() {
     }
 
     // Delete the packed model
-    tokio::fs::remove_file(m2m100_path).await.unwrap();
+    tokio::fs::remove_file(model_path).await.unwrap();
 }
