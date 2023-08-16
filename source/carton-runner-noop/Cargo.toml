@@ -2,6 +2,7 @@
 name = "carton-runner-noop"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
 carton-runner-interface = { path = "../carton-runner-interface" }

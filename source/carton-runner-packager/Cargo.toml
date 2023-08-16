@@ -2,6 +2,7 @@
 name = "carton-runner-packager"
 version = "0.0.1"
 edition = "2021"
+publish = false
 
 [dependencies]
 carton-utils = { path = "../carton-utils" }
@@ -16,7 +17,7 @@ semver = {version = "1.0.16", features = ["serde"]}
 target-lexicon = {version = "0.12.7", features = ["serde_support"]}
 chrono = {version = "0.4.23", features = ["serde"]}
 tempfile = "3.3.0"
-reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
 async_zip = {version = "0.0.11", features = ["full"]}
 sha2 = "0.10.6"
 walkdir = "2.3.2"
@@ -27,5 +28,5 @@ dashmap = "5.4.0"
 
 # Required by ci_upload_releases
 # TODO: split this out
-rust-s3 = "0.32.3"
+rust-s3 = { version = "0.32.3", features = ["tokio-rustls-tls"], default-features = false }
 base64 = "0.21.0"

@@ -3,6 +3,7 @@ name = "carton-bindings-nodejs"
 version = "0.1.0"
 edition = "2021"
 exclude = ["js/carton_native.node"]
+publish = false
 
 [lib]
 crate-type = ["cdylib"]
