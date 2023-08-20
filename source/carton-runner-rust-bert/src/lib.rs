@@ -3,11 +3,13 @@ use std::{collections::HashMap, path::Path};
 use async_trait::async_trait;
 use carton_runner_interface::{slowlog::slowlog, types::Tensor};
 use lunchbox::{types::ReadableFile, ReadableFileSystem};
+use qa::CartonQAConfig;
 use serde::{Deserialize, Serialize};
 use summarize::CartonSummarizationConfig;
 use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
 use translate::CartonTranslationConfig;
 
+pub mod qa;
 pub mod summarize;
 pub mod translate;
 
@@ -19,7 +21,7 @@ pub enum ModelConfig {
     SentimentAnalysis,
     NER,
     POSTagging,
-    QuestionAnswering,
+    QuestionAnswering(CartonQAConfig),
     KeywordExtraction,
     TextClassification,
     FillMask,
