@@ -158,7 +158,6 @@ pub type CartonInfo<T> = crate::info::CartonInfo<T>;
 
 for_each_numeric_carton_type! {
     /// The core tensor type
-    #[derive(Debug)]
     pub enum Tensor<Storage> where Storage: TensorStorage {
         $($CartonType(Storage::TypedStorage::<$RustType>),)*
 
@@ -214,6 +213,19 @@ for_each_numeric_carton_type! {
                 )*
                 Tensor::String(item) => Self::String(item.convert_into_with_context(context)),
                 Tensor::NestedTensor(item) => Self::NestedTensor(item.convert_into_with_context(context))
+            }
+        }
+    }
+}
+
+for_each_carton_type! {
+    impl<Storage: TensorStorage> std::fmt::Debug for Tensor<Storage> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                $(
+                    Self::$CartonType(item) => f.debug_tuple(stringify!($CartonType)).field(&item.view()).finish(),
+                )*
+                Self::NestedTensor(item) => f.debug_tuple("NestedTensor").field(item).finish(),
             }
         }
     }

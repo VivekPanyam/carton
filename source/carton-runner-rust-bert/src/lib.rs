@@ -9,17 +9,19 @@ use summarize::CartonSummarizationConfig;
 use text_generation::CartonTextGenerationConfig;
 use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
 use translate::CartonTranslationConfig;
+use zero_shot::CartonZeroShotConfig;
 
 pub mod qa;
 pub mod summarize;
 pub mod text_generation;
 pub mod translate;
+pub mod zero_shot;
 
 #[derive(Serialize, Deserialize)]
 pub enum ModelConfig {
     Translation(CartonTranslationConfig),
     Summarization(CartonSummarizationConfig),
-    ZeroShotClassification,
+    ZeroShotClassification(CartonZeroShotConfig),
     SentimentAnalysis,
     NER,
     POSTagging,
