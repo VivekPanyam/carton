@@ -6,11 +6,13 @@ use lunchbox::{types::ReadableFile, ReadableFileSystem};
 use qa::CartonQAConfig;
 use serde::{Deserialize, Serialize};
 use summarize::CartonSummarizationConfig;
+use text_generation::CartonTextGenerationConfig;
 use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
 use translate::CartonTranslationConfig;
 
 pub mod qa;
 pub mod summarize;
+pub mod text_generation;
 pub mod translate;
 
 #[derive(Serialize, Deserialize)]
@@ -26,6 +28,7 @@ pub enum ModelConfig {
     TextClassification,
     FillMask,
     SentenceEmbeddings,
+    TextGeneration(CartonTextGenerationConfig),
 }
 
 #[async_trait]

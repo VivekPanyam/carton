@@ -42,6 +42,9 @@ async fn main() {
                     ModelConfig::TextClassification => todo!(),
                     ModelConfig::FillMask => todo!(),
                     ModelConfig::SentenceEmbeddings => todo!(),
+                    ModelConfig::TextGeneration(config) => {
+                        model = Some(Box::new(config.load(&fs).await))
+                    }
                 }
 
                 server
