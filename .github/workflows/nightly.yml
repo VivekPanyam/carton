@@ -27,9 +27,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZIPFS_READ }}
-          submodules: recursive
       - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
       - run: pip3 install toml maturin==0.14.13
@@ -50,9 +47,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZIPFS_READ }}
-          submodules: recursive
       - run: pip3 install gql[requests]
       - name: Wait for Cirrus CI builds to finish
         run: python3 ci/trigger_cirrus_build.py
@@ -76,9 +70,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZIPFS_READ }}
-          submodules: recursive
       - run: mkdir /tmp/artifacts
       - uses: actions/download-artifact@v3
         with:

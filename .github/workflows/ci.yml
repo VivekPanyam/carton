@@ -16,9 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZIPFS_READ }}
-          submodules: recursive
       - run: cargo fmt --check
   cargo-deny:
     name: cargo-deny
@@ -26,9 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZIPFS_READ }}
-          submodules: recursive
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check bans licenses sources
@@ -50,9 +44,6 @@ jobs:
   #   steps:
   #     - name: Checkout
   #       uses: actions/checkout@v3
-  #       with:
-  #         token: ${{ secrets.ZIPFS_READ }}
-  #         submodules: recursive
   #     - run: rustup default stable
   #     - uses: Swatinem/rust-cache@v2
   #     - run: pip3 install toml maturin==0.14.13
@@ -69,9 +60,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZIPFS_READ }}
-          submodules: recursive
       - run: rustup target add wasm32-wasi
       - run: cargo build -p carton --verbose --target wasm32-wasi
   build_wasm:
@@ -80,9 +68,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.ZIPFS_READ }}
-          submodules: recursive
       - run: rustup target add wasm32-unknown-unknown
       - uses: actions/setup-node@v3
         with:
