@@ -57,7 +57,6 @@ query = gql(
 CIRRUS_BUILD_CONFIG = """
 env:
   CARGO_TERM_COLOR: always
-  CIRRUS_REPO_CLONE_TOKEN: ENCRYPTED[d6e35d6af0f64a5b9867662226058191c97bdccd3e4161873dfa8d309e273bdd5895848a663de57a27440188b98005b5]
 
 # Nightly release builds
 # nightly_linux_task:
@@ -67,9 +66,6 @@ env:
 #     dockerfile: ci/ci.dockerfile
 #     cpu: 4
 #     memory: 16G
-#   submodules_script:
-#     # Init submodules
-#     - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
 #   target_cache:
 #     folder: target
 #     fingerprint_script:
@@ -90,9 +86,6 @@ nightly_macos_task:
   alias: nightly_macos
   macos_instance:
     image: ghcr.io/cirruslabs/macos-ventura-xcode:14.2
-  submodules_script:
-    # Init submodules
-    - git -c url."https://x-access-token:${CIRRUS_REPO_CLONE_TOKEN}@github.com/".insteadOf="git@github.com:" submodule update --init --recursive
   symlink_xcode_script:
     - ln -s /Applications/Xcode-14.2.0.app /Applications/Xcode.app
     - ls -alh /Applications/
