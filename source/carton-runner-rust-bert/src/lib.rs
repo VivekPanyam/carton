@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use carton_runner_interface::{slowlog::slowlog, types::Tensor};
 use lunchbox::{types::ReadableFile, ReadableFileSystem};
 use qa::CartonQAConfig;
+use sentiment_analysis::CartonSentimentAnalysisConfig;
 use serde::{Deserialize, Serialize};
 use summarize::CartonSummarizationConfig;
 use text_generation::CartonTextGenerationConfig;
@@ -12,6 +13,7 @@ use translate::CartonTranslationConfig;
 use zero_shot::CartonZeroShotConfig;
 
 pub mod qa;
+pub mod sentiment_analysis;
 pub mod summarize;
 pub mod text_generation;
 pub mod translate;
@@ -22,7 +24,7 @@ pub enum ModelConfig {
     Translation(CartonTranslationConfig),
     Summarization(CartonSummarizationConfig),
     ZeroShotClassification(CartonZeroShotConfig),
-    SentimentAnalysis,
+    SentimentAnalysis(CartonSentimentAnalysisConfig),
     NER,
     POSTagging,
     QuestionAnswering(CartonQAConfig),

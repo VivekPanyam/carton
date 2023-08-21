@@ -34,7 +34,9 @@ async fn main() {
                     ModelConfig::ZeroShotClassification(config) => {
                         model = Some(Box::new(config.load(&fs).await))
                     }
-                    ModelConfig::SentimentAnalysis => todo!(),
+                    ModelConfig::SentimentAnalysis(config) => {
+                        model = Some(Box::new(config.load(&fs).await))
+                    }
                     ModelConfig::NER => todo!(),
                     ModelConfig::POSTagging => todo!(),
                     ModelConfig::QuestionAnswering(config) => {

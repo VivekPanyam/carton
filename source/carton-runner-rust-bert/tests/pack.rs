@@ -55,12 +55,20 @@ async fn test_pack() {
     log::info!("Installed runner");
 
     // Pack models
-    let (m2m100_path, bart_cnn_dm_path, distilbert_squad_path, gpt2_medium_path, bart_mnli_path) = tokio::join!(
+    let (
+        m2m100_path,
+        bart_cnn_dm_path,
+        distilbert_squad_path,
+        gpt2_medium_path,
+        bart_mnli_path,
+        distilbert_sst2_path,
+    ) = tokio::join!(
         carton_runner_rust_bert::translate::pack::pack_m2m100(),
         carton_runner_rust_bert::summarize::pack::pack_bart_cnn_dm(),
         carton_runner_rust_bert::qa::pack::pack_distilbert_squad(),
         carton_runner_rust_bert::text_generation::pack::pack_gpt2_medium(),
         carton_runner_rust_bert::zero_shot::pack::pack_bart_mnli(),
+        carton_runner_rust_bert::sentiment_analysis::pack::pack_distilbert_sst2(),
     );
 
     log::info!("Testing m2m100 model: {m2m100_path:#?}");
@@ -77,6 +85,9 @@ async fn test_pack() {
 
     log::info!("Testing BART mnli model: {bart_mnli_path:#?}");
     test_model(bart_mnli_path).await;
+
+    log::info!("Testing distilbert_sst2 model: {distilbert_sst2_path:#?}");
+    test_model(distilbert_sst2_path).await;
 }
 
 /// Note: this currently just runs the model and does not verify expected outputs
