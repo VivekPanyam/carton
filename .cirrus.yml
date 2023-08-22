@@ -32,3 +32,5 @@ macos_task:
     - source $HOME/.cargo/env
     - pip3 install toml maturin==0.14.13
     - python3 ci/build.py --target aarch64-apple-darwin
+  timings_artifacts:
+    path: "target/cargo-timings/*"

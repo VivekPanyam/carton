@@ -16,6 +16,7 @@ fn infer_noop_benchmark(c: &mut Criterion) {
     let runner_path = escargot::CargoBuild::new()
         .package("carton-runner-noop")
         .release()
+        .arg("--timings")
         .run()
         .unwrap()
         .path()

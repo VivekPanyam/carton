@@ -3,6 +3,8 @@ steps:
     agents:
       queue: default
     command: "python3 ci/build.py --release --target x86_64-unknown-linux-gnu"
+    artifact_paths:
+      - "target/cargo-timings/*"
     plugins:
       - docker-compose#v3.7.0:
           run: x86_64
@@ -12,6 +14,8 @@ steps:
     agents:
       queue: arm64
     command: "python3 ci/build.py --release --target aarch64-unknown-linux-gnu"
+    artifact_paths:
+      - "target/cargo-timings/*"
     plugins:
       - docker-compose#v3.7.0:
           run: arm64

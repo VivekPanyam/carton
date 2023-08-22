@@ -44,6 +44,7 @@ async fn main() {
             )
             .current_release()
             .current_target()
+            .arg("--timings")
             .run()
             .unwrap()
             .path()
