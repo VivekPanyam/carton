@@ -29,6 +29,7 @@ async fn main() {
         .bin("carton-runner-rust-bert")
         .current_release()
         .current_target()
+        .arg("--timings")
         .env_remove("LIBTORCH")
         .run()
         .unwrap()
