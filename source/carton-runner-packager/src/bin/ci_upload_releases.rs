@@ -47,7 +47,7 @@ async fn main() {
 
     // Decode the runners file
     let contents = base64::engine::general_purpose::STANDARD
-        .decode(github_response.content.trim())
+        .decode(github_response.content.trim().replace("\n", ""))
         .unwrap();
     let mut runners: Vec<DownloadInfo> = serde_json::from_slice(&contents).unwrap();
 

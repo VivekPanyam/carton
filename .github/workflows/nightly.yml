@@ -9,40 +9,40 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  nightly_release_native:
-    name: Native Build ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    container:
-      # TODO: only on linux
-      image: vpanyam/manylinux_2_28-rust-python310:x86_64
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          # For now, don't run macos builds during nightly builds.
-          # TODO: reenable this when the repo is public
-          # - os: macos-latest
-          #   target: x86_64-apple-darwin
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - run: rustup default stable
-      - uses: Swatinem/rust-cache@v2
-      - run: pip3 install toml maturin==0.14.13
-      - run: python3 ci/build.py --target ${{ matrix.target }} --release --nightly --runner_release_dir /tmp/runner_releases
-      - name: Upload runners
-        uses: actions/upload-artifact@v3
-        with:
-          name: runners-${{ matrix.target }}
-          path: /tmp/runner_releases
-      - name: Upload python wheels
-        uses: actions/upload-artifact@v3
-        with:
-          name: py-wheels-${{ matrix.target }}
-          path: target/wheels/
-  nightly_release_aarch64:
-    name: "Native Build aarch64"
+  # nightly_release_native:
+  #   name: Native Build ${{ matrix.os }}
+  #   runs-on: ${{ matrix.os }}
+  #   container:
+  #     # TODO: only on linux
+  #     image: vpanyam/manylinux_2_28-rust-python310:x86_64
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - os: ubuntu-latest
+  #           target: x86_64-unknown-linux-gnu
+  #         # For now, don't run macos builds during nightly builds.
+  #         # TODO: reenable this when the repo is public
+  #         # - os: macos-latest
+  #         #   target: x86_64-apple-darwin
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #     - run: rustup default stable
+  #     - uses: Swatinem/rust-cache@v2
+  #     - run: pip3 install toml maturin==0.14.13
+  #     - run: python3 ci/build.py --target ${{ matrix.target }} --release --nightly --runner_release_dir /tmp/runner_releases
+  #     - name: Upload runners
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: runners-${{ matrix.target }}
+  #         path: /tmp/runner_releases
+  #     - name: Upload python wheels
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: py-wheels-${{ matrix.target }}
+  #         path: target/wheels/
+  nightly_release_mac_aarch64:
+    name: "Native Build macOS aarch64"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -55,17 +55,38 @@ jobs:
       - name: Upload runners
         uses: actions/upload-artifact@v3
         with:
-          name: runners-aarch64
+          name: runners-macos-aarch64
           path: /tmp/runner_releases
       - name: Upload python wheels
         uses: actions/upload-artifact@v3
         with:
-          name: py-wheels-aarch64
+          name: py-wheels-macos-aarch64
+          path: /tmp/target/wheels/
+  nightly_release_buildkite:
+    name: "Native Builds Linux (x86_64 and aarch64)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - run: pip3 install requests
+      - name: Wait for Buildkite builds to finish
+        run: python3 ci/trigger_buildkite_build.py
+        env:
+          BUILDKITE_TOKEN: ${{ secrets.BUILDKITE_TOKEN }}
+      - name: Upload runners
+        uses: actions/upload-artifact@v3
+        with:
+          name: runners-linux
+          path: /tmp/target/runner_releases
+      - name: Upload python wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: py-wheels-linux
           path: /tmp/target/wheels/
 
   upload_nightly_builds:
     name: "Upload nightly builds"
-    needs: [nightly_release_native, nightly_release_aarch64]
+    needs: [nightly_release_mac_aarch64, nightly_release_buildkite]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
