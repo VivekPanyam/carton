@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, OnceLock},
+};
 
 use conversions::{
     create_load_opts, create_pack_opts, CartonInfo, Device, Example, LazyLoadedMiscFile,
@@ -19,6 +22,13 @@ struct SealHandle {
 #[pyclass]
 struct Carton {
     inner: Arc<carton_core::Carton>,
+}
+
+/// Initializes logging if we didn't do so already
+/// Safe to call multiple times
+fn maybe_init_logging() -> &'static pyo3_log::ResetHandle {
+    static CELL: OnceLock<pyo3_log::ResetHandle> = OnceLock::new();
+    CELL.get_or_init(|| pyo3_log::init())
 }
 
 #[pymethods]
@@ -84,6 +94,7 @@ fn load(
     override_required_framework_version: Option<String>,
     override_runner_opts: Option<HashMap<String, PyRunnerOpt>>,
 ) -> PyResult<&PyAny> {
+    maybe_init_logging();
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let opts = create_load_opts(
             visible_device,
@@ -123,6 +134,7 @@ fn load_unpacked(
     misc_files: Option<HashMap<String, Vec<u8>>>,
     visible_device: Option<Device>,
 ) -> PyResult<&PyAny> {
+    maybe_init_logging();
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let pack_opts = create_pack_opts(
             runner_name,
@@ -172,6 +184,7 @@ fn pack(
     examples: Option<Vec<Example>>,
     misc_files: Option<HashMap<String, Vec<u8>>>,
 ) -> PyResult<&PyAny> {
+    maybe_init_logging();
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let opts = create_pack_opts(
             runner_name,
@@ -200,6 +213,7 @@ fn pack(
 /// Get info for a model
 #[pyfunction]
 fn get_model_info(py: Python, url_or_path: String) -> PyResult<&PyAny> {
+    maybe_init_logging();
     pyo3_asyncio::tokio::future_into_py(py, async move {
         let out: CartonInfo = carton_core::Carton::get_model_info(url_or_path)
             .await
@@ -220,6 +234,7 @@ fn shrink(
     path: std::path::PathBuf,
     urls: HashMap<String, Vec<String>>,
 ) -> PyResult<&PyAny> {
+    maybe_init_logging();
     pyo3_asyncio::tokio::future_into_py(py, async move {
         Ok(carton_core::Carton::shrink(path, urls)
             .await
