@@ -126,10 +126,62 @@ pub(crate) enum RPCResponseData {
         e: String,
     },
 
-    // This should be used only when something is expected to take a long time (e.g generating a lockfile for a python project)
-    SlowLog {
-        e: String,
+    /// Logging
+    LogMessage {
+        record: LogRecord,
     },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogRecord {
+    metadata: LogMetadata,
+    args: String,
+    module_path: Option<String>,
+    file: Option<String>,
+    line: Option<u32>,
+}
+
+impl<'a> From<&log::Record<'a>> for LogRecord {
+    fn from(value: &log::Record<'a>) -> Self {
+        Self {
+            metadata: value.metadata().into(),
+            args: value.args().to_string(),
+            module_path: value.module_path().map(|v| v.to_owned()),
+            file: value.file().map(|v| v.to_owned()),
+            line: value.line(),
+        }
+    }
+}
+
+impl LogRecord {
+    /// Log to the currently active logger
+    pub(crate) fn do_log(&self) {
+        log::logger().log(
+            &log::RecordBuilder::new()
+                .level(self.metadata.level)
+                .target(&self.metadata.target)
+                .args(format_args!("{}", self.args))
+                .module_path(self.module_path.as_ref().map(|v| v.as_str()))
+                .file(self.file.as_ref().map(|v| v.as_str()))
+                .line(self.line)
+                .build(),
+        );
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LogMetadata {
+    level: log::Level,
+    target: String,
+}
+
+impl<'a> From<&log::Metadata<'a>> for LogMetadata {
+    fn from(value: &log::Metadata<'a>) -> Self {
+        Self {
+            level: value.level(),
+            target: value.target().to_owned(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]

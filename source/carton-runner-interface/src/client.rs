@@ -49,9 +49,14 @@ impl Client {
         // Handle rpc responses
         tokio::spawn(async move {
             while let Some(response) = recv.recv().await {
-                // Send the response to the callback
-                let callback = inflight_clone.remove(&response.id).unwrap().1;
-                callback.send(response).unwrap();
+                // Handle logging
+                if let RPCResponseData::LogMessage { record } = response.data {
+                    record.do_log();
+                } else {
+                    // Send the response to the callback
+                    let callback = inflight_clone.remove(&response.id).unwrap().1;
+                    callback.send(response).unwrap();
+                }
             }
         });
 

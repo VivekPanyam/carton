@@ -2,6 +2,7 @@ use std::{
     any::Any,
     collections::HashMap,
     path::{Path, PathBuf},
+    sync::{atomic::AtomicBool, Arc},
 };
 
 use anywhere::types::{AnywhereFS, ReadOnlyFS, ReadWriteFS};
@@ -14,7 +15,7 @@ use crate::{
     do_not_modify::comms::Comms,
     do_not_modify::types::{ChannelId, FsToken, RPCRequest, RPCResponse},
     multiplexer::Multiplexer,
-    types::{Device, Handle, RPCRequestData, RPCResponseData, RpcId, RunnerOpt, Tensor},
+    types::{Device, Handle, LogRecord, RPCRequestData, RPCResponseData, RpcId, RunnerOpt, Tensor},
 };
 
 pub struct Server {
@@ -29,6 +30,9 @@ pub struct Server {
 
     // Keep this alive while the serve is up
     _keepalive: Vec<Box<dyn Any>>,
+
+    // A flag that stops us from attempting to send log messages after shutdown
+    is_shutdown: Arc<AtomicBool>,
 }
 
 /// A handle that represents a map of sealed tensors
@@ -200,9 +204,9 @@ pub enum ResponseData {
         e: String,
     },
 
-    /// This should be used only when something is expected to take a long time (e.g generating a lockfile for a python project)
-    SlowLog {
-        e: String,
+    /// Logging
+    LogMessage {
+        record: LogRecord,
     },
 }
 
@@ -227,13 +231,13 @@ impl ResponseData {
                 tensors: into_handles(tensors).await,
             },
             ResponseData::Error { e } => RPCResponseData::Error { e },
-            ResponseData::SlowLog { e } => RPCResponseData::SlowLog { e },
+            ResponseData::LogMessage { record } => RPCResponseData::LogMessage { record },
         }
     }
 }
 
 impl Server {
-    async fn connect(path: &Path) -> Self {
+    async fn connect(path: &Path, logger: Option<&PassThroughLogger>) -> Self {
         let comms = Comms::connect(path).await;
 
         // Set up filesystem handling
@@ -242,12 +246,44 @@ impl Server {
 
         let (tx, rx) = comms.get_channel(ChannelId::Rpc).await;
 
+        let is_shutdown = Arc::new(AtomicBool::new(false));
+        if let Some(logger) = logger {
+            let mut messages = logger.get_rx();
+            let out = tx.clone();
+            let is_shutdown = is_shutdown.clone();
+            tokio::spawn(async move {
+                while let Some(record) = messages.recv().await {
+                    if is_shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                        break;
+                    }
+
+                    // TODO: don't hardcode 0
+                    let status = out
+                        .send(RPCResponse {
+                            id: 0,
+                            data: RPCResponseData::LogMessage { record },
+                        })
+                        .await;
+
+                    // Ignore send errors only when we're shutting down
+                    if let Err(s) = status {
+                        if is_shutdown.load(std::sync::atomic::Ordering::Relaxed) {
+                            break;
+                        } else {
+                            Err(s).unwrap()
+                        }
+                    }
+                }
+            });
+        }
+
         Server {
             comms,
             fs_multiplexer,
             incoming: rx,
             outgoing: tx,
             _keepalive: Vec::new(),
+            is_shutdown,
         }
     }
 
@@ -290,6 +326,15 @@ impl Server {
     }
 }
 
+impl Drop for Server {
+    fn drop(&mut self) {
+        // Mark that we shutdown
+        // TODO: we should be able to remove this once we remove the `unwrap`s in comms
+        self.is_shutdown
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(long)]
@@ -323,7 +368,10 @@ pub async fn init_runner() -> Server {
         }
     });
 
-    let keepalive = match std::env::var("CARTON_RUNNER_TRACE_FILE") {
+    // TODO: this is a little messy. Clean it up
+    let mut keepalive = None;
+    let mut pass_through_logger = None;
+    match std::env::var("CARTON_RUNNER_TRACE_FILE") {
         Ok(path) => {
             // Setup tracing
             let (chrome_layer, _guard) = ChromeLayerBuilder::new()
@@ -332,24 +380,64 @@ pub async fn init_runner() -> Server {
                 .build();
             tracing_subscriber::registry().with(chrome_layer).init();
 
-            Some(_guard)
+            keepalive = Some(_guard);
         }
         Err(_) => {
             // Initialize logging
-            // TODO: pass through slowlog to the main process
-            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-                .init();
+            let logger: &'static PassThroughLogger = Box::leak(Box::new(PassThroughLogger::new()));
+            log::set_logger(logger).unwrap();
+            log::set_max_level(log::LevelFilter::Trace);
 
-            None
+            pass_through_logger = Some(logger);
         }
     };
 
     // TODO: run the FD passing channel on top of UDS and get the appropriate channels out
-    let mut s = Server::connect(&PathBuf::from(args.uds_path)).await;
+    let mut s = Server::connect(&PathBuf::from(args.uds_path), pass_through_logger).await;
 
     if let Some(ka) = keepalive {
         s._keepalive.push(Box::new(ka));
     }
 
     s
+}
+
+/// A logging implementation that passes through to the main process
+struct PassThroughLogger {
+    tx: mpsc::UnboundedSender<LogRecord>,
+    rx: std::sync::Mutex<Option<mpsc::UnboundedReceiver<LogRecord>>>,
+}
+
+impl PassThroughLogger {
+    fn new() -> Self {
+        let (tx, rx) = mpsc::unbounded_channel();
+        Self {
+            tx,
+            rx: std::sync::Mutex::new(Some(rx)),
+        }
+    }
+
+    // Can only be called once
+    fn get_rx(&self) -> mpsc::UnboundedReceiver<LogRecord> {
+        self.rx.lock().unwrap().take().unwrap()
+    }
+}
+
+impl log::Log for PassThroughLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        // This isn't ideal, but for now, lets always return true and let the
+        // main process handle it
+        // TODO: improve this
+        true
+    }
+
+    fn log(&self, record: &log::Record) {
+        // TODO: check if this is reasonably efficient
+        // Ignore send failures
+        let _ = self.tx.send(record.into());
+    }
+
+    fn flush(&self) {
+        // Noop for now
+    }
 }
