@@ -33,6 +33,7 @@ tokio-util = {version = "0.7", features = ["compat"]}
 futures = "0.3"
 dashmap = "5.4.0"
 log = "0.4"
+pathdiff = "0.2.1"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 dlopen = "0.1"
