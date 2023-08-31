@@ -258,7 +258,7 @@ async fn fetch_range(
     range_start: u64,
     num_bytes: u64,
 ) -> bytes::Bytes {
-    println!("Request: {} {}", range_start, num_bytes);
+    log::trace!("Request: {url} {range_start} {num_bytes}");
     let range_end = range_start + num_bytes - 1;
     let res = client
         .get(url)
@@ -285,7 +285,7 @@ type FetchReturnType = Box<dyn AsyncRead + Unpin + Send + Sync>;
 type FetchReturnType = Box<dyn AsyncRead + Unpin>;
 
 async fn fetch(client: &reqwest::Client, url: &str, range_start: u64) -> FetchReturnType {
-    println!("Request: {}", range_start);
+    log::trace!("Request: {url} {range_start}");
     let res = client
         .get(url)
         .header(reqwest::header::RANGE, format!("bytes={range_start}-"))
