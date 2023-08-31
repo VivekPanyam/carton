@@ -5,6 +5,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use async_trait::async_trait;
 use carton_core::conversion_utils::{convert_map, convert_opt_map, convert_opt_vec, convert_vec};
+use carton_core::info::LinkedFile;
 use carton_core::types::{DataType, GenericStorage, RunnerOpt, Tensor};
 use numpy::ToPyArray;
 use pyo3::types::PyBytes;
@@ -58,27 +59,36 @@ pub(crate) fn create_pack_opts(
     self_tests: Option<Vec<SelfTest>>,
     examples: Option<Vec<Example>>,
     misc_files: Option<HashMap<String, Vec<u8>>>,
-) -> PyResult<carton_core::types::CartonInfo<PyTensorStorage>> {
+    linked_files: Option<HashMap<String, Vec<String>>>,
+) -> PyResult<carton_core::types::PackOpts<PyTensorStorage>> {
     let misc_files: Option<HashMap<String, LazyLoadedMiscFile>> = convert_opt_map(misc_files);
 
-    Ok(carton_core::types::CartonInfo {
-        model_name,
-        short_description,
-        model_description,
-        required_platforms: convert_required_platforms(required_platforms)?,
-        inputs: convert_opt_vec(inputs),
-        outputs: convert_opt_vec(outputs),
-        self_tests: convert_opt_vec(self_tests),
-        examples: convert_opt_vec(examples),
-        runner: carton_core::info::RunnerInfo {
-            runner_name,
-            required_framework_version: VersionReq::from_str(&required_framework_version).map_err(
-                |e| PyValueError::new_err(format!("Invalid `required_framework_version`: {e}")),
-            )?,
-            runner_compat_version,
-            opts: convert_opt_map(runner_opts),
+    Ok(carton_core::types::PackOpts {
+        info: carton_core::types::CartonInfo {
+            model_name,
+            short_description,
+            model_description,
+            required_platforms: convert_required_platforms(required_platforms)?,
+            inputs: convert_opt_vec(inputs),
+            outputs: convert_opt_vec(outputs),
+            self_tests: convert_opt_vec(self_tests),
+            examples: convert_opt_vec(examples),
+            runner: carton_core::info::RunnerInfo {
+                runner_name,
+                required_framework_version: VersionReq::from_str(&required_framework_version)
+                    .map_err(|e| {
+                        PyValueError::new_err(format!("Invalid `required_framework_version`: {e}"))
+                    })?,
+                runner_compat_version,
+                opts: convert_opt_map(runner_opts),
+            },
+            misc_files: convert_opt_map(misc_files),
         },
-        misc_files: convert_opt_map(misc_files),
+        linked_files: linked_files.map(|v| {
+            v.into_iter()
+                .map(|(k, v)| LinkedFile { sha256: k, urls: v })
+                .collect()
+        }),
     })
 }
 

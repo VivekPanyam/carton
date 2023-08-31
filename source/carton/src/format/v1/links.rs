@@ -18,6 +18,16 @@ pub(crate) struct Links {
     pub(crate) urls: HashMap<String, Vec<String>>,
 }
 
+impl From<Vec<crate::info::LinkedFile>> for Links {
+    fn from(value: Vec<crate::info::LinkedFile>) -> Self {
+        let mut urls = HashMap::new();
+        for item in value {
+            urls.insert(item.sha256, item.urls);
+        }
+        Links { version: 1, urls }
+    }
+}
+
 /// Take a path to a packed carton along with a map from sha256 to urls and shrink the carton by storing
 /// URLs instead of the orig files when possible
 #[cfg(not(target_family = "wasm"))]

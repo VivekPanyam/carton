@@ -18,6 +18,23 @@ use crate::{
     types::{Tensor, TensorStorage},
 };
 
+/// Options that can be specified when packing a model
+pub struct PackOpts<T>
+where
+    T: TensorStorage,
+{
+    pub info: CartonInfo<T>,
+
+    /// Any files to include in the carton as links (instead of the originals)
+    pub linked_files: Option<Vec<LinkedFile>>,
+}
+
+/// Info about files we want to include in the carton as links
+pub struct LinkedFile {
+    pub urls: Vec<String>,
+    pub sha256: String,
+}
+
 // Info about a carton
 pub struct CartonInfo<T>
 where

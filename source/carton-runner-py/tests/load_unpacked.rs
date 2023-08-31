@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use carton::{
     info::RunnerInfo,
-    types::{CartonInfo, GenericStorage, LoadOpts, RunnerOpt},
+    types::{CartonInfo, GenericStorage, LoadOpts, PackOpts, RunnerOpt},
     Carton,
 };
 use carton_runner_packager::RunnerPackage;
@@ -56,7 +56,7 @@ async fn test_pack_python_model() {
     std::env::set_var("CARTON_RUNNER_DIR", runner_dir.path());
     carton_runner_packager::install(download_info, true).await;
 
-    let pack_opts: CartonInfo<GenericStorage> = CartonInfo {
+    let info: CartonInfo<GenericStorage> = CartonInfo {
         model_name: None,
         short_description: None,
         model_description: None,
@@ -119,7 +119,10 @@ def get_model():
     // Pack and load the model
     let _model = Carton::load_unpacked(
         model_dir.path().to_str().unwrap().to_owned(),
-        pack_opts,
+        PackOpts {
+            info,
+            linked_files: None,
+        },
         LoadOpts::default(),
     )
     .await

@@ -97,10 +97,11 @@ impl Carton {
 
         // Launch a runner
         let (runner, runner_info) =
-            discover_or_get_runner_and_launch(&opts, &crate::types::Device::CPU).await?;
+            discover_or_get_runner_and_launch(&opts.info, &crate::types::Device::CPU).await?;
 
         // Set the runner_compat_version if the user didn't
-        opts.runner
+        opts.info
+            .runner
             .runner_compat_version
             .get_or_insert(runner_info.runner_compat_version);
 
@@ -147,10 +148,11 @@ impl Carton {
 
         // Launch a runner
         let (runner, runner_info) =
-            discover_or_get_runner_and_launch(&pack_opts, &crate::types::Device::CPU).await?;
+            discover_or_get_runner_and_launch(&pack_opts.info, &crate::types::Device::CPU).await?;
 
         // Set the runner_compat_version if the user didn't
         pack_opts
+            .info
             .runner
             .runner_compat_version
             .get_or_insert(runner_info.runner_compat_version);
@@ -180,7 +182,7 @@ impl Carton {
 
         // Ask the runner to load the model it just packed
         let info_with_extras = CartonInfoWithExtras {
-            info: pack_opts,
+            info: pack_opts.info,
             manifest_sha256: None,
         };
 

@@ -152,7 +152,7 @@ impl<'de> Deserialize<'de> for Device {
 }
 
 /// Options that can be specified when packing a model
-pub type PackOpts<T> = CartonInfo<T>;
+pub type PackOpts<T> = crate::info::PackOpts<T>;
 
 pub type CartonInfo<T> = crate::info::CartonInfo<T>;
 

@@ -133,6 +133,7 @@ fn load_unpacked(
     examples: Option<Vec<Example>>,
     misc_files: Option<HashMap<String, Vec<u8>>>,
     visible_device: Option<Device>,
+    linked_files: Option<HashMap<String, Vec<String>>>,
 ) -> PyResult<&PyAny> {
     maybe_init_logging();
     pyo3_asyncio::tokio::future_into_py(py, async move {
@@ -150,6 +151,7 @@ fn load_unpacked(
             self_tests,
             examples,
             misc_files,
+            linked_files,
         )?;
 
         // No need for overrides here
@@ -183,6 +185,7 @@ fn pack(
     self_tests: Option<Vec<SelfTest>>,
     examples: Option<Vec<Example>>,
     misc_files: Option<HashMap<String, Vec<u8>>>,
+    linked_files: Option<HashMap<String, Vec<String>>>,
 ) -> PyResult<&PyAny> {
     maybe_init_logging();
     pyo3_asyncio::tokio::future_into_py(py, async move {
@@ -200,6 +203,7 @@ fn pack(
             self_tests,
             examples,
             misc_files,
+            linked_files,
         )?;
 
         let out = carton_core::Carton::pack(path, opts)

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use carton::{
     info::RunnerInfo,
-    types::{CartonInfo, GenericStorage, LoadOpts},
+    types::{CartonInfo, GenericStorage, LoadOpts, PackOpts},
     Carton,
 };
 use criterion::{criterion_group, criterion_main, Criterion};
@@ -55,7 +55,7 @@ platform = "{}"
     println!("Creating runtime");
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    let pack_opts: CartonInfo<GenericStorage> = CartonInfo {
+    let info: CartonInfo<GenericStorage> = CartonInfo {
         model_name: None,
         short_description: None,
         model_description: None,
@@ -75,7 +75,14 @@ platform = "{}"
 
     let load_opts = LoadOpts::default();
     let carton = runtime
-        .block_on(Carton::load_unpacked("/tmp".into(), pack_opts, load_opts))
+        .block_on(Carton::load_unpacked(
+            "/tmp".into(),
+            PackOpts {
+                info,
+                linked_files: None,
+            },
+            load_opts,
+        ))
         .unwrap();
 
     c.bench_function("infer_noop", |b| {
