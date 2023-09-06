@@ -72,7 +72,7 @@ async def main():
         # Options for the python runner (including entrypoint info) go here
         runner_opts={
             # `carton_entrypoint.py` from above
-            "entrypoint": "carton_entrypoint",
+            "entrypoint_package": "carton_entrypoint",
 
             # The `get_model` function from above
             "entrypoint_fn": "get_model",
@@ -106,7 +106,7 @@ See https://docs.rs/semver/1.0.16/semver/enum.Op.html and https://docs.rs/semver
 
 For python models, there are two options that can be specified here and both are required.
 
-- `entrypoint`: The name of the python package that contains your entrypoint function, relative to the root of the code dir. <br/>Ex: `carton_entrypoint` for `carton_entrypoint.py` <br/>Ex: `some.sub.module` for `some/sub/module.py`
+- `entrypoint_package`: The name of the python package that contains your entrypoint function, relative to the root of the code dir. <br/>Ex: `carton_entrypoint` for `carton_entrypoint.py` <br/>Ex: `some.sub.module` for `some/sub/module.py`
 - `entrypoint_fn`: The name of the entrypoint function.<br/>Ex: `get_model`
 
 The sample code above shows usage of all of these options.
