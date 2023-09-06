@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use async_zip::{write::ZipFileWriter, ZipEntryBuilder};
 use lunchbox::{
     path::{LunchboxPathUtils, PathBuf},
     ReadableFileSystem,
@@ -26,6 +25,8 @@ pub(crate) async fn create_links(
     path: std::path::PathBuf,
     urls: HashMap<String, Vec<String>>,
 ) -> crate::error::Result<std::path::PathBuf> {
+    use std::io::Write;
+
     let fs = ZipFS::new(path).await;
 
     let has_links = PathBuf::from("/LINKS").exists(&fs).await;
@@ -49,8 +50,7 @@ pub(crate) async fn create_links(
     // Create the output zip file
     let (output_zip_file, output_zip_path) =
         tempfile::NamedTempFile::new().unwrap().keep().unwrap();
-    let mut output_zip_file = tokio::fs::File::from_std(output_zip_file);
-    let mut writer = ZipFileWriter::new(&mut output_zip_file);
+    let mut writer = zip::ZipWriter::new(output_zip_file);
 
     // For each file in the manifest
     let manifest = fs.read_to_string("/MANIFEST").await?;
@@ -58,10 +58,22 @@ pub(crate) async fn create_links(
         if let Some((file_path, sha256)) = line.rsplit_once("=") {
             if !links.urls.contains_key(sha256) {
                 // Only files that aren't contained in LINKS
-                let zip_entry =
-                    ZipEntryBuilder::new(file_path.into(), async_zip::Compression::Zstd);
                 let data = fs.read(file_path).await?;
-                writer.write_entry_whole(zip_entry, &data).await.unwrap();
+                let file_path = file_path.to_owned();
+                writer = tokio::task::spawn_blocking(move || {
+                    writer
+                        .start_file(
+                            file_path,
+                            zip::write::FileOptions::default()
+                                .compression_method(zip::CompressionMethod::Zstd)
+                                .large_file(data.len() >= 4 * 1024 * 1024 * 1024),
+                        )
+                        .unwrap();
+                    writer.write_all(&data).unwrap();
+                    writer
+                })
+                .await
+                .unwrap();
             }
         } else {
             return Err(CartonError::Other(
@@ -70,18 +82,36 @@ pub(crate) async fn create_links(
         }
     }
 
-    // Add MANIFEST
-    let zip_entry = ZipEntryBuilder::new("/MANIFEST".into(), async_zip::Compression::Zstd);
-    let data = fs.read("/MANIFEST").await?;
-    writer.write_entry_whole(zip_entry, &data).await.unwrap();
+    let manifest_data = fs.read("/MANIFEST").await?;
+    tokio::task::spawn_blocking(move || {
+        // Add MANIFEST
+        writer
+            .start_file(
+                "MANIFEST",
+                zip::write::FileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored),
+            )
+            .unwrap();
+        writer.write_all(&manifest_data).unwrap();
 
-    // Add LINKS
-    let zip_entry = ZipEntryBuilder::new("/LINKS".into(), async_zip::Compression::Zstd);
-    let data = toml::to_vec(&links).unwrap();
-    writer.write_entry_whole(zip_entry, &data).await.unwrap();
+        // Add LINKS
+        writer
+            .start_file(
+                "LINKS",
+                zip::write::FileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored),
+            )
+            .unwrap();
+        let data = toml::to_vec(&links).unwrap();
+        writer.write_all(&data).unwrap();
 
-    // Finish writing the zip file
-    writer.close().await.unwrap();
+        // Finish writing the zip file
+        log::trace!("Closing zip file writer");
+        let mut f = writer.finish().unwrap();
+        f.flush().unwrap();
+    })
+    .await
+    .unwrap();
 
     // Return the output path
     Ok(output_zip_path)

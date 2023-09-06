@@ -1,12 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
+use std::io::Write;
 use std::path::Path;
 
-use async_zip::write::ZipFileWriter;
-use async_zip::ZipEntryBuilder;
 use runner_interface_v1::slowlog::slowlog;
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
-use tokio::io::{AsyncWriteExt, BufWriter};
 use walkdir::WalkDir;
 
 use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
@@ -213,9 +211,7 @@ where
     log::trace!("Creating ZipFileWriter");
     let (output_zip_file, output_zip_path) =
         tempfile::NamedTempFile::new().unwrap().keep().unwrap();
-    let output_zip_file = tokio::fs::File::from_std(output_zip_file);
-    let mut output_zip_file = BufWriter::new(output_zip_file);
-    let mut writer = ZipFileWriter::new(&mut output_zip_file);
+    let mut writer = zip::ZipWriter::new(output_zip_file);
 
     // Generate a MANIFEST as we're zipping files and folders
     log::trace!("Packing metadata");
@@ -233,17 +229,28 @@ where
             .to_str()
             .unwrap()
             .to_owned();
-        let zip_entry = ZipEntryBuilder::new(relative_path.clone(), async_zip::Compression::Zstd);
 
         // Load the data and compute the sha256
         let mut hasher = Sha256::new();
         let data = tokio::fs::read(entry.path()).await.unwrap();
         hasher.update(&data);
         let sha256 = format!("{:x}", hasher.finalize());
-        manifest_contents.insert(relative_path, sha256);
+        manifest_contents.insert(relative_path.clone(), sha256);
 
         // Add the entry to the zip file
-        writer.write_entry_whole(zip_entry, &data).await.unwrap();
+        writer = tokio::task::spawn_blocking(move || {
+            writer
+                .start_file(
+                    relative_path,
+                    zip::write::FileOptions::default()
+                        .compression_method(zip::CompressionMethod::Zstd),
+                )
+                .unwrap();
+            writer.write_all(&data).unwrap();
+            writer
+        })
+        .await
+        .unwrap();
     }
 
     // Add the model dir
@@ -259,7 +266,6 @@ where
             .to_str()
             .unwrap()
             .to_owned();
-        let zip_entry = ZipEntryBuilder::new(relative_path.clone(), async_zip::Compression::Zstd);
 
         log::trace!("About to pack {}", &relative_path);
         let mut sl = slowlog(format!("Packaging file '{}'", &relative_path), 5)
@@ -281,10 +287,23 @@ where
 
         log::trace!("Computed sha256 of {}", &relative_path);
 
-        manifest_contents.insert(relative_path, sha256);
+        manifest_contents.insert(relative_path.clone(), sha256);
 
         // Add the entry to the zip file
-        writer.write_entry_whole(zip_entry, &data).await.unwrap();
+        writer = tokio::task::spawn_blocking(move || {
+            writer
+                .start_file(
+                    relative_path,
+                    zip::write::FileOptions::default()
+                        .compression_method(zip::CompressionMethod::Zstd)
+                        .large_file(data.len() >= 4 * 1024 * 1024 * 1024),
+                )
+                .unwrap();
+            writer.write_all(&data).unwrap();
+            writer
+        })
+        .await
+        .unwrap();
 
         log::trace!("Wrote to zip file");
 
@@ -298,16 +317,23 @@ where
         manifest_str += &format!("{k}={v}\n");
     }
 
-    let manifest_entry = ZipEntryBuilder::new("MANIFEST".into(), async_zip::Compression::Stored);
-    writer
-        .write_entry_whole(manifest_entry, manifest_str.as_bytes())
-        .await
-        .unwrap();
+    tokio::task::spawn_blocking(move || {
+        writer
+            .start_file(
+                "MANIFEST",
+                zip::write::FileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored),
+            )
+            .unwrap();
+        writer.write_all(manifest_str.as_bytes()).unwrap();
 
-    // Finish writing the zip file
-    log::trace!("Closing zip file writer");
-    writer.close().await.unwrap();
-    output_zip_file.flush().await.unwrap();
+        // Finish writing the zip file
+        log::trace!("Closing zip file writer");
+        let mut f = writer.finish().unwrap();
+        f.flush().unwrap();
+    })
+    .await
+    .unwrap();
 
     // Return the output path
     Ok(output_zip_path)
