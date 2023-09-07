@@ -389,6 +389,7 @@ dependencies = [
  "carton-macros",
  "carton-runner-interface",
  "carton-runner-packager",
+ "carton-utils",
  "chrono",
  "console-subscriber",
  "criterion",
@@ -412,6 +413,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tokio-util",
  "toml",
  "url",
@@ -613,7 +615,9 @@ name = "carton-utils"
 version = "0.0.1"
 dependencies = [
  "async_zip 0.0.11",
+ "bytes",
  "flate2",
+ "futures",
  "infer",
  "lazy_static",
  "libc",
@@ -628,6 +632,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "tokio-util",
  "toml",
 ]
 

@@ -71,7 +71,7 @@ pub async fn install(info: DownloadInfo, allow_local_files: bool) {
     let runner_dir = runner_base_dir.join(&info.id);
 
     // Extract into a temp dir and then move to the actual location
-    with_atomic_extraction(&runner_dir, |runner_dir| async move {
+    with_atomic_extraction(&runner_dir, (), |runner_dir, _| async move {
         let mut handles = Vec::new();
         for file in info.download_info {
             // If url is a local file, make sure allow_local_files is true
@@ -94,7 +94,7 @@ pub async fn install(info: DownloadInfo, allow_local_files: bool) {
                 let download_path = if is_file_path(&file.url) {
                     Path::new(&file.url)
                 } else {
-                    cached_download(&file.url, &file.sha256, &download_path, |_| {}, |_| {})
+                    cached_download(&file.url, &file.sha256, Some(&download_path), None, |_| {}, |_| {})
                         .await
                         .unwrap();
 

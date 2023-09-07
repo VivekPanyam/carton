@@ -84,7 +84,8 @@ pub(crate) async fn download_file<P: AsRef<std::path::Path>>(
     let out = carton_utils::download::cached_download(
         url,
         sha256,
-        download_path,
+        Some(download_path),
+        None,
         |total| {
             if let Some(size) = total {
                 sl.set_total(Some(bytesize::ByteSize(size)));

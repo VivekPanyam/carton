@@ -148,9 +148,9 @@ pub async fn extract(archive: &Path, out_dir: &Path) {
 /// This temporary directory is created in `target_dir.parent()` (with a name that starts with `.tmp`). This is necessary because
 /// we need to ensure that the temp dir and the target are on the same device to avoid EXDEV errors when renaming.
 /// Note: if `target_dir` exists, this function doesn't do anything
-pub async fn with_atomic_extraction<F, Fut>(target_dir: &Path, do_extract: F)
+pub async fn with_atomic_extraction<F, A, Fut>(target_dir: &Path, args: A, do_extract: F)
 where
-    F: FnOnce(PathBuf) -> Fut,
+    F: FnOnce(PathBuf, A) -> Fut,
     Fut: Future<Output = ()>,
 {
     if target_dir.exists() {
@@ -167,7 +167,7 @@ where
     let extraction_dir = tempdir.path().join("extraction");
 
     // Extract
-    do_extract(extraction_dir.clone()).await;
+    do_extract(extraction_dir.clone(), args).await;
 
     // Move to the target directory. This should be atomic so it won't break anything
     // if multiple installs happen at the same time.

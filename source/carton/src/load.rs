@@ -156,7 +156,7 @@ where
                             path.into(),
                             FileInfo {
                                 url: url.clone(),
-                                _sha256: sha256.to_owned(),
+                                sha256: sha256.to_owned(),
                             },
                         ))
                     } else {

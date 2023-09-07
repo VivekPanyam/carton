@@ -1,7 +1,7 @@
 use crate::error::{CartonError, Result};
 use async_trait::async_trait;
 use dashmap::DashMap;
-use futures::TryStreamExt;
+use futures::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
 use lunchbox::{
     path::PathBuf,
@@ -16,7 +16,8 @@ use std::{
     pin::Pin,
     task::Poll,
 };
-use tokio::io::AsyncRead;
+use tokio::{io::AsyncRead, sync::mpsc};
+use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 /// HTTPFile implements [`AsyncRead`] on top of an HTTP request
@@ -24,9 +25,6 @@ pub(crate) struct HTTPFile {
     client: reqwest::Client,
     info: FileInfo,
     file_len: u64,
-
-    // The current position
-    seek_pos: u64,
 
     state: RequestState,
 }
@@ -102,7 +100,6 @@ impl HTTPFile {
             client,
             info,
             file_len,
-            seek_pos: 0,
             state: RequestState::None,
         })
     }
@@ -119,19 +116,15 @@ impl AsyncRead for HTTPFile {
                 RequestState::None => {
                     // We don't have a request in flight yet. Create one
                     let url = self.info.url.clone();
+                    let sha256 = self.info.sha256.clone();
 
                     // reqwest::Client is just an Arc internally so it's fairly cheap for us to clone
                     let client = self.client.clone();
-                    let range_start = self.seek_pos;
 
-                    // We're already at the end of the file so let the reader know we're done
-                    if range_start == self.file_len {
-                        return Poll::Ready(Ok(()));
-                    }
-
-                    self.state = RequestState::Request(Box::pin(async move {
-                        fetch(&client, &url, range_start).await
-                    }));
+                    self.state =
+                        RequestState::Request(Box::pin(
+                            async move { fetch(client, url, sha256).await },
+                        ));
                 }
                 RequestState::Request(v) => match v.as_mut().poll(cx) {
                     Poll::Ready(res) => self.state = RequestState::Response(Box::pin(res)),
@@ -149,14 +142,44 @@ type FetchReturnType = Box<dyn AsyncRead + Unpin + Send + Sync>;
 #[cfg(target_family = "wasm")]
 type FetchReturnType = Box<dyn AsyncRead + Unpin>;
 
-async fn fetch(client: &reqwest::Client, url: &str, range_start: u64) -> FetchReturnType {
+#[cfg(not(target_family = "wasm"))]
+async fn fetch(_client: reqwest::Client, url: String, sha256: String) -> FetchReturnType {
+    // Note: on non-wasm platforms, we aren't using `client`; we use `cached_download` instead
     log::trace!("Starting fetch: {url}");
-    let res = client
-        .get(url)
-        .header(reqwest::header::RANGE, format!("bytes={range_start}-"))
-        .send()
+    let (tx, rx) = mpsc::channel(16);
+
+    // Spawn a task to download and send chunks to our queue
+    tokio::spawn(async move {
+        carton_utils::download::cached_download::<String>(
+            &url,
+            &sha256,
+            None,
+            Some(tx),
+            |_| {},
+            |_| {},
+        )
         .await
         .unwrap();
+    });
+
+    // Turn it into a stream
+    let stream = ReceiverStream::new(rx);
+
+    // Convert from a stream into futures::io::AsyncRead
+    let stream = stream.map(|v| Ok(v)).into_async_read();
+
+    // To tokio::io::AsyncRead
+    let stream = stream.compat();
+
+    Box::new(stream)
+}
+
+#[cfg(target_family = "wasm")]
+async fn fetch(client: reqwest::Client, url: String, _sha256: String) -> FetchReturnType {
+    // Note: on WASM, we don't verify the sha256
+    // TODO: fix this
+    log::trace!("Starting fetch: {url}");
+    let res = client.get(&url).send().await.unwrap();
 
     if !res.status().is_success() {
         // TODO: return an error instead of panic
@@ -224,9 +247,7 @@ pub(crate) struct HttpFS {
 #[derive(Clone)]
 pub(crate) struct FileInfo {
     pub url: String,
-
-    // TODO: actually verify that the sha256 matches the expected value
-    pub _sha256: String,
+    pub sha256: String,
 }
 
 impl HasFileType for HttpFS {
