@@ -39,7 +39,11 @@ class Model:
             "out": tensors["x"] * 2
         }
 
-def get_model():
+def get_model(an_example_custom_option: bool):
+    """
+    Your entrypoint function can also accept custom options as arguments.
+    See below for more details.
+    """
     return Model()
 ```
 
@@ -76,6 +80,10 @@ async def main():
 
             # The `get_model` function from above
             "entrypoint_fn": "get_model",
+
+            # A custom option specific to your model. This is passed to your
+            # entrypoint function without the `model.` prefix
+            "model.an_example_custom_option": False,
         }
     )
 
@@ -104,12 +112,16 @@ See https://docs.rs/semver/1.0.16/semver/enum.Op.html and https://docs.rs/semver
 
 ### `runner_opts`
 
-For python models, there are two options that can be specified here and both are required.
+For python models, there are two options that must be specified here.
 
 - `entrypoint_package`: The name of the python package that contains your entrypoint function, relative to the root of the code dir. <br/>Ex: `carton_entrypoint` for `carton_entrypoint.py` <br/>Ex: `some.sub.module` for `some/sub/module.py`
 - `entrypoint_fn`: The name of the entrypoint function.<br/>Ex: `get_model`
 
-The sample code above shows usage of all of these options.
+The sample code above shows usage of both of these options.
+
+You may also provide custom options specific to your model. These options must be prefixed with `model.` and are passed to your entrypoint function without the prefix.
+
+Valid types for options are numbers (integers and floats), strings, and booleans.
 
 ## Other options
 

@@ -4,7 +4,7 @@ use carton_runner_interface::{slowlog::slowlog, types::RunnerOpt};
 use carton_utils::archive::extract_zip;
 use lunchbox::path::{LunchboxPathUtils, PathBuf};
 use path_clean::PathClean;
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyDict};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, BufReader};
 use tracing::Instrument;
 
@@ -219,11 +219,29 @@ where
                 // Import the module
                 let module = PyModule::import(py, module_name.as_str()).unwrap();
 
+                // Get all the custom options specified by the user (anything starting with `model.`)
+                let kwargs = PyDict::new(py);
+                for (key, val) in &opts {
+                    if let Some(key) = key.strip_prefix("model.") {
+                        kwargs
+                            .set_item(
+                                key,
+                                match val {
+                                    RunnerOpt::Integer(v) => v.into_py(py),
+                                    RunnerOpt::Double(v) => v.into_py(py),
+                                    RunnerOpt::String(v) => v.into_py(py),
+                                    RunnerOpt::Boolean(v) => v.into_py(py),
+                                },
+                            )
+                            .unwrap();
+                    }
+                }
+
                 // Get the entrypoint and run it to get the "model" that we'll use for inference
                 let model = module
                     .getattr(entrypoint_fn.as_str())
                     .unwrap()
-                    .call0()
+                    .call((), Some(kwargs))
                     .map_err(pyerr_to_string_with_traceback)
                     .unwrap();
 
