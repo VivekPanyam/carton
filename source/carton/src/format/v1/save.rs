@@ -1,7 +1,8 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use path_clean::PathClean;
 use runner_interface_v1::slowlog::slowlog;
 use sha2::{Digest, Sha256};
 use tempfile::TempDir;
@@ -216,6 +217,7 @@ where
     // Generate a MANIFEST as we're zipping files and folders
     log::trace!("Packing metadata");
     let mut manifest_contents = BTreeMap::new();
+    let mut symlink_targets = HashMap::new();
     for entry in WalkDir::new(&tempdir) {
         let entry = entry.unwrap();
         if entry.file_type().is_dir() {
@@ -235,7 +237,7 @@ where
         let data = tokio::fs::read(entry.path()).await.unwrap();
         hasher.update(&data);
         let sha256 = format!("{:x}", hasher.finalize());
-        manifest_contents.insert(relative_path.clone(), sha256);
+        manifest_contents.insert(relative_path.clone(), Some(sha256));
 
         // Add the entry to the zip file
         writer = tokio::task::spawn_blocking(move || {
@@ -272,45 +274,143 @@ where
             .await
             .without_progress();
 
-        // Load the data and compute the sha256
-        let mut hasher = Sha256::new();
-        let data = tokio::fs::read(entry.path()).await.unwrap();
+        // Should we store this file as a symlink?
+        let symlink_target = if entry.path_is_symlink() {
+            let absolute_file_path = entry.path();
+            assert!(absolute_file_path.is_absolute());
 
-        log::trace!("Done reading file {}", &relative_path);
+            // Get the target
+            let symlink_target = tokio::fs::read_link(absolute_file_path).await.unwrap();
 
-        let (data, sha256) = tokio::task::spawn_blocking(move || {
-            hasher.update(&data);
-            (data, format!("{:x}", hasher.finalize()))
-        })
-        .await
-        .unwrap();
+            // Make the target absolute
+            let symlink_target = if symlink_target.is_relative() {
+                absolute_file_path.parent().unwrap().join(symlink_target)
+            } else {
+                symlink_target
+            };
 
-        log::trace!("Computed sha256 of {}", &relative_path);
+            // Normalize the path
+            let symlink_target = symlink_target.clean();
 
-        manifest_contents.insert(relative_path.clone(), sha256);
+            // Decide what to do
+            if symlink_target.starts_with(&model_dir_path) {
+                // Store as a relative symlink
+                Some(
+                    pathdiff::diff_paths(symlink_target, absolute_file_path.parent().unwrap())
+                        .unwrap(),
+                )
+            } else {
+                // The symlink points outside the model dir; store as a file
+                None
+            }
+        } else {
+            // Not a symlink
+            None
+        };
 
-        // Add the entry to the zip file
-        writer = tokio::task::spawn_blocking(move || {
+        // Handle symlinks
+        if let Some(symlink_target) = symlink_target {
+            // Turn it into a string
+            let symlink_target = symlink_target.to_str().unwrap().to_owned();
+
+            // Store an empty sha256 for now and we'll update it after all the files have been added
+            manifest_contents.insert(relative_path.clone(), None);
+
+            // Store the symlink target for us to use later
+            symlink_targets.insert(relative_path.clone(), symlink_target.clone());
+
             writer
-                .start_file(
+                .add_symlink(
                     relative_path,
-                    zip::write::FileOptions::default()
-                        .compression_method(zip::CompressionMethod::Zstd)
-                        .large_file(data.len() >= 4 * 1024 * 1024 * 1024),
+                    symlink_target,
+                    zip::write::FileOptions::default(),
                 )
                 .unwrap();
-            writer.write_all(&data).unwrap();
-            writer
-        })
-        .await
-        .unwrap();
+        } else {
+            // Load the data and compute the sha256
+            let mut hasher = Sha256::new();
+            let data = tokio::fs::read(entry.path()).await.unwrap();
+
+            log::trace!("Done reading file {}", &relative_path);
+
+            let (data, sha256) = tokio::task::spawn_blocking(move || {
+                hasher.update(&data);
+                (data, format!("{:x}", hasher.finalize()))
+            })
+            .await
+            .unwrap();
+
+            log::trace!("Computed sha256 of {}", &relative_path);
+
+            manifest_contents.insert(relative_path.clone(), Some(sha256));
+
+            // Add the entry to the zip file
+            writer = tokio::task::spawn_blocking(move || {
+                writer
+                    .start_file(
+                        relative_path,
+                        zip::write::FileOptions::default()
+                            .compression_method(zip::CompressionMethod::Zstd)
+                            .large_file(data.len() >= 4 * 1024 * 1024 * 1024),
+                    )
+                    .unwrap();
+                writer.write_all(&data).unwrap();
+                writer
+            })
+            .await
+            .unwrap();
+        }
 
         log::trace!("Wrote to zip file");
 
         sl.done();
     }
 
-    // 5. Write the manifest to the zip file in alphabetical order (we're using a BTreeMap)
+    // Get sha256 values for all the symlinks
+    let manifest_contents = manifest_contents
+        .iter()
+        .map(|(k, v)| {
+            if v.is_none() {
+                let mut path = k.clone();
+                let mut visited = HashSet::new();
+                loop {
+                    let target = symlink_targets.get(&path).unwrap();
+
+                    // `target` is a relative path so we need to convert it to absolute
+                    let target = PathBuf::from(path).parent().unwrap().join(target);
+
+                    // Normalize the target
+                    let target = target.clean().to_str().unwrap().to_owned();
+
+                    let sha = manifest_contents.get(&target).unwrap();
+
+                    if visited.contains(&target) {
+                        // We've already seen this
+                        // TODO: don't panic
+                        panic!("Got symlink loop when packing a model! File: {k}");
+                    }
+
+                    visited.insert(target.clone());
+
+                    match sha {
+                        None => {
+                            // A symlink to a symlink so we should keep looping
+                            path = target;
+                        }
+
+                        Some(sha) => {
+                            // Got the target
+                            return (k, sha.clone());
+                        }
+                    }
+                }
+            }
+
+            (k, v.as_ref().unwrap().clone())
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    // 5. Write the manifest to the zip file in alphabetical order (we're using a BTreeMap for manifest_contents)
     log::trace!("Writing manifest");
     let mut manifest_str = String::new();
     for (k, v) in manifest_contents {

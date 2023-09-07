@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     sync::Arc,
 };
 
@@ -19,20 +19,23 @@ use tokio::io::AsyncRead;
 /// It only supports readable filesystems
 /// Each of the ops are implemented as below;
 /// - `open`:
+///     Resolve the symlink chain (if any) by calling `canonicalize`
 ///     Try the top FS and then the bottom one on failure
 /// - `canonicalize`:
-///     If it's a file on the top filesystem, call through to canonicalize there
-///     If it's a file on the bottom filesystem, call through to canonicalize there
-///     Else use path_clean to normalize the path
+///     Loop: Normalize the path, call `read_link` and continue looping if it was actually a symlink
+///     This resolves the entire symlink chain
 /// - `metadata`:
+///     Resolve the symlink chain (if any) by calling `canonicalize`
 ///     Try the top FS and then the bottom one on failure
 /// - `read`:
+///     Resolve the symlink chain (if any) by calling `canonicalize`
 ///     Try the top FS and then the bottom one on failure
 /// - `read_dir`:
 ///     Call read_dir on both filesystems and merge the result
 /// - `read_link`:
 ///     Try the top FS and then the bottom one on failure
 /// - `read_to_string`:
+///     Resolve the symlink chain (if any) by calling `canonicalize`
 ///     Try the top FS and then the bottom one on failure
 /// - `symlink_metadata`:
 ///     Try the top FS and then the bottom one on failure
@@ -108,7 +111,8 @@ where
     where
         Self::FileType: ReadableFile,
     {
-        let p = path.as_ref();
+        // Find the file we want to open (following symlink chains)
+        let p = &self.canonicalize(path).await?;
 
         fallthrough(
             || async { self.top.open(p).await.map(OverlayFile::Top) },
@@ -118,22 +122,47 @@ where
     }
 
     async fn canonicalize(&self, path: impl PathType) -> std::io::Result<PathBuf> {
-        let p = path.as_ref();
+        // We don't currently support directory symlinks. This means we only need to worry about the last
+        // component being a symlink. This means we can just open the file at `path` and keep following symlinks
+        // until we hit a target that isn't a symlink (or doesn't exist)
+        let mut path: PathBuf = path.as_ref().to_owned();
+        let mut visited = HashSet::new();
+        loop {
+            // Normalize the path
+            path = path_clean::clean(path.as_str()).into();
 
-        if self.top.metadata(p).await.is_ok() {
-            // It exists on the top fs
-            self.top.canonicalize(p).await
-        } else if self.bottom.metadata(p).await.is_ok() {
-            // It exists on the bottom fs
-            self.bottom.canonicalize(p).await
-        } else {
-            // We'll use path_clean to normalize the path
-            Ok(path_clean::clean(p.as_str()).into())
+            // Return an error if we've already visited this path
+            if visited.contains(&path) {
+                return Err(std::io::Error::new(
+                    // TODO: use ErrorKind::FilesystemLoop once stable
+                    std::io::ErrorKind::Other,
+                    "Found symlink loop",
+                ));
+            }
+
+            // Track that we've seen the path
+            visited.insert(path.clone());
+
+            // Open the file and check if it's a symlink
+            let f = self.read_link(&path).await;
+
+            // This will fail if the file doesn't exist or if it wasn't a symlink
+            // Either way, we can just return the path
+            if f.is_err() {
+                return Ok(path);
+            }
+
+            // Otherwise, update the path and continue looping
+            let target = f.unwrap();
+
+            // Relative to the parent dir
+            path = path.parent().unwrap().join(target);
         }
     }
 
     async fn metadata(&self, path: impl PathType) -> std::io::Result<Metadata> {
-        let p = path.as_ref();
+        // Find the file we want to open (following symlink chains)
+        let p = &self.canonicalize(path).await?;
 
         fallthrough(
             || async { self.top.metadata(p).await },
@@ -143,7 +172,8 @@ where
     }
 
     async fn read(&self, path: impl PathType) -> std::io::Result<Vec<u8>> {
-        let p = path.as_ref();
+        // Find the file we want to open (following symlink chains)
+        let p = &self.canonicalize(path).await?;
 
         fallthrough(
             || async { self.top.read(p).await },
@@ -158,6 +188,7 @@ where
         &self,
         path: impl PathType,
     ) -> std::io::Result<ReadDir<Self::ReadDirPollerType, Self>> {
+        // We don't support directory symlinks yet so we don't have to do anything special here
         // This isn't super ideal because we're doing complete read_dir operations on both filesystems up front
         // There's probably a better way to do it as part of poll_next_entry, but this is fine for now
         let p = path.as_ref();
@@ -213,6 +244,7 @@ where
     }
 
     async fn read_link(&self, path: impl PathType) -> std::io::Result<PathBuf> {
+        // Note: We don't want to follow symlink chains here
         let p = path.as_ref();
 
         fallthrough(
@@ -223,7 +255,8 @@ where
     }
 
     async fn read_to_string(&self, path: impl PathType) -> std::io::Result<String> {
-        let p = path.as_ref();
+        // Find the file we want to open (following symlink chains)
+        let p = &self.canonicalize(path).await?;
 
         fallthrough(
             || async { self.top.read_to_string(p).await },
@@ -233,6 +266,7 @@ where
     }
 
     async fn symlink_metadata(&self, path: impl PathType) -> std::io::Result<Metadata> {
+        // Note: We don't want to follow symlink chains here
         let p = path.as_ref();
 
         fallthrough(
