@@ -1,6 +1,8 @@
 use crate::error::{CartonError, Result};
 use async_trait::async_trait;
+use dashmap::DashMap;
 use futures::TryStreamExt;
+use lazy_static::lazy_static;
 use lunchbox::{
     path::PathBuf,
     types::{
@@ -55,26 +57,46 @@ enum RequestState {
     Response(Pin<Box<dyn AsyncRead + Send + Sync>>),
 }
 
+lazy_static! {
+    /// A map from URLs to cached data. This assumes a url gives us the same data on each request (at least during
+    /// the time this process is running).
+    /// We already rely on this assumption in several places so this is okay.
+    static ref FILE_INFO_CACHE: DashMap<String, CachedData> = DashMap::new();
+}
+
+struct CachedData {
+    file_len: u64,
+}
+
 impl HTTPFile {
     pub async fn new(client: reqwest::Client, info: FileInfo) -> Result<HTTPFile> {
-        let res = client.head(&info.url).send().await?;
+        // Check the cache
+        let file_len = match FILE_INFO_CACHE.get(&info.url) {
+            Some(cached_data) => cached_data.file_len,
+            None => {
+                // TODO: maybe lazily fetch this
+                // TODO: include the URL in the error messages below
+                let res = client.head(&info.url).send().await?;
+                let file_len = res
+                    .headers()
+                    .get(reqwest::header::CONTENT_LENGTH)
+                    .ok_or(CartonError::Other(
+                        "Tried to fetch a URL that didn't have a content length",
+                    ))?
+                    .to_str()
+                    .map_err(|_| {
+                        CartonError::Other("Tried to fetch a URL with an invalid content length.")
+                    })?
+                    .parse()
+                    .map_err(|_| {
+                        CartonError::Other("Tried to fetch a URL with an invalid content length.")
+                    })?;
 
-        // TODO: maybe lazily fetch this
-        // TODO: include the URL in the error messages below
-        let file_len = res
-            .headers()
-            .get(reqwest::header::CONTENT_LENGTH)
-            .ok_or(CartonError::Other(
-                "Tried to fetch a URL that didn't have a content length",
-            ))?
-            .to_str()
-            .map_err(|_| {
-                CartonError::Other("Tried to fetch a URL with an invalid content length.")
-            })?
-            .parse()
-            .map_err(|_| {
-                CartonError::Other("Tried to fetch a URL with an invalid content length.")
-            })?;
+                FILE_INFO_CACHE.insert(info.url.clone(), CachedData { file_len });
+
+                file_len
+            }
+        };
 
         Ok(Self {
             client,
@@ -128,6 +150,7 @@ type FetchReturnType = Box<dyn AsyncRead + Unpin + Send + Sync>;
 type FetchReturnType = Box<dyn AsyncRead + Unpin>;
 
 async fn fetch(client: &reqwest::Client, url: &str, range_start: u64) -> FetchReturnType {
+    log::trace!("Starting fetch: {url}");
     let res = client
         .get(url)
         .header(reqwest::header::RANGE, format!("bytes={range_start}-"))
