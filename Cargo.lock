@@ -109,8 +109,23 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "xz2",
- "zstd",
- "zstd-safe",
+ "zstd 0.11.2+zstd.1.5.2",
+ "zstd-safe 5.0.2+zstd.1.5.2",
+]
+
+[[package]]
+name = "async-compression"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d495b6dc0184693324491a5ac05f559acc97bf937ab31d7a1c33dd0016be6d2b"
+dependencies = [
+ "flate2",
+ "futures-core",
+ "futures-io",
+ "memchr",
+ "pin-project-lite",
+ "zstd 0.12.4",
+ "zstd-safe 6.0.3+zstd.1.5.2",
 ]
 
 [[package]]
@@ -151,13 +166,26 @@ version = "0.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c50d29ab7e2f9e808cca1a69ea56a36f4ff216f54a41a23aae1fd4afc05cc020"
 dependencies = [
- "async-compression",
+ "async-compression 0.3.15",
  "chrono",
  "crc32fast",
  "log",
  "pin-project",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "async_zip"
+version = "0.0.15"
+source = "git+https://github.com/VivekPanyam/rs-async-zip.git?branch=fix_zip64#a4f1dc7b438f8ecd6092090df03bab31b69836ab"
+dependencies = [
+ "async-compression 0.4.2",
+ "chrono",
+ "crc32fast",
+ "futures-util",
+ "pin-project",
+ "thiserror",
 ]
 
 [[package]]
@@ -490,7 +518,7 @@ dependencies = [
 name = "carton-runner-packager"
 version = "0.0.1"
 dependencies = [
- "async_zip",
+ "async_zip 0.0.11",
  "base64 0.21.0",
  "carton-utils",
  "chrono",
@@ -583,7 +611,7 @@ dependencies = [
 name = "carton-utils"
 version = "0.0.1"
 dependencies = [
- "async_zip",
+ "async_zip 0.0.11",
  "flate2",
  "infer",
  "lazy_static",
@@ -3841,21 +3869,21 @@ dependencies = [
  "pbkdf2",
  "sha1",
  "time 0.3.19",
- "zstd",
+ "zstd 0.11.2+zstd.1.5.2",
 ]
 
 [[package]]
 name = "zipfs"
 version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4dd74aa0eb4eb4750c2bfca975dca09f4e8a4a5fe1c8c0817b0c97772d88ae8"
+source = "git+https://github.com/VivekPanyam/ZipFS.git?branch=update_async_zip#0060946acaf34f5f313f7ac9ad701b3e3598c57d"
 dependencies = [
  "async-trait",
- "async_zip",
+ "async_zip 0.0.15",
  "lunchbox",
  "path-clean",
  "pin-project",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -3864,7 +3892,16 @@ version = "0.11.2+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20cc960326ece64f010d2d2107537f26dc589a6573a316bd5b1dba685fa5fde4"
 dependencies = [
- "zstd-safe",
+ "zstd-safe 5.0.2+zstd.1.5.2",
+]
+
+[[package]]
+name = "zstd"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a27595e173641171fc74a1232b7b1c7a7cb6e18222c11e9dfb9888fa424c53c"
+dependencies = [
+ "zstd-safe 6.0.3+zstd.1.5.2",
 ]
 
 [[package]]
@@ -3872,6 +3909,16 @@ name = "zstd-safe"
 version = "5.0.2+zstd.1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d2a5585e04f9eea4b2a3d1eca508c4dee9592a89ef6f450c11719da0726f4db"
+dependencies = [
+ "libc",
+ "zstd-sys",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "6.0.3+zstd.1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68e4a3f57d13d0ab7e478665c60f35e2a613dcd527851c2c7287ce5c787e134a"
 dependencies = [
  "libc",
  "zstd-sys",
