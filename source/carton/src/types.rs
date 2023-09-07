@@ -39,9 +39,8 @@ pub struct LoadOpts {
 pub type RunnerOpt = crate::info::RunnerOpt;
 
 /// Supported device types
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub enum Device {
-    #[default]
     CPU,
     GPU {
         /// The UUID of the specified device
@@ -49,6 +48,19 @@ pub enum Device {
         /// See https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#env-vars
         uuid: Option<String>,
     },
+}
+
+/// Default to the first visible GPU (if any)
+impl Default for Device {
+    #[cfg(not(target_family = "wasm"))]
+    fn default() -> Self {
+        Device::maybe_from_index(0)
+    }
+
+    #[cfg(target_family = "wasm")]
+    fn default() -> Self {
+        Device::GPU { uuid: None }
+    }
 }
 
 impl Device {

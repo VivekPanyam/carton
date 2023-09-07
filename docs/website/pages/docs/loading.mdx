@@ -40,7 +40,10 @@ Allowed values:
  - A GPU index (e.g. `0`, `1`, etc.)
  - A GPU UUID (including the `GPU-` or `MIG-GPU-` prefix).<br/>See https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#env-vars for more details.
 
+The default is GPU 0 (or CPU if no GPUs are available).
+
 Note: a visible device does not necessarily mean that the model will use that device; it is up to the model to actually use it (e.g. by moving itself to GPU if it sees one available).
+Note: If a GPU index is specified, but no GPUs are available, Carton will print a warning and attempt to fallback to CPU
 
 ```python
 await carton.load(
