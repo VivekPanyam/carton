@@ -20,7 +20,3 @@ members = [
 [profile.release]
 lto = "thin"
 debug = true
-
-[patch.crates-io]
-# Temporary patch while we're waiting for an upstream merge
-reqwest = { git = "https://github.com/VivekPanyam/reqwest.git", branch = "update_wasm_streams" }
