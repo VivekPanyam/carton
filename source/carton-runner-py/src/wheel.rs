@@ -51,7 +51,8 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
     uncached_download(
         url,
         sha256,
-        &download_path,
+        Some(&download_path),
+        None,
         |total| {
             if let Some(size) = total {
                 sl.set_total(Some(bytesize::ByteSize(size)));
@@ -72,7 +73,10 @@ pub async fn install_wheel(url: &str, sha256: &str) -> PathBuf {
         .without_progress();
 
     // Unzip
-    with_atomic_extraction(&target_dir, |out_dir| extract_zip(download_path, out_dir)).await;
+    with_atomic_extraction(&target_dir, (), |out_dir, _| {
+        extract_zip(download_path, out_dir)
+    })
+    .await;
 
     sl.done();
 

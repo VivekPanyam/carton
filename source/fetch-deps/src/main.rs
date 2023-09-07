@@ -20,9 +20,16 @@ async fn fetch_libtorch() {
         let download_path = td.path().join("download");
 
         // Download the file
-        carton_utils::download::cached_download(url, sha256, &download_path, |_| {}, |_| {})
-            .await
-            .unwrap();
+        carton_utils::download::cached_download(
+            url,
+            sha256,
+            Some(&download_path),
+            None,
+            |_| {},
+            |_| {},
+        )
+        .await
+        .unwrap();
 
         // Unpack it (the zip file contains a libtorch dir so we unpack in the parent dir)
         carton_utils::archive::extract_zip(download_path.as_path(), libtorch_dir.parent().unwrap())
