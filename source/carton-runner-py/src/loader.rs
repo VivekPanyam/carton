@@ -3,6 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use carton_runner_interface::{slowlog::slowlog, types::RunnerOpt};
 use carton_utils::archive::extract_zip;
 use lunchbox::path::{LunchboxPathUtils, PathBuf};
+use path_clean::PathClean;
 use pyo3::prelude::*;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, BufReader};
 use tracing::Instrument;
@@ -112,18 +113,41 @@ where
         // Handles for our parallel copies
         let mut handles = Vec::new();
 
-        // TODO: handle loops, etc here if needed (e.g. once we support symlinks)
+        // TODO: handle loops, etc here if needed (e.g. if we support directory symlinks)
         let mut to_process = VecDeque::new();
         to_process.push_back(PathBuf::from("."));
         while let Some(path) = to_process.pop_front() {
             let mut dir = fs.read_dir(path).await.unwrap();
             while let Some(entry) = dir.next_entry().await.unwrap() {
-                // TODO: entry.metadata() doesn't follow symlinks
-                if entry.metadata().await.unwrap().is_dir() {
+                // entry.metadata() doesn't follow symlinks
+                let metadata = entry.metadata().await.unwrap();
+                if metadata.is_dir() {
                     to_process.push_back(entry.path());
-                } else {
+                } else if metadata.is_symlink() {
+                    // Get the absolute path of the entry
                     let filepath = entry.path();
-                    let target_path = filepath.to_path(&model_dir_path);
+                    let target_path = filepath.to_path(&model_dir_path).clean();
+                    assert!(target_path.starts_with(&model_dir_path));
+
+                    // Get the symlink target
+                    let symlink_target = std::path::PathBuf::from(
+                        fs.read_link(&filepath).await.unwrap().to_string(),
+                    );
+                    assert!(symlink_target.is_relative());
+
+                    // Create the dirs containing the symlink
+                    tokio::fs::create_dir_all(target_path.parent().unwrap())
+                        .await
+                        .unwrap();
+
+                    // Create the symlink
+                    tokio::fs::symlink(symlink_target, target_path)
+                        .await
+                        .unwrap();
+                } else {
+                    // Get the absolute path of the entry
+                    let filepath = entry.path();
+                    let target_path = filepath.to_path(&model_dir_path).clean();
                     assert!(target_path.starts_with(&model_dir_path));
 
                     let f = fs.open(&filepath).await.unwrap();
