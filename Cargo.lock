@@ -357,7 +357,6 @@ name = "carton"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "async_zip",
  "bytes",
  "carton-macros",
  "carton-runner-interface",
@@ -389,6 +388,7 @@ dependencies = [
  "url",
  "uuid",
  "walkdir",
+ "zip",
  "zipfs",
 ]
 
@@ -518,7 +518,6 @@ dependencies = [
 name = "carton-runner-py"
 version = "0.0.1"
 dependencies = [
- "async_zip",
  "bytes",
  "bytesize",
  "carton",
