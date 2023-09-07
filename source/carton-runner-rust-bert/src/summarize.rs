@@ -105,7 +105,7 @@ pub mod pack {
 
     use carton::{
         info::{DataType, Example, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
-        types::{GenericStorage, PackOpts, Tensor},
+        types::{CartonInfo, GenericStorage, PackOpts, Tensor},
     };
 
     use crate::{download_file, ModelConfig};
@@ -181,7 +181,7 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
         res.3.unwrap();
 
         // Pack the model and return the path
-        carton::Carton::pack::<GenericStorage>(dir.path().to_str().unwrap().to_owned(), PackOpts {
+        let info = CartonInfo {
             model_name: Some("BART".into()),
             short_description: Some("A BART model fine-tuned on CNN/Daily Mail to summarize text.".into()),
             model_description: Some("See [here](https://github.com/facebookresearch/fairseq/blob/main/examples/bart/README.md) for more details.".into()),
@@ -224,6 +224,16 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
                 opts: None,
             },
             misc_files: None,
-        }).await.unwrap()
+        };
+
+        carton::Carton::pack::<GenericStorage>(
+            dir.path().to_str().unwrap().to_owned(),
+            PackOpts {
+                info,
+                linked_files: None,
+            },
+        )
+        .await
+        .unwrap()
     }
 }

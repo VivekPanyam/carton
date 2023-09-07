@@ -2,7 +2,7 @@
 
 use carton::{
     info::RunnerInfo,
-    types::{GenericStorage, LoadOpts, PackOpts, RunnerOpt},
+    types::{CartonInfo, GenericStorage, LoadOpts, PackOpts, RunnerOpt},
     Carton,
 };
 use semver::VersionReq;
@@ -14,7 +14,7 @@ async fn main() {
     std::env::set_var("CARTON_RUNNER_DIR", runner_dir.path());
 
     // Pack a model that requires a specific version of python
-    let pack_opts: PackOpts<GenericStorage> = PackOpts {
+    let info: CartonInfo<GenericStorage> = CartonInfo {
         model_name: None,
         short_description: None,
         model_description: None,
@@ -76,7 +76,10 @@ def get_model():
     // Pack and load the model
     let _model = Carton::load_unpacked(
         model_dir.path().to_str().unwrap().to_owned(),
-        pack_opts,
+        PackOpts {
+            info,
+            linked_files: None,
+        },
         LoadOpts::default(),
     )
     .await

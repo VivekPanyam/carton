@@ -130,7 +130,7 @@ pub mod pack {
 
     use carton::{
         info::{DataType, Example, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
-        types::{GenericStorage, PackOpts, Tensor},
+        types::{CartonInfo, GenericStorage, PackOpts, Tensor},
     };
 
     use crate::{download_file, ModelConfig};
@@ -181,7 +181,7 @@ pub mod pack {
         res.2.unwrap();
 
         // Pack the model and return the path
-        carton::Carton::pack::<GenericStorage>(dir.path().to_str().unwrap().to_owned(), PackOpts {
+        let info = CartonInfo {
             model_name: Some("DistilBERT base cased distilled SQuAD".into()),
             short_description: Some("A DistilBERT model fine tuned for question answering.".into()),
             model_description: Some("See [here](https://huggingface.co/distilbert-base-cased-distilled-squad) for more details.".into()),
@@ -232,6 +232,16 @@ pub mod pack {
                 opts: None,
             },
             misc_files: None,
-        }).await.unwrap()
+        };
+
+        carton::Carton::pack::<GenericStorage>(
+            dir.path().to_str().unwrap().to_owned(),
+            PackOpts {
+                info,
+                linked_files: None,
+            },
+        )
+        .await
+        .unwrap()
     }
 }

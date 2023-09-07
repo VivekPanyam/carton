@@ -10,7 +10,8 @@ use walkdir::WalkDir;
 
 use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
 use crate::error::{CartonError, Result};
-use crate::types::{CartonInfo, TensorStorage};
+use crate::format::v1::links::Links;
+use crate::types::{PackOpts, TensorStorage};
 
 use super::carton_toml::{CartonToml, TensorOrMiscReference};
 
@@ -32,12 +33,18 @@ async fn save_misc_file<'a>(
 /// Given a path to a filled `model` dir, this function creates a complete carton by saving all the additonal
 /// info. Returns a path to the saved file
 pub(crate) async fn save<T>(
-    info: CartonInfo<T>,
+    pack_opts: PackOpts<T>,
     model_dir_path: &std::path::Path,
 ) -> Result<std::path::PathBuf>
 where
     T: TensorStorage,
 {
+    // Extract the model info from pack opts
+    let info = pack_opts.info;
+
+    // Extract info about linked files if any
+    let linked_files: Option<Links> = pack_opts.linked_files.map(|v| v.into());
+
     // Create a tempdir
     let tempdir = TempDir::new().unwrap();
 
@@ -342,23 +349,30 @@ where
 
             log::trace!("Computed sha256 of {}", &relative_path);
 
-            manifest_contents.insert(relative_path.clone(), Some(sha256));
+            // Only store the file in the zip if (1) we don't have any linked files or (2) the linked files don't include this sha256
+            if linked_files
+                .as_ref()
+                .map_or(true, |v| !v.urls.contains_key(&sha256))
+            {
+                // Add the entry to the zip file
+                let relative_path = relative_path.clone();
+                writer = tokio::task::spawn_blocking(move || {
+                    writer
+                        .start_file(
+                            relative_path,
+                            zip::write::FileOptions::default()
+                                .compression_method(zip::CompressionMethod::Zstd)
+                                .large_file(data.len() >= 4 * 1024 * 1024 * 1024),
+                        )
+                        .unwrap();
+                    writer.write_all(&data).unwrap();
+                    writer
+                })
+                .await
+                .unwrap();
+            }
 
-            // Add the entry to the zip file
-            writer = tokio::task::spawn_blocking(move || {
-                writer
-                    .start_file(
-                        relative_path,
-                        zip::write::FileOptions::default()
-                            .compression_method(zip::CompressionMethod::Zstd)
-                            .large_file(data.len() >= 4 * 1024 * 1024 * 1024),
-                    )
-                    .unwrap();
-                writer.write_all(&data).unwrap();
-                writer
-            })
-            .await
-            .unwrap();
+            manifest_contents.insert(relative_path, Some(sha256));
         }
 
         log::trace!("Wrote to zip file");
@@ -426,6 +440,20 @@ where
             )
             .unwrap();
         writer.write_all(manifest_str.as_bytes()).unwrap();
+
+        // 6. Add links (if any)
+        if let Some(linked_files) = linked_files {
+            // Add LINKS
+            writer
+                .start_file(
+                    "LINKS",
+                    zip::write::FileOptions::default()
+                        .compression_method(zip::CompressionMethod::Stored),
+                )
+                .unwrap();
+            let data = toml::to_vec(&linked_files).unwrap();
+            writer.write_all(&data).unwrap();
+        }
 
         // Finish writing the zip file
         log::trace!("Closing zip file writer");
