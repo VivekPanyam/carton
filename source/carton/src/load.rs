@@ -404,7 +404,20 @@ impl GetReader for protocol::LocalFilePath {
 }
 
 lazy_static! {
-    static ref CLIENT: reqwest::Client = reqwest::Client::new();
+    // TODO: for some reason, if we allow HTTP2, requests hang when making
+    // multiple parallel requests (e.g. when loading a model)
+    // This is likely a bug within reqwest or something it uses under the hood
+    static ref CLIENT: reqwest::Client = {
+        #[cfg(not(target_family = "wasm"))]
+        return reqwest::ClientBuilder::new()
+            .http1_only()
+            .use_rustls_tls()
+            .build()
+            .unwrap();
+
+        #[cfg(target_family = "wasm")]
+        return reqwest::Client::new();
+    };
 }
 
 #[cfg_attr(target_family = "wasm", async_trait(?Send))]
