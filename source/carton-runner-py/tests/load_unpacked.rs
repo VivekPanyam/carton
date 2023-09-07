@@ -88,13 +88,25 @@ async fn test_pack_python_model() {
 
     // Create a "model" with a dependency
     let model_dir = tempfile::tempdir().unwrap();
-    tokio::fs::write(model_dir.path().join("requirements.txt"), "xgboost==1.7.3")
-        .await
-        .unwrap();
+    tokio::fs::write(
+        model_dir.path().join("requirements_symlink_target.txt"),
+        "xgboost==1.7.3",
+    )
+    .await
+    .unwrap();
+
+    // Testing symlinks
+    tokio::fs::symlink(
+        model_dir.path().join("requirements_symlink_target.txt"),
+        model_dir.path().join("requirements.txt"),
+    )
+    .await
+    .unwrap();
 
     tokio::fs::write(
         model_dir.path().join("main.py"),
         r#"
+import os.path
 import xgboost as xgb
 
 class Model:
@@ -106,6 +118,7 @@ class Model:
 
 def get_model():
     print("Loaded python model!")
+    assert os.path.islink("requirements.txt")
     expected_xgb_version = "1.7.3"
     if xgb.__version__ != expected_xgb_version:
         raise ValueError(f"Got an unexpected version of xgboost. Got {xgb.__version__} and expected {expected_xgb_version}")
