@@ -79,6 +79,14 @@ async fn test_pack_python_model() {
                         "entrypoint_fn".into(),
                         RunnerOpt::String("get_model".into()),
                     ),
+                    (
+                        "model.an_example_custom_option".into(),
+                        RunnerOpt::String("some_string_value".into()),
+                    ),
+                    (
+                        "model.another_example_custom_option".into(),
+                        RunnerOpt::Boolean(false),
+                    ),
                 ]
                 .into(),
             ),
@@ -116,12 +124,18 @@ class Model:
     def infer_with_tensors(self, tensors):
         pass
 
-def get_model():
+def get_model(an_example_custom_option, another_example_custom_option):
     print("Loaded python model!")
     assert os.path.islink("requirements.txt")
     expected_xgb_version = "1.7.3"
     if xgb.__version__ != expected_xgb_version:
         raise ValueError(f"Got an unexpected version of xgboost. Got {xgb.__version__} and expected {expected_xgb_version}")
+
+    if an_example_custom_option != "some_string_value":
+        raise ValueError("an_example_custom_option did not match the expected value")
+
+    if another_example_custom_option != False:
+        raise ValueError("another_example_custom_option did not match the expected value")
 
     return Model()
 "#,
