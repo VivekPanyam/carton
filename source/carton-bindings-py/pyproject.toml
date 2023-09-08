@@ -1,6 +1,10 @@
 [project]
 name = "cartonml"
 
+dependencies = [
+    "numpy >= 1.16.0"
+]
+
 [build-system]
 requires = ["maturin>=0.14,<0.15"]
 build-backend = "maturin"

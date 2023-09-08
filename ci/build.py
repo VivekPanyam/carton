@@ -35,6 +35,13 @@ def update_version_numbers():
     with open(bindings_config, 'w') as f:
         toml.dump(data, f)
 
+    # Update the python package name
+    package_config = "source/carton-bindings-py/pyproject.toml"
+    data = toml.load(package_config)
+    data["project"]["name"] = "cartonml-nightly"
+    with open(package_config, 'w') as f:
+        toml.dump(data, f)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog = 'Carton CI Build Script')
     parser.add_argument("-t", "--target", required=True, help="The target triple to build against")

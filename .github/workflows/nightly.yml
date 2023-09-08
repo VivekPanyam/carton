@@ -88,6 +88,7 @@ jobs:
     name: "Upload nightly builds"
     needs: [nightly_release_mac_aarch64, nightly_release_buildkite]
     runs-on: ubuntu-latest
+    environment: nightly
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -104,3 +105,36 @@ jobs:
           CARTON_NIGHTLY_S3_ENDPOINT: ${{ secrets.CARTON_NIGHTLY_S3_ENDPOINT }}
           CARTON_NIGHTLY_ACCESS_KEY_ID: ${{ secrets.CARTON_NIGHTLY_ACCESS_KEY_ID }}
           CARTON_NIGHTLY_SECRET_ACCESS_KEY: ${{ secrets.CARTON_NIGHTLY_SECRET_ACCESS_KEY }}
+      - name: Upload wheels to PyPi
+        run: >
+          pip3 install twine &&
+          twine upload /tmp/artifacts/py-wheels-linux/* /tmp/artifacts/py-wheels-macos-aarch64/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_NIGHTLY_TOKEN }}
+          TWINE_NON_INTERACTIVE: true
+  build_wasm:
+    name: WASM Build wasm32-unknown-unknown
+    runs-on: ubuntu-latest
+    environment: nightly
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g wasm-pack yarn@1.22.19
+      - name: Update version
+        run: >
+          cd source/carton-bindings-wasm &&
+          cat package.json  | jq '.version += (now | strftime("-dev%Y%m%d"))' | tee package.json
+      - run: >
+          cd source/carton-bindings-wasm && ./build.sh &&
+          cd tests && yarn install && node basic.js
+      - name: Publish to NPM
+        run: >
+          cd source/carton-bindings-wasm/dist && npm publish --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
