@@ -153,10 +153,8 @@ where
             }
 
             // Otherwise, update the path and continue looping
-            let target = f.unwrap();
-
-            // Relative to the parent dir
-            path = path.parent().unwrap().join(target);
+            // (the result of `read_link` must be relative to the FS root so this is okay)
+            path = f.unwrap();
         }
     }
 
