@@ -30,7 +30,7 @@ impl From<carton_core::error::CartonError> for CartonError {
 #[wasm_bindgen]
 pub async fn get_model_info(url: String) -> Result<CartonInfo, CartonError> {
     // TODO: we want to call this from all possible entrypoints (including registration code)
-    utils::set_panic_hook();
+    utils::init_logging();
     let info = carton_core::Carton::get_model_info(url).await;
 
     info.map(|v| v.into()).map_err(|e| e.into())

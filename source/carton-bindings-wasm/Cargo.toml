@@ -24,3 +24,5 @@ wasm-streams = "0.3.0"
 tokio-util = {version = "0.7", features = ["compat"]}
 js-sys = "0.3.60"
 console_error_panic_hook = { version = "0.1.1", optional = true }
+console_log = { version = "1", features = ["color"] }
+log = "0.4"
