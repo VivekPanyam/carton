@@ -1760,8 +1760,7 @@ dependencies = [
 [[package]]
 name = "lunchbox"
 version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dfcd18b5c3be722c8d3f05b465d7b92eb98d944ac6579649193194f49b2ee01"
+source = "git+https://github.com/VivekPanyam/lunchbox.git?branch=main#375d35f887bc2ab86af25e9228bcb04bd8772310"
 dependencies = [
  "async-trait",
  "path-clean",
@@ -3900,7 +3899,7 @@ dependencies = [
 [[package]]
 name = "zipfs"
 version = "0.0.1"
-source = "git+https://github.com/VivekPanyam/ZipFS.git?branch=update_async_zip#0060946acaf34f5f313f7ac9ad701b3e3598c57d"
+source = "git+https://github.com/VivekPanyam/ZipFS.git?branch=update_async_zip#e8da730ee481c982bc33d1ac20337ed9cbaaf4a3"
 dependencies = [
  "async-trait",
  "async_zip 0.0.15",

@@ -25,3 +25,4 @@ debug = true
 # Temporary patch while we're waiting for an upstream merge + release in async_zip
 zipfs = { git = "https://github.com/VivekPanyam/ZipFS.git", branch = "update_async_zip" }
 async_zip = { git = "https://github.com/VivekPanyam/rs-async-zip.git", branch = "fix_zip64" }
+lunchbox = { git = "https://github.com/VivekPanyam/lunchbox.git", branch = "main" }

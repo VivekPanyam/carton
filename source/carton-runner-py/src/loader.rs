@@ -130,10 +130,13 @@ where
                     assert!(target_path.starts_with(&model_dir_path));
 
                     // Get the symlink target
-                    let symlink_target = std::path::PathBuf::from(
-                        fs.read_link(&filepath).await.unwrap().to_string(),
-                    );
-                    assert!(symlink_target.is_relative());
+                    let symlink_target = fs
+                        .read_link(&filepath)
+                        .await
+                        .unwrap()
+                        .to_path(&model_dir_path)
+                        .clean();
+                    assert!(symlink_target.starts_with(&model_dir_path));
 
                     // Create the dirs containing the symlink
                     tokio::fs::create_dir_all(target_path.parent().unwrap())
@@ -141,6 +144,7 @@ where
                         .unwrap();
 
                     // Create the symlink
+                    // TODO: do we want to convert it to a relative symlink instead of an absolute one?
                     tokio::fs::symlink(symlink_target, target_path)
                         .await
                         .unwrap();

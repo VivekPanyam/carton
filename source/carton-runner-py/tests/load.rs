@@ -95,6 +95,8 @@ async fn test_pack_python_model() {
     };
 
     // Create a "model" with a dependency
+    // This also tests symlinks so it's doing much more than necessary
+    // You can just create a normal requirements.txt in the root of the model directory
     let model_dir = tempfile::tempdir().unwrap();
     tokio::fs::write(
         model_dir.path().join("requirements_symlink_target.txt"),
@@ -103,10 +105,23 @@ async fn test_pack_python_model() {
     .await
     .unwrap();
 
-    // Testing symlinks
+    // Test symlinks
+    tokio::fs::create_dir(model_dir.path().join("something"))
+        .await
+        .unwrap();
+
+    // requirements.txt -> something/symlink_one.txt
     tokio::fs::symlink(
-        model_dir.path().join("requirements_symlink_target.txt"),
+        model_dir.path().join("something").join("symlink_one.txt"),
         model_dir.path().join("requirements.txt"),
+    )
+    .await
+    .unwrap();
+
+    // something/symlink_one.txt -> ../requirements_symlink_target.txt
+    tokio::fs::symlink(
+        "../requirements_symlink_target.txt",
+        model_dir.path().join("something").join("symlink_one.txt"),
     )
     .await
     .unwrap();
@@ -114,6 +129,7 @@ async fn test_pack_python_model() {
     tokio::fs::write(
         model_dir.path().join("main.py"),
         r#"
+import os
 import os.path
 import xgboost as xgb
 
@@ -127,6 +143,7 @@ class Model:
 def get_model(an_example_custom_option, another_example_custom_option):
     print("Loaded python model!")
     assert os.path.islink("requirements.txt")
+    assert os.readlink("requirements.txt").startswith("/")
     expected_xgb_version = "1.7.3"
     if xgb.__version__ != expected_xgb_version:
         raise ValueError(f"Got an unexpected version of xgboost. Got {xgb.__version__} and expected {expected_xgb_version}")
@@ -143,11 +160,11 @@ def get_model(an_example_custom_option, another_example_custom_option):
     .await
     .unwrap();
 
-    // Pack and load the model
+    // Test `load_unpacked`
     let _model = Carton::load_unpacked(
         model_dir.path().to_str().unwrap().to_owned(),
         PackOpts {
-            info,
+            info: info.clone(),
             linked_files: None,
         },
         LoadOpts::default(),
@@ -166,4 +183,22 @@ def get_model(an_example_custom_option, another_example_custom_option):
     assert!(lockfile.contains("xgboost"));
     assert!(lockfile.contains("scipy"));
     assert!(lockfile.contains("numpy"));
+
+    // Test pack followed by load
+    let packed_path = Carton::pack(
+        model_dir.path().to_str().unwrap().to_owned(),
+        PackOpts {
+            info,
+            linked_files: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    let _model = Carton::load(
+        packed_path.to_str().unwrap().to_owned(),
+        LoadOpts::default(),
+    )
+    .await
+    .unwrap();
 }

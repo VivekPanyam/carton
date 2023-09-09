@@ -177,8 +177,11 @@ impl Carton {
 
         // Create a localfs with the new root
         // TODO: don't unwrap this one because it may fail if the runner returned an invalid path
-        let localfs =
-            Arc::new(lunchbox::LocalFS::with_base_dir(model_dir_path.to_string()).unwrap());
+        let localfs = Arc::new(
+            lunchbox::LocalFS::with_base_dir(model_dir_path.to_string())
+                .await
+                .unwrap(),
+        );
 
         // Ask the runner to load the model it just packed
         let info_with_extras = CartonInfoWithExtras {

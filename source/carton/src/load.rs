@@ -72,7 +72,7 @@ async fn fetch(url: &str, opts: LoadOpts, skip_runner: bool) -> ReturnType {
                 // This is a local directory (or a symlink to one)
                 // Skip directly to step 3
                 maybe_resolve_links(
-                    &Arc::new(lunchbox::LocalFS::with_base_dir(path.0).unwrap()),
+                    &Arc::new(lunchbox::LocalFS::with_base_dir(path.0).await.unwrap()),
                     opts,
                     skip_runner,
                 )
