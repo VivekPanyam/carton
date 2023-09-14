@@ -185,6 +185,9 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
             model_name: Some("BART".into()),
             short_description: Some("A BART model fine-tuned on CNN/Daily Mail to summarize text.".into()),
             model_description: Some("See [here](https://github.com/facebookresearch/fairseq/blob/main/examples/bart/README.md) for more details.".into()),
+            license: Some("MIT".into()),
+            repository: None,
+            homepage: Some("https://github.com/facebookresearch/fairseq/tree/main/examples/bart".into()),
             required_platforms: None,
             inputs: Some(vec![
                 TensorSpec {

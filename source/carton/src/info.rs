@@ -49,6 +49,16 @@ where
     /// The model description
     pub model_description: Option<String>,
 
+    /// The license for this model. This should be an SPDX expression, but may not be
+    /// for non-SPDX license types.
+    pub license: Option<String>,
+
+    /// A URL for a repository for this model
+    pub repository: Option<String>,
+
+    /// A URL for a website that is the homepage for this model
+    pub homepage: Option<String>,
+
     /// A list of platforms this model supports
     /// If empty or unspecified, all platforms are okay
     pub required_platforms: Option<Vec<Triple>>,
@@ -81,6 +91,9 @@ impl<T: TensorStorage> Clone for CartonInfo<T> {
     fn clone(&self) -> Self {
         Self {
             model_name: self.model_name.clone(),
+            license: self.license.clone(),
+            repository: self.repository.clone(),
+            homepage: self.homepage.clone(),
             short_description: self.short_description.clone(),
             model_description: self.model_description.clone(),
             required_platforms: self.required_platforms.clone(),
@@ -439,6 +452,9 @@ where
             model_name: value.model_name,
             short_description: value.short_description,
             model_description: value.model_description,
+            license: value.license,
+            repository: value.repository,
+            homepage: value.homepage,
             required_platforms: value.required_platforms,
             inputs: value.inputs,
             outputs: value.outputs,

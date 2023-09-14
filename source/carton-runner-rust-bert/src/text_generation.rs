@@ -165,6 +165,9 @@ pub mod pack {
             model_name: Some("GPT2 Medium".into()),
             short_description: Some("GPT2 Medium".into()),
             model_description: Some("See [here](https://github.com/openai/gpt-2) for more details.".into()),
+            license: Some("MIT".into()),
+            repository: None,
+            homepage: Some("https://github.com/openai/gpt-2".into()),
             required_platforms: None,
             inputs: Some(vec![
                 TensorSpec {

@@ -48,6 +48,16 @@ pub struct CartonInfo {
     /// The model description
     pub model_description: Option<String>,
 
+    /// The license for this model. This should be an SPDX expression, but may not be
+    /// for non-SPDX license types.
+    pub license: Option<String>,
+
+    /// A URL for a repository for this model
+    pub repository: Option<String>,
+
+    /// A URL for a website that is the homepage for this model
+    pub homepage: Option<String>,
+
     /// A list of platforms this model supports
     /// If empty or unspecified, all platforms are okay
     pub required_platforms: JsValue,
@@ -89,6 +99,9 @@ impl From<carton_core::info::CartonInfoWithExtras<GenericStorage>> for CartonInf
             model_name: value.model_name,
             short_description: value.short_description,
             model_description: value.model_description,
+            license: value.license,
+            repository: value.repository,
+            homepage: value.homepage,
             required_platforms: value.required_platforms.serialize(&serializer).unwrap(),
             inputs: value.inputs.serialize(&serializer).unwrap(),
             outputs: value.outputs.serialize(&serializer).unwrap(),

@@ -212,6 +212,9 @@ pub mod pack {
             model_name: Some("M2M100".into()),
             short_description: Some("M2M100 is a model that can translate directly between any pair of 100 languages.".into()),
             model_description: Some("See [here](https://about.fb.com/news/2020/10/first-multilingual-machine-translation-model/) for more details. M2M100 supports the following languages:\n".to_owned() + &languages.iter().map(|l| format!("- {}", serde_plain::to_string(l).unwrap())).collect::<Vec<_>>().join("\n")),
+            license: Some("MIT".into()),
+            repository: None,
+            homepage: Some("https://about.fb.com/news/2020/10/first-multilingual-machine-translation-model/".into()),
             required_platforms: None,
             inputs: Some(vec![
                 TensorSpec {

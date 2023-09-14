@@ -51,6 +51,46 @@ await carton.pack(
 )
 ```
 
+### `license`
+<div className='text-slate-500'>Type: string</div>
+
+The name of the license for this model. This should be an [SPDX license expression](https://spdx.github.io/spdx-spec/v2.3/SPDX-license-expressions/). See [https://spdx.org/licenses/](https://spdx.org/licenses/) for more details.
+
+If the model is not licensed under an SPDX recognized license, this can be an arbitrary string.
+
+```python
+await carton.pack(
+    # ...
+    license = "Apache-2.0",
+)
+```
+
+### `repository`
+<div className='text-slate-500'>Type: string</div>
+
+A URL for a repository for this model.
+
+Note: this should be the repository containing the Carton packing code for this model. If this is different from the original model repository, consider setting `homepage` below to the original model repository.
+
+```python
+await carton.pack(
+    # ...
+    repository = "https://github.com/VivekPanyam/carton",
+)
+```
+
+### `homepage`
+<div className='text-slate-500'>Type: string</div>
+
+A URL for a website that is the homepage for this model.
+
+```python
+await carton.pack(
+    # ...
+    homepage = "https://carton.run",
+)
+```
+
 ### `required_platforms`
 <div className='text-slate-500'>Type: list of target triples</div>
 

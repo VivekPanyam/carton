@@ -185,6 +185,9 @@ pub mod pack {
             model_name: Some("DistilBERT base cased distilled SQuAD".into()),
             short_description: Some("A DistilBERT model fine tuned for question answering.".into()),
             model_description: Some("See [here](https://huggingface.co/distilbert-base-cased-distilled-squad) for more details.".into()),
+            license: Some("Apache-2.0".into()),
+            repository: None,
+            homepage: Some("https://huggingface.co/distilbert-base-cased-distilled-squad".into()),
             required_platforms: None,
             inputs: Some(vec![
                 TensorSpec {

@@ -43,6 +43,23 @@ See the misc section of this document for more details
 """
 
 # Optional
+# Should be an SPDX license expression (https://spdx.github.io/spdx-spec/v2.3/SPDX-license-expressions/)
+# See https://spdx.org/licenses/ for more details
+# Can be something else if an SPDX license doesn't apply
+license = "Apache-2.0"
+
+# Optional
+# A URL for a repository for this model
+# Note: this should be the repository containing the Carton packing code for the model
+# If this is different from the original model repository, consider setting
+# `homepage` below to the original model repository.
+repository = "https://github.com/VivekPanyam/carton"
+
+# Optional
+# A URL for a website that is the homepage for this model
+homepage = "https://carton.run"
+
+# Optional
 # A list of platforms the model supports. If empty or unspecified, all platforms are okay.
 # The contents of this list are target triples. For example:
 # x86_64-unknown-linux-gnu

@@ -53,6 +53,9 @@ pub(crate) fn create_pack_opts(
     model_name: Option<String>,
     short_description: Option<String>,
     model_description: Option<String>,
+    license: Option<String>,
+    repository: Option<String>,
+    homepage: Option<String>,
     required_platforms: Option<Vec<String>>,
     inputs: Option<Vec<TensorSpec>>,
     outputs: Option<Vec<TensorSpec>>,
@@ -68,6 +71,9 @@ pub(crate) fn create_pack_opts(
             model_name,
             short_description,
             model_description,
+            license,
+            repository,
+            homepage,
             required_platforms: convert_required_platforms(required_platforms)?,
             inputs: convert_opt_vec(inputs),
             outputs: convert_opt_vec(outputs),
@@ -107,6 +113,19 @@ pub(crate) struct CartonInfo {
     /// The model description
     #[pyo3(get)]
     pub model_description: Option<String>,
+
+    /// The license for this model. This should be an SPDX expression, but may not be
+    /// for non-SPDX license types.
+    #[pyo3(get)]
+    pub license: Option<String>,
+
+    /// A URL for a repository for this model
+    #[pyo3(get)]
+    pub repository: Option<String>,
+
+    /// A URL for a website that is the homepage for this model
+    #[pyo3(get)]
+    pub homepage: Option<String>,
 
     /// A list of platforms this model supports
     /// If empty or unspecified, all platforms are okay
@@ -172,6 +191,9 @@ impl From<carton_core::types::CartonInfo<carton_core::types::GenericStorage>> fo
             model_name: value.model_name,
             short_description: value.short_description,
             model_description: value.model_description,
+            license: value.license,
+            repository: value.repository,
+            homepage: value.homepage,
             required_platforms: value.required_platforms.map(|required_platforms| {
                 required_platforms
                     .into_iter()

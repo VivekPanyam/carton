@@ -19,6 +19,16 @@ pub struct CartonToml {
     /// The model description
     pub(crate) model_description: Option<String>,
 
+    /// The license for this model. This should be an SPDX expression, but may not be
+    /// for non-SPDX license types.
+    pub(crate) license: Option<String>,
+
+    /// A URL for a repository for this model
+    pub(crate) repository: Option<String>,
+
+    /// A URL for a website that is the homepage for this model
+    pub(crate) homepage: Option<String>,
+
     /// A list of platforms this model supports
     /// If empty, all platforms are okay
     /// These are target triples
