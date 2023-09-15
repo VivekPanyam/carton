@@ -104,7 +104,7 @@ pub mod pack {
     use std::path::PathBuf;
 
     use carton::{
-        info::{DataType, Example, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
+        info::{DataType, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
         types::{CartonInfo, GenericStorage, PackOpts, Tensor},
     };
 
@@ -153,32 +153,42 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
         tokio::fs::create_dir(&model_dir).await.unwrap();
         let res = tokio::join!(
             download_file(
-                "https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/rust_model.ot".into(),
-                "cd0d1586babffa4e90ca71e230290b55b8ebf634319a1c4200c8506ddbae0ab0".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/rust_model.ot".into()],
+                    sha256: "cd0d1586babffa4e90ca71e230290b55b8ebf634319a1c4200c8506ddbae0ab0".into(),
+                },
                 model_dir.join("rust_model.ot"),
             ),
             download_file(
-                "https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/config.json".into(),
-                "c6cb642aec929b65f514ee0ec7c04f9de19f705c143491577ecd8b7cc923c6ed".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/config.json".into()],
+                    sha256: "c6cb642aec929b65f514ee0ec7c04f9de19f705c143491577ecd8b7cc923c6ed".into(),
+                },
                 model_dir.join("config.json"),
             ),
             download_file(
-                "https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/vocab.json".into(),
-                "9e7f63c2d15d666b52e21d250d2e513b87c9b713cfa6987a82ed89e5e6e50655".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/vocab.json".into()],
+                    sha256: "9e7f63c2d15d666b52e21d250d2e513b87c9b713cfa6987a82ed89e5e6e50655".into(),
+                },
                 model_dir.join("vocab.json"),
             ),
             download_file(
-                "https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/merges.txt".into(),
-                "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/bart-large-cnn/resolve/3d224934c6541b2b9147e023c2f6f6fe49bd27e1/merges.txt".into()],
+                    sha256: "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5".into(),
+                },
                 model_dir.join("merges.txt"),
             ),
         );
 
         // TODO: better error handling
-        res.0.unwrap();
-        res.1.unwrap();
-        res.2.unwrap();
-        res.3.unwrap();
+        let linked_files = vec![
+            res.0.unwrap(),
+            res.1.unwrap(),
+            res.2.unwrap(),
+            res.3.unwrap(),
+        ];
 
         // Pack the model and return the path
         let info = CartonInfo {
@@ -233,7 +243,7 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,
-                linked_files: None,
+                linked_files: Some(linked_files),
             },
         )
         .await

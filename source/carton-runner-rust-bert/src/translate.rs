@@ -139,7 +139,9 @@ pub mod pack {
     use std::path::PathBuf;
 
     use carton::{
-        info::{DataType, Dimension, Example, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
+        info::{
+            DataType, Dimension, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec,
+        },
         types::{CartonInfo, GenericStorage, PackOpts, Tensor},
     };
     use rust_bert::{m2m_100::M2M100SourceLanguages, pipelines::translation::Language};
@@ -180,32 +182,42 @@ pub mod pack {
         tokio::fs::create_dir(&model_dir).await.unwrap();
         let res = tokio::join!(
             download_file(
-                "https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/rust_model.ot".into(),
-                "f170f6a277d00b20144fa6dac6ecd781c5a5e66844c022244437dd2da3a83655".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/rust_model.ot".into()],
+                    sha256: "f170f6a277d00b20144fa6dac6ecd781c5a5e66844c022244437dd2da3a83655".into(),
+                },
                 model_dir.join("rust_model.ot"),
             ),
             download_file(
-                "https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/config.json".into(),
-                "df0ae43e4e4b0d7e3c97b7f447857a70ef6b6a2aa1f145cedbcc730d95f67134".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/config.json".into()],
+                    sha256: "df0ae43e4e4b0d7e3c97b7f447857a70ef6b6a2aa1f145cedbcc730d95f67134".into(),
+                },
                 model_dir.join("config.json"),
             ),
             download_file(
-                "https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/vocab.json".into(),
-                "b6e77e474aeea8f441363aca7614317c06381f3eacfe10fb9856d5081d1074cc".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/vocab.json".into()],
+                    sha256: "b6e77e474aeea8f441363aca7614317c06381f3eacfe10fb9856d5081d1074cc".into(),
+                },
                 model_dir.join("vocab.json"),
             ),
             download_file(
-                "https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/sentencepiece.bpe.model".into(),
-                "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/facebook/m2m100_418M/resolve/a84767a43c9159c5c15eb3964dce2179684647f6/sentencepiece.bpe.model".into()],
+                    sha256: "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a".into(),
+                },
                 model_dir.join("sentencepiece.bpe.model"),
             ),
         );
 
         // TODO: better error handling
-        res.0.unwrap();
-        res.1.unwrap();
-        res.2.unwrap();
-        res.3.unwrap();
+        let linked_files = vec![
+            res.0.unwrap(),
+            res.1.unwrap(),
+            res.2.unwrap(),
+            res.3.unwrap(),
+        ];
 
         // Pack the model and return the path
         let info = CartonInfo {
@@ -276,7 +288,7 @@ pub mod pack {
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,
-                linked_files: None,
+                linked_files: Some(linked_files),
             },
         )
         .await

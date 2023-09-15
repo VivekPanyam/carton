@@ -104,7 +104,7 @@ pub mod pack {
     use std::path::PathBuf;
 
     use carton::{
-        info::{DataType, Example, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
+        info::{DataType, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
         types::{CartonInfo, GenericStorage, PackOpts, Tensor},
     };
 
@@ -133,32 +133,42 @@ pub mod pack {
         tokio::fs::create_dir(&model_dir).await.unwrap();
         let res = tokio::join!(
             download_file(
-                "https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/rust_model.ot".into(),
-                "064e9fde8e3a539c41b186a6ca94e6fb7c6520f49f903fb236f6e89912fedd32".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/rust_model.ot".into()],
+                    sha256: "064e9fde8e3a539c41b186a6ca94e6fb7c6520f49f903fb236f6e89912fedd32".into(),
+                },
                 model_dir.join("rust_model.ot"),
             ),
             download_file(
-                "https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/config.json".into(),
-                "ef1a44d889ad1a0acc7731c78134f1b87d2d222f110e97dd10fd4117331caf22".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/config.json".into()],
+                    sha256: "ef1a44d889ad1a0acc7731c78134f1b87d2d222f110e97dd10fd4117331caf22".into(),
+                },
                 model_dir.join("config.json"),
             ),
             download_file(
-                "https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/vocab.json".into(),
-                "196139668be63f3b5d6574427317ae82f612a97c5d1cdaf36ed2256dbf636783".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/vocab.json".into()],
+                    sha256: "196139668be63f3b5d6574427317ae82f612a97c5d1cdaf36ed2256dbf636783".into(),
+                },
                 model_dir.join("vocab.json"),
             ),
             download_file(
-                "https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/merges.txt".into(),
-                "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/gpt2-medium/resolve/f65d4965d1221eff2bcf34f53a2ba12120e18f24/merges.txt".into()],
+                    sha256: "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5".into(),
+                },
                 model_dir.join("merges.txt"),
             ),
         );
 
         // TODO: better error handling
-        res.0.unwrap();
-        res.1.unwrap();
-        res.2.unwrap();
-        res.3.unwrap();
+        let linked_files = vec![
+            res.0.unwrap(),
+            res.1.unwrap(),
+            res.2.unwrap(),
+            res.3.unwrap(),
+        ];
 
         // Pack the model and return the path
         let info = CartonInfo {
@@ -213,7 +223,7 @@ pub mod pack {
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,
-                linked_files: None,
+                linked_files: Some(linked_files),
             },
         )
         .await

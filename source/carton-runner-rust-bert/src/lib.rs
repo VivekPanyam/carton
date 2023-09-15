@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::Path};
 
 use async_trait::async_trait;
+use carton::info::LinkedFile;
 use carton_runner_interface::{slowlog::slowlog, types::Tensor};
 use lunchbox::{types::ReadableFile, ReadableFileSystem};
 use qa::CartonQAConfig;
@@ -80,10 +81,11 @@ where
 }
 
 pub(crate) async fn download_file<P: AsRef<std::path::Path>>(
-    url: &str,
-    sha256: &str,
+    info: LinkedFile,
     download_path: P,
-) -> carton_utils::error::Result<()> {
+) -> carton_utils::error::Result<LinkedFile> {
+    let url = info.urls.first().unwrap();
+    let sha256 = &info.sha256;
     let mut sl = slowlog(format!("Downloading file '{url}'"), 5).await;
     let out = carton_utils::download::cached_download(
         url,
@@ -104,5 +106,5 @@ pub(crate) async fn download_file<P: AsRef<std::path::Path>>(
     // Let the logging task know we're done downloading
     sl.done();
 
-    out
+    out.map(|_| info)
 }

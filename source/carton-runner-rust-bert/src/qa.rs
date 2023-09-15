@@ -129,7 +129,7 @@ pub mod pack {
     use std::path::PathBuf;
 
     use carton::{
-        info::{DataType, Example, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
+        info::{DataType, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
         types::{CartonInfo, GenericStorage, PackOpts, Tensor},
     };
 
@@ -159,26 +159,30 @@ pub mod pack {
         tokio::fs::create_dir(&model_dir).await.unwrap();
         let res = tokio::join!(
             download_file(
-                "https://huggingface.co/distilbert-base-cased-distilled-squad/resolve/50ba811384f02cb99cdabe5cdc02f7ddc4f69e10/rust_model.ot".into(),
-                "8a9f9b2f153ac9ff230aca4548fa3286be9d2f9ea4eb7e9169665b1a8e983f44".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/distilbert-base-cased-distilled-squad/resolve/50ba811384f02cb99cdabe5cdc02f7ddc4f69e10/rust_model.ot".into()],
+                    sha256: "8a9f9b2f153ac9ff230aca4548fa3286be9d2f9ea4eb7e9169665b1a8e983f44".into(),
+                },
                 model_dir.join("rust_model.ot"),
             ),
             download_file(
-                "https://huggingface.co/distilbert-base-cased-distilled-squad/resolve/50ba811384f02cb99cdabe5cdc02f7ddc4f69e10/config.json".into(),
-                "0b5cb15ec08645604ef7085acfaf9c4131158ac22207a76634574cf2771b1515".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/distilbert-base-cased-distilled-squad/resolve/50ba811384f02cb99cdabe5cdc02f7ddc4f69e10/config.json".into()],
+                    sha256: "0b5cb15ec08645604ef7085acfaf9c4131158ac22207a76634574cf2771b1515".into(),
+                },
                 model_dir.join("config.json"),
             ),
             download_file(
-                "https://huggingface.co/distilbert-base-cased-distilled-squad/resolve/50ba811384f02cb99cdabe5cdc02f7ddc4f69e10/vocab.txt".into(),
-                "eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/distilbert-base-cased-distilled-squad/resolve/50ba811384f02cb99cdabe5cdc02f7ddc4f69e10/vocab.txt".into()],
+                    sha256: "eeaa9875b23b04b4c54ef759d03db9d1ba1554838f8fb26c5d96fa551df93d02".into(),
+                },
                 model_dir.join("vocab.txt"),
             ),
         );
 
         // TODO: better error handling
-        res.0.unwrap();
-        res.1.unwrap();
-        res.2.unwrap();
+        let linked_files = vec![res.0.unwrap(), res.1.unwrap(), res.2.unwrap()];
 
         // Pack the model and return the path
         let info = CartonInfo {
@@ -241,7 +245,7 @@ pub mod pack {
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,
-                linked_files: None,
+                linked_files: Some(linked_files),
             },
         )
         .await

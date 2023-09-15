@@ -121,7 +121,9 @@ pub mod pack {
     use std::path::PathBuf;
 
     use carton::{
-        info::{CartonInfo, DataType, Example, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
+        info::{
+            CartonInfo, DataType, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec,
+        },
         types::{GenericStorage, PackOpts, Tensor},
     };
 
@@ -150,26 +152,30 @@ pub mod pack {
         tokio::fs::create_dir(&model_dir).await.unwrap();
         let res = tokio::join!(
             download_file(
-                "https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english/resolve/3d65bad49c7ba6f71920504507a8927f4b9db6c0/rust_model.ot".into(),
-                "9db97da21b97a5e6db1212ce6a810a0c5e22c99daefe3355bae2117f78a0abb9".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english/resolve/3d65bad49c7ba6f71920504507a8927f4b9db6c0/rust_model.ot".into()],
+                    sha256: "9db97da21b97a5e6db1212ce6a810a0c5e22c99daefe3355bae2117f78a0abb9".into(),
+                },
                 model_dir.join("rust_model.ot"),
             ),
             download_file(
-                "https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english/resolve/3d65bad49c7ba6f71920504507a8927f4b9db6c0/config.json".into(),
-                "582122c8f414793d131e10022ce9ba04e3811a9da6389137ee2f18665b4f4d15".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english/resolve/3d65bad49c7ba6f71920504507a8927f4b9db6c0/config.json".into()],
+                    sha256: "582122c8f414793d131e10022ce9ba04e3811a9da6389137ee2f18665b4f4d15".into(),
+                },
                 model_dir.join("config.json"),
             ),
             download_file(
-                "https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english/resolve/3d65bad49c7ba6f71920504507a8927f4b9db6c0/vocab.txt".into(),
-                "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3".into(),
+                LinkedFile {
+                    urls: vec!["https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english/resolve/3d65bad49c7ba6f71920504507a8927f4b9db6c0/vocab.txt".into()],
+                    sha256: "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3".into(),
+                },
                 model_dir.join("vocab.txt"),
             ),
         );
 
         // TODO: better error handling
-        res.0.unwrap();
-        res.1.unwrap();
-        res.2.unwrap();
+        let linked_files = vec![res.0.unwrap(), res.1.unwrap(), res.2.unwrap()];
 
         // Pack the model and return the path
         let info = CartonInfo {
@@ -224,7 +230,7 @@ pub mod pack {
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,
-                linked_files: None,
+                linked_files: Some(linked_files),
             },
         )
         .await
