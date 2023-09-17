@@ -35,7 +35,7 @@ const Pre = ({ children, className, forLang, ...props }: any) => {
     }
   }
 
-  return <Code language={language} codeString={children.props.children.trimEnd()} className={`not-prose -ml-5 md:ml-0 ${className || ""}`} {...props} />
+  return <Code language={language} codeString={children.props.children.trimEnd()} className={`not-prose -ml-5 overflow-x-auto -mr-5 md:ml-0 md:mr-0 ${className || ""}`} {...props} />
 }
 
 // See https://github.com/vercel/next.js/discussions/11110

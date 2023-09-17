@@ -45,10 +45,13 @@ const FRAMEWORKS = [
   "Aribitrary python code",
 ]
 
+// Used to pad the header code so it's always the same length
+const MAX_FRAMEWORK_LEN = FRAMEWORKS.map(item => item.toLowerCase().replaceAll(" ", "_").length).reduce((a, b) => Math.max(a, b))
+
 const get_header_code = (frameworkname: string) =>
   `import cartonml as carton
 
-MODEL_PATH = "/path/to/${frameworkname}_model.carton"
+MODEL_PATH = "/path/to/${frameworkname}_model.carton"${" ".repeat(MAX_FRAMEWORK_LEN - frameworkname.length)}
 
 model = await carton.load(MODEL_PATH)
 await model.infer({
@@ -83,10 +86,10 @@ const RotatingFrameworkHeader = () => {
     return () => clearInterval(interval)
   }, [])
 
-  let framework = FRAMEWORKS[index].toLowerCase().replace(" ", "_")
+  let framework = FRAMEWORKS[index].toLowerCase().replaceAll(" ", "_")
 
   return (
-    <Code codeString={get_header_code(framework)} withLineNumbers={true} highlight="3" language="python" className="max-w-2xl overflow-hidden m-auto" />
+    <Code codeString={get_header_code(framework)} withLineNumbers={true} highlight="3" language="python" className="max-w-2xl overflow-x-auto m-auto" />
   )
 
 }
@@ -274,6 +277,12 @@ export default function Home() {
             </ul>
           </FAQItem>
           <FAQItem title={`What is "a carton"?`}>A carton is the output of the packing step. It is a zip file that contains your original model and some metadata. It <i>does not</i> modify the original model, avoiding error-prone conversion steps.</FAQItem>
+          <FAQItem title={`Why use Carton instead of ONNX?`}>
+            ONNX <i>converts</i> models while Carton <i>wraps</i> them. Carton uses the underlying framework (e.g. PyTorch) to actually execute a model under the hood. This is important because it makes it easy to use custom ops, TensorRT, etc without changes. For some sophisticated models, "conversion" steps (e.g. to ONNX) can be problematic and require validation. By removing these conversion steps, Carton enables faster experimentation, deployment, and iteration.
+            <br/>
+            <br/>
+            With that said, we plan to support ONNX models within Carton. This lets you use ONNX if you choose and it enables some interesting use cases (like running models in-browser with WASM).
+          </FAQItem>
         </div>
       </div>
     </div>
