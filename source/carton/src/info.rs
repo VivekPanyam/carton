@@ -15,7 +15,7 @@ use tokio::{io::AsyncRead, sync::OnceCell};
 
 use crate::{
     conversion_utils::{ConvertFromWithContext, ConvertIntoWithContext},
-    types::{Tensor, TensorStorage},
+    types::{GenericStorage, Tensor, TensorStorage},
 };
 
 /// Options that can be specified when packing a model
@@ -103,6 +103,15 @@ impl<T: TensorStorage> Clone for CartonInfo<T> {
             examples: self.examples.clone(),
             runner: self.runner.clone(),
             misc_files: self.misc_files.clone(),
+        }
+    }
+}
+
+impl<T: TensorStorage> From<CartonInfo<T>> for PackOpts<T> {
+    fn from(value: CartonInfo<T>) -> Self {
+        Self {
+            info: value,
+            linked_files: None,
         }
     }
 }
@@ -308,6 +317,28 @@ pub struct RunnerInfo {
     /// Sometimes used to configure thread-pool sizes, etc.
     /// See the documentation for more info
     pub opts: Option<HashMap<String, RunnerOpt>>,
+}
+
+impl From<RunnerInfo> for PackOpts<GenericStorage> {
+    fn from(value: RunnerInfo) -> Self {
+        let info = CartonInfo {
+            model_name: None,
+            short_description: None,
+            model_description: None,
+            license: None,
+            repository: None,
+            homepage: None,
+            required_platforms: None,
+            inputs: None,
+            outputs: None,
+            self_tests: None,
+            examples: None,
+            runner: value,
+            misc_files: None,
+        };
+
+        info.into()
+    }
 }
 
 /// The types of options that can be passed to runners

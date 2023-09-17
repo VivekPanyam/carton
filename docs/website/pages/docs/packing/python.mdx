@@ -1,3 +1,8 @@
+import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
+
+<LanguageSwitch>
+<LanguageItem forLang='python,rust'>
+
 # Pack a Python model
 
 Packing arbitrary python code with Carton provides a lot of flexibility.
@@ -51,9 +56,14 @@ This defines a simple model that doubles an input tensor named `x` and returns i
 
 ### Packaging
 
+<div className="flex items-center pt-5 space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
+
 To pack this model, we'd do the following:
 
-```python
+```python forLang='python'
 import asyncio
 import cartonml as carton
 
@@ -88,6 +98,57 @@ async def main():
     )
 
 asyncio.run(main())
+```
+
+```rust forLang='rust'
+use carton::Carton;
+
+async fn main() {
+    let packed_model_path = Carton::pack(
+        // Path to the code directory from above
+        "/path/to/code_dir",
+        RunnerInfo {
+            // This model runs with the python runner
+            runner_name: "python".into(),
+
+            // `required_framework_version` is a semver version range.
+            //
+            // See https://docs.rs/semver/1.0.16/semver/enum.Op.html and
+            // https://docs.rs/semver/1.0.16/semver/struct.VersionReq.html
+            // We want to run this model with Python 3.10.
+            // The below value means any 3.10.x version is okay.
+            required_framework_version: semver::VersionReq::parse("=3.10").unwrap(),
+            runner_compat_version: None,
+
+            // Options for the python runner (including entrypoint info) go here
+            opts: Some(
+                [
+                    // `carton_entrypoint.py` from above
+                    (
+                        "entrypoint_package".into(),
+                        RunnerOpt::String("carton_entrypoint".into()),
+                    ),
+
+                    // The `get_model` function from above
+                    (
+                        "entrypoint_fn".into(),
+                        RunnerOpt::String("get_model".into()),
+                    ),
+
+                    // A custom option specific to your model. This is passed to your
+                    // entrypoint function without the `model.` prefix
+                    (
+                        "model.an_example_custom_option".into(),
+                        RunnerOpt::Boolean(false),
+                    ),
+                ]
+                .into(),
+            ),
+        },
+    )
+    .await
+    .unwrap();
+}
 ```
 
 The model at `packed_model_path` can now be loaded from any programming language supported by Carton!
@@ -131,12 +192,22 @@ See [here](/docs/packing/options) for more details.
 
 # Loading a model
 
-Loading a model is the same for all frameworks. Check out the "Loading a model" docs for more details.
+Loading a model is the same for all frameworks. Check out the ["Loading a model"](/docs/loading) docs for more details.
 
 # Loading an unpacked model
 
 Carton also supports loading an unpacked model via the `load_unpacked` method. This is conceptually the same as `pack` followed by `load`, but is implemented more efficiently internally. It supports all the options that `load` and `pack` support.
 
+</LanguageItem>
+<LanguageItem>
+
+This language currently does not support packing models. Please check the [quickstart guide](/quickstart) for more info or select a different language.
+
+<div className="flex not-prose">
+    <LanguageSelect/>
+</div>
+</LanguageItem>
+</LanguageSwitch>
 
 import DocsLayout from '@/components/docslayout'
 export default ({children}) => <DocsLayout>{children}</DocsLayout>

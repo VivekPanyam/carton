@@ -191,7 +191,7 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo {
+        let info = CartonInfo::<GenericStorage> {
             model_name: Some("BART".into()),
             short_description: Some("A BART model fine-tuned on CNN/Daily Mail to summarize text.".into()),
             model_description: Some("See [here](https://github.com/facebookresearch/fairseq/blob/main/examples/bart/README.md) for more details.".into()),
@@ -239,7 +239,7 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
             misc_files: None,
         };
 
-        carton::Carton::pack::<GenericStorage>(
+        carton::Carton::pack(
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,

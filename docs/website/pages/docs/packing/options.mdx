@@ -1,19 +1,41 @@
+import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
+
+<LanguageSwitch>
+<LanguageItem forLang='python,rust'>
+
 # Packing Options
 
 These options are the same across all model types. They are not required, but may make it easier for others to use your model.
 
 See the [docs for specific frameworks](/docs/packing) for options specific to those frameworks.
 
+<div className="flex items-center pt-5 space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
+
 ### `model_name`
 <div className='text-slate-500'>Type: string</div>
 
 The name of the model.
 
-```python
+```python forLang='python'
 await carton.pack(
     # ...
     model_name = "super_awesome_test_model",
 )
+```
+
+```rust forLang='rust'
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        model_name: Some("super_awesome_test_model".into()),
+    }
+)
+.await
+.unwrap()
 ```
 
 ### `short_description`
@@ -21,11 +43,23 @@ await carton.pack(
 
 A short description (should be 100 characters or less)
 
-```python
+```python forLang='python'
 await carton.pack(
     # ...
     short_description = "A short description that should be less than or equal to 100 characters.",
 )
+```
+
+```rust forLang='rust'
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        short_description: Some("A short description that should be less than or equal to 100 characters.".into()),
+    }
+)
+.await
+.unwrap()
 ```
 
 ### `model_description`
@@ -33,7 +67,7 @@ await carton.pack(
 
 A detailed description that can contain markdown
 
-```python
+```python forLang='python'
 MODEL_DESCRIPTION = """
 Some description of the model that can be as detailed as you want it to be
 
@@ -51,6 +85,29 @@ await carton.pack(
 )
 ```
 
+```rust forLang='rust'
+const MODEL_DESCRIPTION: &'static str = "
+Some description of the model that can be as detailed as you want it to be
+
+This can span multiple lines. It can use markdown, but shouldn't use arbitrary HTML
+(which will usually be treated as text instead of HTML when this is rendered)
+
+You can use images and links, but the paths must either be complete https
+URLs (e.g. https://example.com/image.png) or must reference a file in the misc folder (e.g `@misc/file.png`).
+See the `misc_files` section of this document for more details
+";
+
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        model_description: Some(MODEL_DESCRIPTION.into()),
+    }
+)
+.await
+.unwrap()
+```
+
 ### `license`
 <div className='text-slate-500'>Type: string</div>
 
@@ -58,11 +115,23 @@ The name of the license for this model. This should be an [SPDX license expressi
 
 If the model is not licensed under an SPDX recognized license, this can be an arbitrary string.
 
-```python
+```python forLang='python'
 await carton.pack(
     # ...
     license = "Apache-2.0",
 )
+```
+
+```rust forLang='rust'
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        license: Some("Apache-2.0".into()),
+    }
+)
+.await
+.unwrap()
 ```
 
 ### `repository`
@@ -72,11 +141,23 @@ A URL for a repository for this model.
 
 Note: this should be the repository containing the Carton packing code for this model. If this is different from the original model repository, consider setting `homepage` below to the original model repository.
 
-```python
+```python forLang='python'
 await carton.pack(
     # ...
     repository = "https://github.com/VivekPanyam/carton",
 )
+```
+
+```rust forLang='rust'
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        repository: Some("https://github.com/VivekPanyam/carton".into()),
+    }
+)
+.await
+.unwrap()
 ```
 
 ### `homepage`
@@ -84,11 +165,23 @@ await carton.pack(
 
 A URL for a website that is the homepage for this model.
 
-```python
+```python forLang='python'
 await carton.pack(
     # ...
     homepage = "https://carton.run",
 )
+```
+
+```rust forLang='rust'
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        homepage: Some("https://carton.run".into()),
+    }
+)
+.await
+.unwrap()
 ```
 
 ### `required_platforms`
@@ -96,7 +189,7 @@ await carton.pack(
 
 A list of platforms this model supports. If empty or unspecified, all platforms are okay.
 
-```python
+```python forLang='python'
 await carton.pack(
     # ...
 
@@ -109,6 +202,24 @@ await carton.pack(
 )
 ```
 
+```rust forLang='rust'
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+
+        // The contents of this list are target triples. For example:
+        // x86_64-unknown-linux-gnu
+        // aarch64-unknown-linux-gnu
+        // x86_64-apple-darwin
+        // aarch64-apple-darwin
+        required_platforms: None,
+    }
+)
+.await
+.unwrap()
+```
+
 ### `inputs`
 <div className='text-slate-500'>Type: list of `TensorSpec`</div>
 
@@ -118,7 +229,7 @@ A `TensorSpec` describes an input or output tensor of a model. It provides a nam
 
 Note: If you specify one input or output, you must specify all inputs and outputs
 
-```python
+```python forLang='python'
 from cartonml import TensorSpec
 
 input_x = TensorSpec(
@@ -172,6 +283,75 @@ await carton.pack(
 )
 ```
 
+```rust forLang='rust'
+use carton::info::{DataType, Dimension, Shape, TensorSpec};
+
+let input_x = TensorSpec {
+    // The name of the input or output
+    name: "x".into(),
+
+    // The datatype of the tensor.  Valid values are
+    // - DataType::Float
+    // - DataType::Double
+    // - DataType::String
+    // - DataType::I8
+    // - DataType::I16
+    // - DataType::I32
+    // - DataType::I64
+    // - DataType::U8
+    // - DataType::U16
+    // - DataType::U32
+    // - DataType::U64
+    dtype: DataType::Float,
+
+    // A shape of `Shape::Any` means the tensor can be of any shape
+    shape: Shape::Any,
+
+    // A shape with 3 dims of any value
+    // Note: this also supports ragged/nested tensors
+    // shape: Shape::Shape(vec![Dimension::Any, Dimension::Any, Dimension::Any]),
+
+    // A shape of an exact size
+    // shape: Shape::Shape(vec![
+    //     Dimension::Value(2),
+    //     Dimension::Value(3),
+    //     Dimension::Value(512),
+    //     Dimension::Value(512),
+    // ]),
+
+    // A scalar
+    // shape: Shape::Shape(vec![]),
+
+    // A shape containing a "symbol"
+    // shape: Shape::Shape(vec![
+    //     Dimension::Symbol("batch_size"),
+    //     Dimension::Value(3),
+    //     Dimension::Value(512),
+    //     Dimension::Value(512),
+    // ]),
+
+    // A symbol is an arbitrary string that should resolve to the same value each time it's used.
+    // (i.e. at runtime, every dimension of size "batch_size" should
+    // resolve to the same concrete value)
+
+    // A symbol for the overall shape:
+    // shape: Shape::Symbol("input_shape".into()),
+
+    // Optional
+    description = "The input image as a NCHW tensor"
+};
+
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        inputs: Some(vec![input_x]),
+    }
+)
+.await
+.unwrap()
+```
+
 ### `outputs`
 <div className='text-slate-500'>Type: list of `TensorSpec`</div>
 
@@ -179,11 +359,23 @@ A list of outputs for the model. Each item is a `TensorSpec`. See the `inputs` s
 
 Note: If you specify one input or output, you must specify all inputs and outputs
 
-```python
+```python forLang='python'
 await carton.pack(
     # ...
     outputs = [],
 )
+```
+
+```rust forLang='rust'
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        outputs: None,
+    }
+)
+.await
+.unwrap()
 ```
 
 ### `self_tests`
@@ -193,7 +385,7 @@ A list of self tests. A `SelfTest` is a set of inputs (and optionally outputs) t
 
 Note: `inputs` and `outputs` above must be specified in order to specify test data.
 
-```python
+```python forLang='python'
 from cartonml import SelfTest
 import numpy as np
 
@@ -210,6 +402,7 @@ st = SelfTest(
     # Optional
     # If specified, the output will be compared using
     # something conceptually similar to np.allclose
+    # Note: this comparison is not currently implemented, but may be in the future
     expected_out = dict(out = np.ones(5, dtype=np.float32) * 2)
 )
 
@@ -217,6 +410,57 @@ await carton.pack(
     # ...
     self_tests = [st],
 )
+```
+
+```rust forLang='rust'
+use carton::info::SelfTest;
+
+let st = SelfTest {
+    // Optional
+    name: Some("a_self_test".into()),
+
+    // Optional
+    description: Some("A self test".into()),
+
+    // A mapping from input tensor names to values
+    inputs: [
+        (
+            "x".into(),
+            Tensor::Float(
+                ndarray::ArrayD::ones(
+                    ndarray::IxDyn(&[5])
+                )
+            ).into()
+        ),
+    ].into(),
+
+    // Optional
+    // If specified, the output will be compared using
+    // something conceptually similar to np.allclose
+    // Note: this comparison is not currently implemented, but may be in the future
+    expected_out: Some(
+        [
+            (
+                "out".into(),
+                Tensor::Float(
+                    ndarray::ArrayD::ones(
+                        ndarray::IxDyn(&[5])
+                    ) * 2.0
+                ).into()
+            ),
+        ].into()
+    ),
+}
+
+Carton::pack(
+    input_model_path,
+    CartonInfo {
+        // ...
+        self_tests: Some(vec![st]),
+    }
+)
+.await
+.unwrap()
 ```
 
 ### `examples`
@@ -228,7 +472,7 @@ These may be rendered in model documentation. See the `MiscFile` section below f
 
 Note: `inputs` and `outputs` above must be specified in order to specify examples.
 
-```python
+```python forLang='python'
 from cartonml import Example
 import numpy as np
 
@@ -256,6 +500,9 @@ await carton.pack(
 )
 ```
 
+```rust forLang='rust'
+// TODO: example for rust
+```
 
 
 ### `misc_files`
@@ -269,7 +516,7 @@ The following file types are allowed:
 - mp3
 - mp4
 
-```python className='pb-5'
+```python forLang='python'
 # ...
 
 MODEL_DESCRIPTION = """
@@ -291,6 +538,21 @@ async def main():
     )
 
 ```
+
+```rust forLang='rust'
+// TODO: example for rust
+```
+
+</LanguageItem>
+<LanguageItem>
+
+This language currently does not support packing models. Please check the [quickstart guide](/quickstart) for more info or select a different language.
+
+<div className="flex not-prose">
+    <LanguageSelect/>
+</div>
+</LanguageItem>
+</LanguageSwitch>
 
 import DocsLayout from '@/components/docslayout'
 export default ({children}) => <DocsLayout>{children}</DocsLayout>

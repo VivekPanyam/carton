@@ -41,7 +41,10 @@ type CodeProps = {
 
 const LANGUAGE_TAGS = {
     "python": { "bg": "bg-sky-500", tag: "py"},
-    "bash": {"bg": "bg-amber-400", tag: "bash"}
+    "bash": {"bg": "bg-amber-400", tag: "bash"},
+    "text": {"bg": "", tag: ""},
+    "js": {"bg": "bg-emerald-500", tag: "js"},
+    "rust": {"bg": "bg-violet-500", tag: "rust"},
 }
 
 const Code = ({

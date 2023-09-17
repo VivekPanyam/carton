@@ -185,7 +185,7 @@ pub mod pack {
         let linked_files = vec![res.0.unwrap(), res.1.unwrap(), res.2.unwrap()];
 
         // Pack the model and return the path
-        let info = CartonInfo {
+        let info = CartonInfo::<GenericStorage> {
             model_name: Some("DistilBERT base cased distilled SQuAD".into()),
             short_description: Some("A DistilBERT model fine tuned for question answering.".into()),
             model_description: Some("See [here](https://huggingface.co/distilbert-base-cased-distilled-squad) for more details.".into()),
@@ -241,7 +241,7 @@ pub mod pack {
             misc_files: None,
         };
 
-        carton::Carton::pack::<GenericStorage>(
+        carton::Carton::pack(
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,

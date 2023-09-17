@@ -1,12 +1,13 @@
 import { createContext, Fragment, useContext, useState } from 'react'
 import { Listbox, Transition } from '@headlessui/react'
 import { HiCheck, HiChevronUpDown } from 'react-icons/hi2'
+import React from 'react';
 
-const LANGUAGES = [
+export const LANGUAGES = [
     { name: "Python", enabled: true },
-    { name: "JavaScript", enabled: false },
-    { name: "TypeScript", enabled: false },
-    { name: "Rust", enabled: false },
+    { name: "JavaScript", enabled: true },
+    { name: "TypeScript", enabled: true },
+    { name: "Rust", enabled: true },
     { name: "C", enabled: false },
     { name: "C++", enabled: false },
     { name: "C#", enabled: false },
@@ -77,4 +78,40 @@ export default function LanguageSelect({ className }: any) {
             </Listbox>
         </div>
     )
+}
+
+/// Show at most one child based on the selected language
+export const LanguageSwitch = ({ children }: any) => {
+    const { currentLanguage, setCurrentLanguage: _ } = useContext(LanguageContext)
+    const arrayChildren = React.Children.toArray(children);
+
+    let selectedChild = null;
+    for (const child of arrayChildren) {
+        // @ts-ignore
+        const forLang = child.props.forLang;
+
+        // If forLang is set, we only want to display this block for a specific language
+        if (forLang != null) {
+            const target = forLang.split(',')
+            const currLang = currentLanguage.name.toLowerCase();
+            if (target.indexOf(currLang) >= 0) {
+                selectedChild = child;
+                break;
+            }
+        } else {
+            // This is a catch all
+            selectedChild = child;
+            break;
+        }
+    }
+
+    return (
+        <>
+            {selectedChild}
+        </>
+    )
+}
+
+export const LanguageItem = ({ children, forLang}: any) => {
+    return children
 }

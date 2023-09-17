@@ -1,4 +1,5 @@
 import remarkGfm from "remark-gfm";
+import rehypeSlug from 'rehype-slug';
 import remarkMdxCodeMeta from 'remark-mdx-code-meta';
 import createMDX from "@next/mdx";
 
@@ -12,7 +13,9 @@ const withMDX = createMDX({
       remarkMdxCodeMeta,
       remarkGfm,
     ],
-    rehypePlugins: [],
+    rehypePlugins: [
+      rehypeSlug,
+    ],
     // If you use `MDXProvider`, uncomment the following line.
     providerImportSource: "@mdx-js/react",
   },

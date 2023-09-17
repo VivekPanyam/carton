@@ -1,0 +1,315 @@
+import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
+
+# Model Metadata
+
+It's possible to fetch model metadata without loading a model. This approach only fetches the data needed to provide the requested information and is therefore quite efficient even with large models.
+
+<div className="flex items-center pt-5 space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
+
+&nbsp;
+
+```python forLang='python'
+import asyncio
+import cartonml as carton
+
+async def main():
+    info = await carton.get_model_info("https://carton.pub/cartonml/basic_test")
+
+    # ...
+
+asyncio.run(main())
+```
+
+```js forLang='javascript,typescript'
+import { get_model_info } from '@cartonml/wasm'
+
+const info = await get_model_info("https://carton.pub/cartonml/basic_test");
+```
+
+```rust forLang='rust'
+use carton::Carton;
+
+async fn main() {
+    // Load the model
+    let data = Carton::get_model_info(
+        "https://carton.pub/cartonml/basic_test",
+    )
+    .await
+    .unwrap();
+
+    let info = data.info;
+
+    // ...
+}
+```
+
+### `model_name`
+
+See the [corresponding packing option](/docs/packing/options#model_name) for more details.
+
+```python forLang='python'
+print(info.model_name)
+# 'Test Model'
+```
+
+```js forLang='javascript,typescript'
+console.log(info.model_name)
+// 'Test Model'
+```
+
+```rust forLang='rust'
+println!("{:#?}", info.model_name);
+// 'Test Model'
+```
+
+### `short_description`
+
+See the [corresponding packing option](/docs/packing/options#short_description) for more details.
+
+```python forLang='python'
+print(info.short_description)
+# 'A short description that should be less than or equal to 100 characters.'
+```
+
+```js forLang='javascript,typescript'
+console.log(info.short_description)
+// 'A short description that should be less than or equal to 100 characters.'
+```
+
+```rust forLang='rust'
+println!("{:#?}", info.short_description);
+// 'A short description that should be less than or equal to 100 characters.'
+```
+
+### `model_description`
+
+See the [corresponding packing option](/docs/packing/options#model_description) for more details.
+
+```python forLang='python'
+print(info.model_description)
+```
+
+```js forLang='javascript,typescript'
+console.log(info.model_description)
+```
+
+```rust forLang='rust'
+println!("{:#?}", info.model_description);
+```
+
+### `license`
+
+See the [corresponding packing option](/docs/packing/options#license) for more details.
+
+```python forLang='python'
+print(info.license)
+```
+
+```js forLang='javascript,typescript'
+console.log(info.license)
+```
+
+```rust forLang='rust'
+println!("{:#?}", info.license);
+```
+
+### `repository`
+
+See the [corresponding packing option](/docs/packing/options#repository) for more details.
+
+```python forLang='python'
+print(info.repository)
+```
+
+```js forLang='javascript,typescript'
+console.log(info.repository)
+```
+
+```rust forLang='rust'
+println!("{:#?}", info.repository);
+```
+
+### `homepage`
+
+See the [corresponding packing option](/docs/packing/options#homepage) for more details.
+
+```python forLang='python'
+print(info.homepage)
+```
+
+```js forLang='javascript,typescript'
+console.log(info.homepage)
+```
+
+```rust forLang='rust'
+println!("{:#?}", info.homepage);
+```
+
+### `required_platforms`
+
+See the [corresponding packing option](/docs/packing/options#required_platforms) for more details.
+
+```python forLang='python'
+print(info.required_platforms)
+```
+
+```js forLang='javascript,typescript'
+console.log(info.required_platforms)
+```
+
+```rust forLang='rust'
+println!("{:#?}", info.required_platforms);
+```
+
+### `inputs`
+
+See the [corresponding packing option](/docs/packing/options#inputs) for more details.
+
+```python forLang='python'
+print(info.inputs)
+```
+
+```js forLang='javascript,typescript'
+console.log(info.inputs)
+```
+
+```rust forLang='rust'
+// See https://docs.rs/carton for more detail on `info.inputs`
+```
+
+
+### `outputs`
+
+See the [corresponding packing option](/docs/packing/options#outputs) for more details.
+
+```python forLang='python'
+print(info.outputs)
+```
+
+```js forLang='javascript,typescript'
+console.log(info.outputs)
+```
+
+```rust forLang='rust'
+// See https://docs.rs/carton for more detail on `info.outputs`
+```
+
+### `self_tests`
+
+See the [corresponding packing option](/docs/packing/options#self_tests) for more details.
+
+```python forLang='python'
+print(info.self_tests)
+
+# Note: To get the value of an input or output tensor, call `get()` on it
+# For example:
+# await info.self_tests[0].inputs["f"].get()
+```
+
+```js forLang='javascript,typescript'
+for (const t of info.self_tests) {
+    console.log(t.name)
+    console.log(t.description)
+    for (const [k, v] of t.inputs) {
+        // The value will be an object containing a buffer, shape, dtype, and stride
+        // These can be passed to several JS ndarray libraries
+        console.log(k, await v.get())
+    }
+    for (const [k, v] of t.expected_out) {
+        // The value will be an object containing a buffer, shape, dtype, and stride
+        // These can be passed to several JS ndarray libraries
+        console.log(k, await v.get())
+    }
+}
+```
+
+```rust forLang='rust'
+// See https://docs.rs/carton for more detail on `info.self_tests`
+```
+
+### `examples`
+
+See the [corresponding packing option](/docs/packing/options#examples) for more details.
+
+```python forLang='python'
+print(info.examples)
+
+# Note: To get the value of an input or output tensor, call `get()` on it
+# For example:
+# await info.examples[0].inputs["x"].get()
+#
+# To read a misc file, call `read()` on it.
+# For example:
+# await info.examples[0].inputs["some_misc_input"].read()
+```
+
+```js forLang='javascript,typescript'
+for (const t of info.examples) {
+    console.log(t.name)
+    console.log(t.description)
+    for (const [k, v] of t.inputs) {
+        // If the value is a tensor, `get()` will return an object containing
+        // a buffer, shape, dtype, and stride. These can be passed to several
+        // JS ndarray libraries.
+        // If the value is a misc file, `get()` will return a readable bytestream
+        // See https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_readable_byte_streams
+        console.log(k, await v.get())
+    }
+    for (const [k, v] of t.sample_out) {
+        // If the value is a tensor, `get()` will return an object containing
+        // a buffer, shape, dtype, and stride. These can be passed to several
+        // JS ndarray libraries.
+        // If the value is a misc file, `get()` will return a readable bytestream
+        // See https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_readable_byte_streams
+        console.log(k, await v.get())
+    }
+}
+```
+
+```rust forLang='rust'
+// See https://docs.rs/carton for more detail on `info.examples`
+```
+
+### `misc_files`
+
+See the [corresponding packing option](/docs/packing/options#misc_files) for more details.
+
+```python forLang='python'
+print(info.misc_files)
+
+# To read a misc file, call `read()` on it.
+# For example:
+# await info.misc_files["model_architecture.png"].read()
+```
+
+```js forLang='javascript,typescript'
+for (const [k, v] of info.misc_files) {
+    // `get()` will return a readable bytestream
+    // See https://developer.mozilla.org/en-US/docs/Web/API/Streams_API/Using_readable_byte_streams
+    console.log(k, await v.get())
+}
+```
+
+```rust forLang='rust'
+// See https://docs.rs/carton for more detail on `info.misc_files`
+```
+
+<LanguageSwitch>
+<LanguageItem forLang="javascript,typescript">
+
+### `manifest_sha256`
+
+The sha256 of the manifest of the model.
+
+```js forLang='javascript,typescript'
+console.log(info.manifest_sha256)
+```
+
+</LanguageItem>
+</LanguageSwitch>
+
+import DocsLayout from '@/components/docslayout'
+export default ({children}) => <DocsLayout>{children}</DocsLayout>

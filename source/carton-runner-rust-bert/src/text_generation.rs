@@ -171,7 +171,7 @@ pub mod pack {
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo {
+        let info = CartonInfo::<GenericStorage> {
             model_name: Some("GPT2 Medium".into()),
             short_description: Some("GPT2 Medium".into()),
             model_description: Some("See [here](https://github.com/openai/gpt-2) for more details.".into()),
@@ -219,7 +219,7 @@ pub mod pack {
             misc_files: None,
         };
 
-        carton::Carton::pack::<GenericStorage>(
+        carton::Carton::pack(
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,

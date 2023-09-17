@@ -116,7 +116,7 @@ async fn test_model(model_path: PathBuf) {
     }
 
     log::info!("running inference");
-    let out = model.infer_with_inputs(tensors).await.unwrap();
+    let out = model.infer(tensors).await.unwrap();
     for (k, v) in out {
         log::info!("{k}: {v:#?}");
     }

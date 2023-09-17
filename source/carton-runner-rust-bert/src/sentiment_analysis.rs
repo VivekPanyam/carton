@@ -178,7 +178,7 @@ pub mod pack {
         let linked_files = vec![res.0.unwrap(), res.1.unwrap(), res.2.unwrap()];
 
         // Pack the model and return the path
-        let info = CartonInfo {
+        let info = CartonInfo::<GenericStorage> {
             model_name: Some("DistilBERT base uncased finetuned SST-2".into()),
             short_description: Some("DistilBERT base uncased finetuned SST-2 is a model that can do sentiment analysis.".into()),
             model_description: Some("See [here](https://huggingface.co/distilbert-base-uncased-finetuned-sst-2-english) for more details.".into()),
@@ -213,7 +213,7 @@ pub mod pack {
                         ("input".into(), TensorOrMisc::Tensor(Tensor::String(ndarray::ArrayD::from_shape_vec(ndarray::IxDyn(&[3]), vec!["I love pizza".into(), "This car is fast, but gets hot.".into(), "Most movies that try to do too many things are bad, but this one was different.".into()]).unwrap().into()).into())),
                     ].into(),
                     sample_out: [
-                        ("scores".into(), TensorOrMisc::Tensor(Tensor::Float(ndarray::ArrayD::from_shape_vec(ndarray::IxDyn(&[3]), vec![0.97580576, -0.74823254, 0.729913]).unwrap().into()).into()))
+                        ("scores".into(), TensorOrMisc::Tensor(Tensor::Float(ndarray::ArrayD::from_shape_vec(ndarray::IxDyn(&[3]), vec![0.97580576, -0.74823254, 0.729913]).unwrap()).into()))
                     ].into(),
                 }
             ]),
@@ -226,7 +226,7 @@ pub mod pack {
             misc_files: None,
         };
 
-        carton::Carton::pack::<GenericStorage>(
+        carton::Carton::pack(
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,

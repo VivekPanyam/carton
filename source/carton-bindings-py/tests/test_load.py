@@ -14,6 +14,6 @@ async def test():
 
     print ("Input: ", input)
 
-    model.infer_with_inputs(input)
+    model.infer(input)
 
 asyncio.run(test())

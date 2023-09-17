@@ -79,7 +79,7 @@ platform = "{}"
     let load_opts = LoadOpts::default();
     let carton = runtime
         .block_on(Carton::load_unpacked(
-            "/tmp".into(),
+            "/tmp",
             PackOpts {
                 info,
                 linked_files: None,
@@ -91,7 +91,7 @@ platform = "{}"
     c.bench_function("infer_noop", |b| {
         b.to_async(&runtime).iter(|| async {
             let tensors: HashMap<String, carton::types::Tensor<GenericStorage>> = HashMap::new();
-            carton.infer_with_inputs(tensors).await.unwrap();
+            carton.infer(tensors).await.unwrap();
         })
     });
 }

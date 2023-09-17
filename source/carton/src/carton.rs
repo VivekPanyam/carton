@@ -25,8 +25,8 @@ pub struct Carton {
 
 impl Carton {
     /// Load a carton given a url, path, etc and options
-    pub async fn load(url_or_path: String, opts: LoadOpts) -> Result<Self> {
-        let (info, runner) = crate::load::load(&url_or_path, opts).await?;
+    pub async fn load<P: AsRef<str>>(url_or_path: P, opts: LoadOpts) -> Result<Self> {
+        let (info, runner) = crate::load::load(url_or_path.as_ref(), opts).await?;
 
         Ok(Self {
             info,
@@ -37,17 +37,21 @@ impl Carton {
 
     /// Infer using a set of inputs.
     /// Consider using `seal` and `infer_with_handle` in pipelines
-    pub async fn infer_with_inputs<T>(
-        &self,
-        tensors: HashMap<String, Tensor<T>>,
-    ) -> Result<HashMap<String, Tensor<RunnerStorage>>>
+    pub async fn infer<I, S, T>(&self, tensors: I) -> Result<HashMap<String, Tensor<RunnerStorage>>>
     where
+        I: IntoIterator<Item = (S, Tensor<T>)>,
+        String: From<S>,
         T: TensorStorage,
     {
         match &self.runner {
             Runner::V1(runner) => Ok(convert_map(
                 runner
-                    .infer_with_inputs(convert_map(tensors))
+                    .infer_with_inputs(
+                        tensors
+                            .into_iter()
+                            .map(|(k, v)| (k.into(), v.into()))
+                            .collect(),
+                    )
                     .await
                     .map_err(|e| CartonError::ErrorFromRunner(e))?,
             )),
@@ -72,7 +76,7 @@ impl Carton {
     }
 
     /// Infer using a handle from `seal`.
-    /// This approach can make inference pipelines more efficient vs just using `infer_with_inputs`
+    /// This approach can make inference pipelines more efficient vs just using `infer`
     pub async fn infer_with_handle(
         &self,
         handle: SealHandle,
@@ -89,11 +93,14 @@ impl Carton {
 
     /// Pack a carton given a path and options. Returns the path of the output file
     #[cfg(not(target_family = "wasm"))]
-    pub async fn pack<T>(path: String, mut opts: PackOpts<T>) -> Result<std::path::PathBuf>
+    pub async fn pack<T, O, P: AsRef<str>>(path: P, opts: O) -> Result<std::path::PathBuf>
     where
         T: TensorStorage,
+        O: Into<PackOpts<T>>,
     {
         use std::sync::Arc;
+
+        let mut opts = opts.into();
 
         // Launch a runner
         let (runner, runner_info) =
@@ -119,7 +126,11 @@ impl Carton {
         log::trace!("Asking runner to pack...");
         let model_dir_path = match runner {
             Runner::V1(runner) => runner
-                .pack(&localfs, path.as_ref(), temp_folder)
+                .pack(
+                    &localfs,
+                    lunchbox::path::Path::new(path.as_ref()),
+                    temp_folder,
+                )
                 .await
                 .map_err(|e| CartonError::ErrorFromRunner(e))?,
         };
@@ -134,17 +145,20 @@ impl Carton {
     /// Functionally equivalent to `pack` followed by `load`, but implemented in a more
     /// optimized way
     #[cfg(not(target_family = "wasm"))]
-    pub async fn load_unpacked<T>(
-        path: String,
-        mut pack_opts: PackOpts<T>,
+    pub async fn load_unpacked<T, O, P: AsRef<str>>(
+        path: P,
+        pack_opts: O,
         load_opts: LoadOpts,
     ) -> Result<Self>
     where
         T: TensorStorage + 'static,
+        O: Into<PackOpts<T>>,
     {
         use std::sync::Arc;
 
         use crate::conversion_utils::ConvertInto;
+
+        let mut pack_opts = pack_opts.into();
 
         // Launch a runner
         let (runner, runner_info) =
@@ -170,7 +184,11 @@ impl Carton {
         // Ask the runner to pack the model
         let model_dir_path = match &runner {
             Runner::V1(runner) => runner
-                .pack(&localfs, path.as_ref(), temp_folder)
+                .pack(
+                    &localfs,
+                    lunchbox::path::Path::new(path.as_ref()),
+                    temp_folder,
+                )
                 .await
                 .map_err(|e| CartonError::ErrorFromRunner(e))?,
         };
@@ -210,10 +228,10 @@ impl Carton {
     }
 
     /// Get info for a model
-    pub async fn get_model_info(
-        url_or_path: String,
+    pub async fn get_model_info<P: AsRef<str>>(
+        url_or_path: P,
     ) -> Result<CartonInfoWithExtras<GenericStorage>> {
-        crate::load::get_carton_info(&url_or_path).await
+        crate::load::get_carton_info(url_or_path.as_ref()).await
     }
 
     /// Shrink a packed carton by storing links to files instead of the files themselves when possible.

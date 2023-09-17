@@ -220,7 +220,7 @@ pub mod pack {
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo {
+        let info = CartonInfo::<GenericStorage> {
             model_name: Some("M2M100".into()),
             short_description: Some("M2M100 is a model that can translate directly between any pair of 100 languages.".into()),
             model_description: Some("See [here](https://about.fb.com/news/2020/10/first-multilingual-machine-translation-model/) for more details. M2M100 supports the following languages:\n".to_owned() + &languages.iter().map(|l| format!("- {}", serde_plain::to_string(l).unwrap())).collect::<Vec<_>>().join("\n")),
@@ -284,7 +284,7 @@ pub mod pack {
             misc_files: None,
         };
 
-        carton::Carton::pack::<GenericStorage>(
+        carton::Carton::pack(
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,
