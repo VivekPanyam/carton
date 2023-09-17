@@ -26,7 +26,7 @@ class Carton {
         return this.inner.runner
     }
 
-    async infer_with_inputs(tensors) {
+    async infer(tensors) {
         // TODO: this may be a bit brittle across libraries so refactor if needed
 
         // Get the buffer, shape, stride, and dtype for each input tensor
@@ -46,6 +46,6 @@ class Carton {
         // console.log(nativeTensors)
 
         // Run the model
-        return await native.infer_with_inputs.call(this.inner.handle, nativeTensors)
+        return await native.infer.call(this.inner.handle, nativeTensors)
     }
 }

@@ -96,7 +96,7 @@ impl CartonWrapper {
     ///     "stride": [...]
     /// }
     ///
-    fn infer_with_inputs(mut cx: FunctionContext) -> JsResult<JsPromise> {
+    fn infer(mut cx: FunctionContext) -> JsResult<JsPromise> {
         let tensors_js = cx.argument::<JsObject>(0)?;
         let mut tensors = HashMap::new();
 
@@ -175,7 +175,7 @@ impl CartonWrapper {
 
         // Spawn a task
         rt.spawn(async move {
-            let res = this.infer_with_inputs(tensors).await;
+            let res = this.infer(tensors).await;
 
             // This runs on the JS main thread
             deferred.settle_with(&channel, move |mut cx| {
@@ -238,7 +238,7 @@ impl CartonWrapper {
 #[neon::main]
 fn main(mut cx: ModuleContext) -> NeonResult<()> {
     cx.export_function("load", load)?;
-    cx.export_function("infer_with_inputs", CartonWrapper::infer_with_inputs)?;
+    cx.export_function("infer", CartonWrapper::infer)?;
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 import { ButtonLink, ButtonGrid } from '@/components/buttonlink'
-import LanguageSelect from "@/components/languageselect";
+import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
 
 # Install
 
@@ -8,15 +8,37 @@ import LanguageSelect from "@/components/languageselect";
     <LanguageSelect/>
 </div>
 
-```bash linePrompt='$'
-pip install cartonml --extra-index-url https://nightly.carton.run/python
+```bash linePrompt='$' forLang='python'
+pip install cartonml-nightly
 ```
+
+```bash linePrompt='$' forLang='javascript,typescript'
+yarn add @cartonml/wasm@next
+
+# or
+
+npm install @cartonml/wasm@next
+```
+
+```bash linePrompt='$' forLang='rust'
+cargo add carton
+```
+
+<LanguageSwitch>
+<LanguageItem forLang='javascript,typescript'>
+JS and TS are currently supported by our WASM build. This build supports fetching Carton metadata and powers the [community model registry.](https://carton.pub)
+
+At the moment, loading and packing models are not supported from WASM. NodeJS bindings are in progress and will have docs soon.
+
+</LanguageItem>
+<LanguageItem>
+
 &nbsp;
 # Load and run a model
 
 If you want to run an existing carton model (or "a carton" for short), you can just pass in a file path or URL.
 
-```python
+```python forLang='python'
 # TODO: actually make this a runnable example with correct output
 import asyncio
 import cartonml as carton
@@ -35,13 +57,43 @@ async def main():
 asyncio.run(main())
 ```
 
+```rust forLang='rust'
+// TODO: actually make this a runnable example with correct output
+use carton::Carton;
+use carton::types::LoadOpts;
+
+async fn main() {
+    // Load the model
+    let model = Carton::load(
+        "https://carton.pub/google-research/bert-base-uncased",
+        LoadOpts::default(),
+    )
+    .await
+    .unwrap();
+
+    // Create an ndarray with our inputs
+    let arr = ndarray::ArrayD::from_shape_vec(
+        ndarray::IxDyn(&[1]),
+        vec!["Today is a good [MASK].".to_owned()],
+    )
+    .unwrap();
+
+    // Run inference
+    let out = model
+        .infer([("input_sequences", Tensor::<GenericStorage>::String(arr))])
+        .await
+        .unwrap();
+    println!("{out:?}");
+}
+```
+
 See the ["Loading a model"](/docs/loading) docs for more details.
 
 # Pack a model
 
 To create a carton, you need to pack a model from a supported framework. The below example packs an xgboost model.
 
-```python
+```python forLang='python'
 import asyncio
 import cartonml as carton
 
@@ -57,13 +109,34 @@ async def main():
 asyncio.run(main())
 ```
 
+```rust forLang='rust'
+use carton::Carton;
+use carton::info::RunnerInfo;
+
+async fn main() {
+    let runner_info = RunnerInfo {
+        runner_name: "xgboost".into(),
+        required_framework_version: semver::VersionReq::parse("=1.7").unwrap(),
+        runner_compat_version: None,
+        opts: None,
+    };
+
+    let packed_model_path = Carton::pack(
+        "/path/to/model.xgboost",
+        runner_info,
+    )
+    .await
+    .unwrap();
+}
+```
+
 The packing procedure can be slightly different depending on the framework the original model is in. See the ["Pack a model"](/docs/packing) docs for more details.
 
 # Load an unpacked model
 
 Carton also supports loading an unpacked model via the `load_unpacked` method. This is conceptually the same as `pack` followed by `load`, but is implemented more efficiently internally. It supports all the options that `load` and `pack` support.
 
-```python
+```python forLang='python'
 import asyncio
 import cartonml as carton
 
@@ -78,6 +151,88 @@ async def main():
 
 asyncio.run(main())
 ```
+
+```rust forLang='rust'
+use carton::Carton;
+use carton::info::RunnerInfo;
+use carton::types::LoadOpts;
+
+async fn main() {
+    let runner_info = RunnerInfo {
+        runner_name: "xgboost".into(),
+        required_framework_version: semver::VersionReq::parse("=1.7").unwrap(),
+        runner_compat_version: None,
+        opts: None,
+    };
+
+    let model = Carton::load_unpacked(
+        "/path/to/model.xgboost",
+        runner_info,
+        LoadOpts::default(),
+    )
+    .await
+    .unwrap();
+}
+```
+
+&nbsp;
+
+</LanguageItem>
+</LanguageSwitch>
+
+# Fetch model metadata
+
+It's possible to fetch model metadata without loading a model. This function only fetches the data needed to provide the requested metadata. Therefore it's quite efficient even with large models.
+
+```python forLang='python'
+import asyncio
+import cartonml as carton
+
+async def main():
+    info = await carton.get_model_info("https://carton.pub/cartonml/basic_test")
+
+    print(info.model_name)
+    # 'Test Model'
+
+    print(info.short_description)
+    # 'A short description that should be less than or equal to 100 characters.'
+
+asyncio.run(main())
+```
+
+```js forLang='javascript,typescript'
+import { get_model_info } from '@cartonml/wasm'
+
+const info = await get_model_info("https://carton.pub/cartonml/basic_test");
+
+console.log(info.model_name)
+// 'Test Model'
+
+console.log(info.short_description)
+// 'A short description that should be less than or equal to 100 characters.'
+
+```
+
+```rust forLang='rust'
+use carton::Carton;
+
+async fn main() {
+    // Load the model
+    let data = Carton::get_model_info(
+        "https://carton.pub/cartonml/basic_test",
+    )
+    .await
+    .unwrap();
+
+    println!("{}", data.info.model_name);
+    // 'Test Model'
+
+    println!("{}", data.info.short_description);
+    // 'A short description that should be less than or equal to 100 characters.'
+}
+```
+
+See the [metadata docs](/docs/metadata) for a list of available fields.
 
 &nbsp;
 

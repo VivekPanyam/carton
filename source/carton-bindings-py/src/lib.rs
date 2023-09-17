@@ -35,12 +35,12 @@ fn maybe_init_logging() -> &'static pyo3_log::ResetHandle {
 impl Carton {
     fn infer<'a>(&self, py: Python<'a>, tensors: &PyDict) -> PyResult<&'a PyAny> {
         let tensors: HashMap<String, SupportedTensorType> = tensors.extract().unwrap();
-        let transformed = tensors.into_iter().map(|(k, v)| (k, v.into())).collect();
+        let transformed: HashMap<_, _> = tensors.into_iter().map(|(k, v)| (k, v.into())).collect();
 
         let inner = self.inner.clone();
         pyo3_asyncio::tokio::future_into_py(py, async move {
             let out: HashMap<String, PyObject> = inner
-                .infer_with_inputs(transformed)
+                .infer(transformed)
                 .await
                 .unwrap()
                 .into_iter()

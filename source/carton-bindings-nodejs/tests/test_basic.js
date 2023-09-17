@@ -11,7 +11,7 @@ async function test(input) {
 
     console.log("Input: ", input)
 
-    let out = await model.infer_with_inputs(input)
+    let out = await model.infer(input)
 
     console.log("Out: ", out)
 }

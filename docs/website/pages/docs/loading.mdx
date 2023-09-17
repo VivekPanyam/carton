@@ -1,8 +1,18 @@
+import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
+
+<LanguageSwitch>
+<LanguageItem forLang='python,rust'>
+
 # Loading a model
+
+<div className="flex items-center space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
 
 Once you have a packed model, you can pass in a file path or URL to the model.
 
-```python
+```python forLang='python'
 # TODO: actually make this a runnable example with correct output
 import asyncio
 import cartonml as carton
@@ -19,6 +29,36 @@ async def main():
     # }
 
 asyncio.run(main())
+```
+
+```rust forLang='rust'
+// TODO: actually make this a runnable example with correct output
+use carton::Carton;
+use carton::types::LoadOpts;
+
+async fn main() {
+    // Load the model
+    let model = Carton::load(
+        "https://carton.pub/google-research/bert-base-uncased",
+        LoadOpts::default(),
+    )
+    .await
+    .unwrap();
+
+    // Create an ndarray with our inputs
+    let arr = ndarray::ArrayD::from_shape_vec(
+        ndarray::IxDyn(&[1]),
+        vec!["Today is a good [MASK].".to_owned()],
+    )
+    .unwrap();
+
+    // Run inference
+    let out = model
+        .infer([("input_sequences", Tensor::<GenericStorage>::String(arr))])
+        .await
+        .unwrap();
+    println!("{out:?}");
+}
 ```
 
 Carton loads the model (caching it locally if necessary).
@@ -48,12 +88,28 @@ Allowed values:
 The default is GPU 0 (or CPU if no GPUs are available).
 
 Note: a visible device does not necessarily mean that the model will use that device; it is up to the model to actually use it (e.g. by moving itself to GPU if it sees one available).
+
 Note: If a GPU index is specified, but no GPUs are available, Carton will print a warning and attempt to fallback to CPU
 
-```python
+```python forLang='python'
 await carton.load(
     # ...
-    visible_deivce = "0",
+    visible_device = "0",
+)
+```
+
+```rust forLang='rust'
+use carton::Carton;
+use carton::types::{Device, LoadOpts};
+
+Carton::load(
+    // ...
+    LoadOpts {
+        // ...
+        visible_device: Device::maybe_from_index(0),
+        // visible_device: Device::maybe_from_string("0").unwrap(),
+        // visible_device: Device::maybe_from_string("cpu").unwrap(),
+    },
 )
 ```
 
@@ -68,7 +124,7 @@ These are sometimes used to configure thread-pool sizes, etc.
 
 For allowed values, see the [packing docs](/docs/packing) for each framework.
 
-```python
+```python forLang='python'
 await carton.load(
     # ...
     override_runner_opts = {
@@ -77,6 +133,27 @@ await carton.load(
         # TODO: torchscript support isn't implemented yet
         "num_interop_threads": 4,
         "num_threads": 1,
+    },
+)
+```
+
+```rust forLang='rust'
+use carton::Carton;
+use carton::types::{Device, LoadOpts, RunnerOpt};
+
+Carton::load(
+    // ...
+    LoadOpts {
+        // ...
+        override_runner_opts: Some(
+            [
+                // For example, if we know this is a torchscript model and we want to set
+                // threading configuration for running this model.
+                // TODO: torchscript support isn't implemented yet
+                ("num_interop_threads".into(), RunnerOpt::Integer(4)),
+                ("num_threads".into(), RunnerOpt::Integer(1)),
+            ].into(),
+        ),
     },
 )
 ```
@@ -92,7 +169,7 @@ This is useful if a model is limited to a specific framework version range and y
 
 Note: this is not guaranteed to work if the underlying model isn't compatible with the version range you specify.
 
-```python
+```python forLang='python'
 await carton.load(
     # ...
 
@@ -102,6 +179,31 @@ await carton.load(
 )
 ```
 
+```rust forLang='rust'
+use carton::Carton;
+use carton::types::{Device, LoadOpts};
+
+Carton::load(
+    // ...
+    LoadOpts {
+        // ...
+
+        // If we know this is a python model and we want to force it to
+        // run with a `3.10.x` version of python.
+        override_required_framework_version: Some("=3.10".into()),
+    },
+)
+```
+</LanguageItem>
+<LanguageItem>
+
+This language currently does not support loading models. Please check the [quickstart guide](/quickstart) for more info or select a different language.
+
+<div className="flex not-prose">
+    <LanguageSelect/>
+</div>
+</LanguageItem>
+</LanguageSwitch>
 
 
 import DocsLayout from '@/components/docslayout'

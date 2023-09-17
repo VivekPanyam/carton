@@ -2,13 +2,15 @@ import '@/styles/globals.css'
 import '@/styles/prism_style.css'
 import type { AppProps } from 'next/app'
 
-import { LanguageContext, DEFAULT_LANGUAGE } from '@/components/languageselect'
-import { useState } from 'react'
+import { LanguageContext, DEFAULT_LANGUAGE, LANGUAGES } from '@/components/languageselect'
+import { useContext, useEffect, useState } from 'react'
 import { MDXProvider } from '@mdx-js/react'
 import Code from '@/components/code'
 import Link from 'next/link'
 
-const Pre = ({ children, className, ...props }: any) => {
+const Pre = ({ children, className, forLang, ...props }: any) => {
+  const { currentLanguage, setCurrentLanguage: _ } = useContext(LanguageContext)
+
   if (children.type != "code") {
     throw `Expected child type to be \`code\`, but got ${children.type}`
   }
@@ -23,6 +25,15 @@ const Pre = ({ children, className, ...props }: any) => {
   }
 
   language = language.replace("language-", "")
+
+  // If forLang is set, we only want to display this block for a specific language
+  if (forLang != null) {
+    const target = forLang.split(',')
+    const currLang = currentLanguage.name.toLowerCase();
+    if (target.indexOf(currLang) < 0) {
+      return null
+    }
+  }
 
   return <Code language={language} codeString={children.props.children.trimEnd()} className={`not-prose -ml-5 md:ml-0 ${className || ""}`} {...props} />
 }
@@ -52,11 +63,50 @@ const components = {
 }
 
 export default function App({ Component, pageProps }: AppProps) {
-  const [currentLanguage, setCurrentLanguage] = useState(DEFAULT_LANGUAGE)
+  const [currentLanguage, setCurrentLanguage] = useState<typeof DEFAULT_LANGUAGE | null>(null)
+
+  // Update the current language based on localStorage
+  useEffect(() => {
+    // Checks if we have a selectedLanguage in local storage and loads it
+    const listener = () => {
+      const storedLanguage = localStorage.getItem("selectedLanguage");
+      if (storedLanguage) {
+        const matching = LANGUAGES.filter((item) => item.name == storedLanguage);
+        if (matching.length > 0) {
+          setCurrentLanguage(matching[0])
+          return
+        }
+      }
+
+      // Fallback to default
+      setCurrentLanguage(DEFAULT_LANGUAGE)
+    };
+
+    // Check if we have a stored language
+    listener()
+
+    // Disable sync for now because it could get annoying to use
+    // // Update on changes
+    // window.addEventListener("storage", listener);
+
+    // // Remove the event listener when the component unmounts
+    // return () => window.removeEventListener("storage", listener)
+  }, [])
+
+  // Save the current language
+  useEffect(() => {
+    if (currentLanguage != null) {
+      localStorage.setItem("selectedLanguage", currentLanguage.name)
+    }
+  }, [currentLanguage])
+
+  // If we don't have a language selected yet
+  const cl = currentLanguage || DEFAULT_LANGUAGE;
+
   return (
     <MDXProvider components={components}>
       <LanguageContext.Provider value={{
-        currentLanguage,
+        currentLanguage: cl,
         setCurrentLanguage
       }}>
         <Component {...pageProps} />

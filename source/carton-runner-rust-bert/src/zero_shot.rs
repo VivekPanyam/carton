@@ -245,7 +245,7 @@ pub mod pack {
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo {
+        let info = CartonInfo::<GenericStorage> {
             model_name: Some("BART Large MNLI".into()),
             short_description: Some("BART Large MNLI is a model that can do zero shot classificiation.".into()),
             model_description: Some("See [here](https://huggingface.co/facebook/bart-large-mnli) for more details.\n\nNote: This model performs multi-label classification (i.e. zero or more labels may be true for each input).".into()),
@@ -316,7 +316,7 @@ pub mod pack {
             misc_files: None,
         };
 
-        carton::Carton::pack::<GenericStorage>(
+        carton::Carton::pack(
             dir.path().to_str().unwrap().to_owned(),
             PackOpts {
                 info,
