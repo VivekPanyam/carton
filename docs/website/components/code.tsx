@@ -81,10 +81,8 @@ const Code = ({
                                     let additionalLineNumberClasses = "";
 
                                     if (shouldHighlightLine(i)) {
-                                        lineProps.className = `${lineProps.className} border-l-4 border-l-sky-400 bg-slate-500 bg-opacity-10`
-                                        additionalLineNumberProps.width = "calc(3em - 4px)"
+                                        lineProps.className = `${lineProps.className} border-l-4 border-l-sky-400 bg-slate-500 bg-opacity-10 -ml-[4px]`
                                         additionalLineNumberProps.opacity = 0.5;
-                                        additionalLineNumberClasses = "left-[1px] sm:-left-[2px]"
                                     }
 
                                     return (
