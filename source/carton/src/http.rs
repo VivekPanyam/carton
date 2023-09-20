@@ -49,6 +49,9 @@ lazy_static! {
     /// the time this process is running).
     /// We already rely on this assumption in several places so this is okay.
     static ref FILE_INFO_CACHE: DashMap<String, Arc<CachedData>> = DashMap::new();
+
+    /// A map from URLs to the `x-carton-dl-url` header returned during a HEAD request
+    static ref DL_URL_CACHE: DashMap<String, String> = DashMap::new();
 }
 
 struct CachedData {
@@ -75,14 +78,26 @@ impl HTTPFile {
                 parsed.to_string()
             } else {
                 // Check for an `x-carton-dl-url` header
-                let res = client.head(&url).send().await?;
-                match res.headers().get("x-carton-dl-url") {
-                    Some(v) => v.to_str().unwrap().to_owned(),
-                    None => {
-                        // We can reuse the head response since the URL didn't change
-                        head_res = Some(res);
-                        url
+
+                // First check the cache
+                if let Some(u) = DL_URL_CACHE.get(&url) {
+                    u.clone()
+                } else {
+                    // Not cached, make a request
+                    let res = client.head(&url).send().await?;
+                    let u = match res.headers().get("x-carton-dl-url") {
+                        Some(v) => v.to_str().unwrap(),
+                        None => {
+                            // We can reuse the head response since the URL didn't change
+                            head_res = Some(res);
+                            &url
+                        }
                     }
+                    .to_owned();
+
+                    // Store the value in the cache
+                    DL_URL_CACHE.insert(url, u.clone());
+                    u
                 }
             }
         } else {

@@ -279,6 +279,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_get() {
+        env_logger::builder()
+            .filter_level(log::LevelFilter::Info)
+            .filter_module("carton", log::LevelFilter::Trace)
+            .is_test(true)
+            .init();
+
         let start = Instant::now();
         let info =
             super::Carton::get_model_info("https://carton.pub/cartonml/basic_test".to_owned())
@@ -298,5 +304,23 @@ mod tests {
         let mut buf = Vec::new();
         misc_file.read_to_end(&mut buf).await.unwrap();
         println!("Fetched misc file in {:#?}", start.elapsed());
+    }
+
+    /// This tests a subdomain of carton.pub to exercise a different code path
+    /// We can remove this once the special case for carton.pub in `http.rs` is removed
+    #[tokio::test]
+    async fn test_other_domain() {
+        env_logger::builder()
+            .filter_level(log::LevelFilter::Info)
+            .filter_module("carton", log::LevelFilter::Trace)
+            .is_test(true)
+            .init();
+
+        let start = Instant::now();
+        let _info =
+            super::Carton::get_model_info("https://assets.carton.pub/manifest_sha256/512fdd95ec33dcde89558cb23d5d977d43b16cc2e670d9e3d1536f49afc47272")
+                .await
+                .unwrap();
+        println!("Loaded info in {:#?}", start.elapsed());
     }
 }
