@@ -396,6 +396,7 @@ dependencies = [
  "dashmap",
  "dlopen",
  "dlopen_derive",
+ "env_logger",
  "escargot",
  "futures",
  "lazy_static",
@@ -3899,7 +3900,7 @@ dependencies = [
 [[package]]
 name = "zipfs"
 version = "0.0.1"
-source = "git+https://github.com/VivekPanyam/ZipFS.git?branch=update_async_zip#e8da730ee481c982bc33d1ac20337ed9cbaaf4a3"
+source = "git+https://github.com/VivekPanyam/ZipFS.git?branch=read_full#0c27172f53c86ac6cd4a5bd57174a19bc5e4a7e7"
 dependencies = [
  "async-trait",
  "async_zip 0.0.15",

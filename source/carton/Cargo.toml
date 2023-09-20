@@ -53,6 +53,7 @@ criterion = {version = "0.4", features = ["async_tokio", "html_reports"]}
 tokio = { version = "1", features = ["full", "tracing"] }
 console-subscriber = "0.1.8"
 escargot = "0.5.8"
+env_logger = "0.9"
 
 [[bench]]
 name = "bench_noop_infer"
