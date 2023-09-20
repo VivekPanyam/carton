@@ -172,7 +172,7 @@ where
         let httpfs = Arc::new(HttpFS::new(CLIENT.clone(), file_mapping));
 
         // Create an overlay filesystem that does URL fetching for the files in links
-        let overlay = Arc::new(OverlayFS::new(fs.clone(), httpfs));
+        let overlay = Arc::new(OverlayFS::new(httpfs, fs.clone()));
 
         // Continue loading the carton
         load_carton(&overlay, opts, skip_runner).await
