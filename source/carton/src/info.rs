@@ -239,6 +239,34 @@ impl<T: TensorStorage> Clone for SelfTest<T> {
     }
 }
 
+impl<T: TensorStorage> SelfTest<T> {
+    /// Returns an input tensor if it exists
+    pub async fn get_input_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    where
+        S: AsRef<str>,
+        Tensor<T>: Clone,
+    {
+        let val = self.inputs.get(key.as_ref())?;
+        let tensor = val.get().await;
+
+        Some(tensor.clone())
+    }
+
+    /// Returns an output tensor if it exists
+    pub async fn get_output_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    where
+        S: AsRef<str>,
+        Tensor<T>: Clone,
+    {
+        let out = self.expected_out.as_ref()?;
+
+        let val = out.get(key.as_ref())?;
+        let tensor = val.get().await;
+
+        Some(tensor.clone())
+    }
+}
+
 pub struct Example<T>
 where
     T: TensorStorage,
@@ -256,6 +284,40 @@ impl<T: TensorStorage> Clone for Example<T> {
             description: self.description.clone(),
             inputs: self.inputs.clone(),
             sample_out: self.sample_out.clone(),
+        }
+    }
+}
+
+impl<T: TensorStorage> Example<T> {
+    /// Returns an input tensor if it exists (and is a tensor)
+    pub async fn get_input_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    where
+        S: AsRef<str>,
+        Tensor<T>: Clone,
+    {
+        let val = self.inputs.get(key.as_ref())?;
+        if let TensorOrMisc::Tensor(val) = val {
+            let tensor = val.get().await;
+
+            Some(tensor.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Returns an output tensor if it exists (and is a tensor)
+    pub async fn get_output_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    where
+        S: AsRef<str>,
+        Tensor<T>: Clone,
+    {
+        let val = self.sample_out.get(key.as_ref())?;
+        if let TensorOrMisc::Tensor(val) = val {
+            let tensor = val.get().await;
+
+            Some(tensor.clone())
+        } else {
+            None
         }
     }
 }
