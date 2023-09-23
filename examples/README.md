@@ -1,0 +1,1 @@
+This folder contains examples of packing various models with Carton.
