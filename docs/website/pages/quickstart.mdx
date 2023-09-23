@@ -189,7 +189,7 @@ import asyncio
 import cartonml as carton
 
 async def main():
-    info = await carton.get_model_info("https://carton.pub/cartonml/basic_test")
+    info = await carton.get_model_info("https://carton.pub/cartonml/basic_example")
 
     print(info.model_name)
     # 'Test Model'
@@ -203,7 +203,7 @@ asyncio.run(main())
 ```js forLang='javascript,typescript'
 import { get_model_info } from '@cartonml/wasm'
 
-const info = await get_model_info("https://carton.pub/cartonml/basic_test");
+const info = await get_model_info("https://carton.pub/cartonml/basic_example");
 
 console.log(info.model_name)
 // 'Test Model'
@@ -219,7 +219,7 @@ use carton::Carton;
 async fn main() {
     // Load the model
     let data = Carton::get_model_info(
-        "https://carton.pub/cartonml/basic_test",
+        "https://carton.pub/cartonml/basic_example",
     )
     .await
     .unwrap();
