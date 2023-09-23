@@ -234,6 +234,45 @@ async fn main() {
 
 See the [metadata docs](/docs/metadata) for a list of available fields.
 
+# Logging
+
+<LanguageSwitch>
+<LanguageItem forLang='python'>
+
+Carton routes all of its log messages to Python logging. Don't forget to configure logging before calling any functions in Carton:
+
+```python
+import logging
+
+async def main():
+    # Configure logging format
+    FORMAT = '[%(asctime)s %(levelname)s %(name)s] %(filename)s:%(lineno)d %(message)s'
+    logging.basicConfig(format=FORMAT)
+
+    # If you want trace messages to show up, set the log level to <= 5
+    # logging.getLogger().setLevel(5)
+    logging.getLogger().setLevel(logging.INFO)
+```
+
+</LanguageItem>
+<LanguageItem forLang='rust'>
+
+Make sure to configure logging. This example uses `env_logger`.
+
+```rust
+async fn main() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+}
+```
+
+</LanguageItem>
+<LanguageItem forLang='javascript,typescript'>
+
+Carton routes all of its log messages to the console. If you want to see trace logging, you may need to enable the verbose log level in your browser's console.
+
+</LanguageItem>
+</LanguageSwitch>
+
 &nbsp;
 
 # Up next...
