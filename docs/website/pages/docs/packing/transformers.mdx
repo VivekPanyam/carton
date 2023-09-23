@@ -1,0 +1,279 @@
+import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
+
+<LanguageSwitch>
+<LanguageItem forLang='python,rust'>
+
+# Pack a Hugging Face Transformers model
+
+There are two ways to do this:
+
+ - You can pack a model using the [rust-bert](https://github.com/guillaume-be/rust-bert) runner. This library is a partial Rust port of the transformers library and doesn't require Python at runtime. It allows your model to run completely in native code. If your [model is supported](https://huggingface.co/models?library=rust), see the [Rust Bert](#rust-bert) section below to get started.
+ 
+ - You can pack a model as arbitrary Python code. See the [Python Runner](#python-runner) section below to get started.
+
+<div className="flex items-center pt-5 space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
+
+## Python Runner
+
+For complete examples, you can look at the code that packs the [Intel DPT depth estimation model](https://github.com/VivekPanyam/carton/tree/main/examples/hf/dpt-hybrid-midas) and the code that packs [Stable Diffusion XL](https://github.com/VivekPanyam/carton/tree/main/examples/hf/sdxl).
+
+You can also look at the [Python packing docs](/docs/packing/python) for more detail.
+
+<LanguageSwitch>
+<LanguageItem forLang='python'>
+
+### 1. Get the model
+
+Within our packing code, the first thing we're going to do is get the model we want to pack
+
+```python forLang="python" withLineNumbers highlight='14,20'
+# At /path/to/my/model/pack.py
+import asyncio
+import cartonml as carton
+
+from transformers import DPTForDepthEstimation, DPTFeatureExtractor
+
+async def main():
+    # Download the model components we need
+    model_id = "Intel/dpt-hybrid-midas"
+    model_revision = "fc1dad95a6337f3979a108e336932338130255a0"
+    model = DPTForDepthEstimation.from_pretrained(
+        model_id,
+        revision = model_revision,
+        cache_dir="./to_pack/model",
+    )
+
+    feature_extractor = DPTFeatureExtractor.from_pretrained(
+        model_id,
+        revision = model_revision,
+        cache_dir="./to_pack/model",
+    )
+
+    # ...
+
+asyncio.run(main())
+```
+
+Note the `cache_dir` argument. This saves everything needed to run the model to that directory.
+
+### 2. Create the model entrypoint
+
+This is the code that runs when your model is loaded. For more details, see the [Python packing docs](/docs/packing/python).
+
+```python withLineNumbers highlight='13-14,20-21'
+# At /path/to/my/model/to_pack/infer.py
+import torch
+from transformers import DPTForDepthEstimation, DPTFeatureExtractor
+
+class Model:
+    def __init__(self):
+        # Load the model we downloaded (notice the `local_files_only=True`)
+        model_id = "Intel/dpt-hybrid-midas"
+        model_revision = "fc1dad95a6337f3979a108e336932338130255a0"
+        self.model = DPTForDepthEstimation.from_pretrained(
+            model_id,
+            revision = model_revision,
+            cache_dir="./model",
+            local_files_only=True,
+        )
+
+        self.feature_extractor = DPTFeatureExtractor.from_pretrained(
+            model_id,
+            revision = model_revision,
+            cache_dir="./model",
+            local_files_only=True,
+        )
+
+        if torch.cuda.is_available():
+            self.model.to("cuda")
+
+    def infer_with_tensors(self, tensors):
+        image = tensors["image"]
+        
+        # ... Use self.model and self.feature_extractor ...
+
+        return {
+            "depth": prediction
+        }
+
+def get_model():
+    return Model()
+```
+
+Again, notice the `cache_dir` and `local_files_only` arguments. This loads everything from the directory we set up in our packing code.
+
+We also want to create a requirements.txt file in the same directory as infer.py (`/path/to/my/model/to_pack/`):
+
+```text
+transformers==4.31.0
+accelerate==0.21.0
+torch==2.0.1
+```
+
+### 3. Pack the model
+
+Continuing from the code in step 1, we can let Carton know about the entrypoint we defined
+
+```python forLang="python" withLineNumbers
+# At /path/to/my/model/pack.py
+import asyncio
+import cartonml as carton
+
+from transformers import DPTForDepthEstimation, DPTFeatureExtractor
+
+async def main():
+    # ...
+    # Continued from step 1 above
+
+    packed_model_path = await carton.pack(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "to_pack"),
+        runner_name = "python",
+        required_framework_version="=3.10",
+        runner_opts = {
+            "entrypoint_package": "infer",
+            "entrypoint_fn": "get_model",
+        },
+        # ...
+        # See the link below for a list of other information you can provide when packing a model
+    )
+
+asyncio.run(main())
+```
+
+There are several other [options](/docs/packing/options) (e.g. description, examples, etc.) you can provide when packing a model. See the packing code for the [Intel DPT depth estimation model](https://github.com/VivekPanyam/carton/tree/main/examples/hf/dpt-hybrid-midas) for an example.
+
+### 4. Improve packing speed and load time (optional)
+
+Optionally, we can tell Carton to load large files directly from Hugging Face instead of storing them in the model. This can improve packing and loading time in some cases.
+
+```python forLang="python" withLineNumbers highlight='4,12-15,27'
+# At /path/to/my/model/pack.py
+import asyncio
+import cartonml as carton
+from cartonml.utils.hf import get_linked_files
+
+from transformers import DPTForDepthEstimation, DPTFeatureExtractor
+
+async def main():
+    # ...
+    # Continued from step 1 above
+
+    # For a smaller output model file, we can let Carton know to pull large files from HF instead of storing
+    # them in the output file. This can also lead to better caching behavior if the same files are used across
+    # several models
+    linked_files = get_linked_files(model_id, model_revision)
+
+    packed_model_path = await carton.pack(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "to_pack"),
+        runner_name = "python",
+        required_framework_version="=3.10",
+        runner_opts = {
+            "entrypoint_package": "infer",
+            "entrypoint_fn": "get_model",
+        },
+        # ...
+        # See the link below for a list of other information you can provide when packing a model
+        linked_files = linked_files,
+    )
+
+asyncio.run(main())
+```
+
+</LanguageItem>
+<LanguageItem>
+<div class="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 rounded-md drop-shadow-lg p-5">
+    <div class="flex items-center flex-col">
+    <span class="text-white pb-5">This guide is currently only available for Python. Please change your language selection to see it</span>
+    <div className="flex not-prose">
+        <LanguageSelect/>
+    </div>
+    </div>
+</div>
+</LanguageItem>
+</LanguageSwitch>
+
+## Rust-Bert
+
+This type of model uses the [rust-bert](https://github.com/guillaume-be/rust-bert) runner. This library is a partial Rust port of the transformers library and doesn't require Python at runtime. It allows your model to run completely in native code.
+
+<LanguageSwitch>
+<LanguageItem forLang="python">
+
+### Text Generation
+
+First, you need to create a folder to contain the model you want to pack. In this example, we'll use `{MODEL_PATH}`, but you should replace that with your folder path.
+
+Once you select a text generation model to use from [Hugging Face](https://huggingface.co/models?library=rust), download the following files into `{MODEL_PATH}/model`:
+
+- The model (`rust_model.ot`)
+- The configuration (`config.json`)
+- The vocabulary file (`vocab.txt`)
+- The merges file (optional, usually named something like `merges.txt`)
+
+Next, we'll create a config file so that Carton knows the type of the model and where the required files are:
+
+```json
+{
+  "TextGeneration": {
+    "model_type": "GPT2",
+    "model_path": "./model/rust_model.ot",
+    "config_path": "./model/config.json",
+    "vocab_path": "./model/vocab.json",
+    "merges_path": "./model/merges.txt"
+  }
+}
+```
+
+This file should be at `{MODEL_PATH}/config.json`. The valid values for `model_type` are [here](https://docs.rs/rust-bert/latest/rust_bert/pipelines/common/enum.ModelType.html#variants).
+
+Finally, you can pack the model as follows
+
+```python forLang="python" withLineNumbers highlight='6'
+import asyncio
+import cartonml as carton
+
+async def main():
+    packed_model_path = await carton.pack(
+        "{MODEL_PATH}", # Don't forget to change this!
+        runner_name = "rust-bert",
+        required_framework_version="=0.21.0",
+        # ...
+        # See the link below for a list of other information you can provide when packing a model
+    )
+
+asyncio.run(main())
+```
+
+There are several other [options](/docs/packing/options) (e.g. description, examples, etc.) you can provide when packing a model.
+
+Finally, you can also provide `linked_files` as in step 4 of the first Python example above. This can speed up packing and loading of some large models.
+
+</LanguageItem>
+<LanguageItem forLang="rust">
+
+See the following examples for packing one of these models from Rust:
+
+- [Question Answering](https://github.com/VivekPanyam/carton/blob/71105103fbee60c768f5947d92c05d7bf95d0d27/source/carton-runner-rust-bert/src/qa.rs#L138)
+- [Translation](https://github.com/VivekPanyam/carton/blob/71105103fbee60c768f5947d92c05d7bf95d0d27/source/carton-runner-rust-bert/src/translate.rs#L149)
+- [Text Generation](https://github.com/VivekPanyam/carton/blob/71105103fbee60c768f5947d92c05d7bf95d0d27/source/carton-runner-rust-bert/src/text_generation.rs#L113)
+- [Summarization](https://github.com/VivekPanyam/carton/blob/71105103fbee60c768f5947d92c05d7bf95d0d27/source/carton-runner-rust-bert/src/summarize.rs#L133)
+
+</LanguageItem>
+</LanguageSwitch>
+
+</LanguageItem>
+<LanguageItem>
+
+This language currently does not support packing models. Please check the [quickstart guide](/quickstart) for more info or select a different language.
+
+<div className="flex not-prose">
+    <LanguageSelect/>
+</div>
+</LanguageItem>
+</LanguageSwitch>
+
+import DocsLayout from '@/components/docslayout'
+export default ({children}) => <DocsLayout>{children}</DocsLayout>
