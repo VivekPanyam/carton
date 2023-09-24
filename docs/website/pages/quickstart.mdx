@@ -91,7 +91,7 @@ See the ["Loading a model"](/docs/loading) docs for more details.
 
 # Pack a model
 
-To create a carton, you need to pack a model from a supported framework. The below example packs an xgboost model.
+To create a carton, you need to pack a model from a supported framework. The below example packs a [TorchScript](/docs/packing/torchscript) model.
 
 ```python forLang='python'
 import asyncio
@@ -99,11 +99,11 @@ import cartonml as carton
 
 async def main():
     packed_model_path = await carton.pack(
-        "/path/to/model.xgboost",
-        runner_name="xgboost",
+        "/path/to/model.pt",
+        runner_name="torchscript",
         # `required_framework_version` is a semver version range.
-        # The below value means any 1.7.x version is okay.
-        required_framework_version="=1.7"
+        # The below value means any 2.0.x version is okay.
+        required_framework_version="=2.0"
     )
 
 asyncio.run(main())
@@ -115,14 +115,17 @@ use carton::info::RunnerInfo;
 
 async fn main() {
     let runner_info = RunnerInfo {
-        runner_name: "xgboost".into(),
-        required_framework_version: semver::VersionReq::parse("=1.7").unwrap(),
+        runner_name: "torchscript".into(),
+
+        // `required_framework_version` is a semver version range.
+        // The below value means any 2.0.x version is okay.
+        required_framework_version: semver::VersionReq::parse("=2.0").unwrap(),
         runner_compat_version: None,
         opts: None,
     };
 
     let packed_model_path = Carton::pack(
-        "/path/to/model.xgboost",
+        "/path/to/model.pt",
         runner_info,
     )
     .await
@@ -142,11 +145,11 @@ import cartonml as carton
 
 async def main():
     model = await carton.load_unpacked(
-        "/path/to/model.xgboost",
-        runner_name="xgboost",
+        "/path/to/model.pt",
+        runner_name="torchscript",
         # `required_framework_version` is a semver version range.
-        # The below value means any 1.7.x version is okay.
-        required_framework_version="=1.7"
+        # The below value means any 2.0.x version is okay.
+        required_framework_version="=2.0"
     )
 
 asyncio.run(main())
@@ -159,14 +162,17 @@ use carton::types::LoadOpts;
 
 async fn main() {
     let runner_info = RunnerInfo {
-        runner_name: "xgboost".into(),
-        required_framework_version: semver::VersionReq::parse("=1.7").unwrap(),
+        runner_name: "torchscript".into(),
+
+        // `required_framework_version` is a semver version range.
+        // The below value means any 2.0.x version is okay.
+        required_framework_version: semver::VersionReq::parse("=2.0").unwrap(),
         runner_compat_version: None,
         opts: None,
     };
 
     let model = Carton::load_unpacked(
-        "/path/to/model.xgboost",
+        "/path/to/model.pt",
         runner_info,
         LoadOpts::default(),
     )

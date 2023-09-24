@@ -213,7 +213,7 @@ For example:
 
 ```
 carton.toml=712f4a7aa03b1ba5ac4e6c3ee90ec2ece4cc2f78470d7ef40dda9e96e356ad4a
-model/model.xgboost=e550f6224a5133f597d823ab4590f369e0b20e3c6446488225fc6f7a372b9fe2
+model/model.pt=e550f6224a5133f597d823ab4590f369e0b20e3c6446488225fc6f7a372b9fe2
 ```
 
 Note: Any changes to the manifest format require a bump in `spec_version` above

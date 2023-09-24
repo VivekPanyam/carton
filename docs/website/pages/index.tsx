@@ -157,15 +157,15 @@ export default function Home() {
           <div className='flex-1 flex flex-col justify-center items-center gap-y-4'>
             <div className='flex flex-col lg:flex-row justify-center items-center gap-y-4 lg:gap-x-4'>
               <div className='border w-64 h-20 bg-slate-100 flex justify-center items-center'>
-                <span className={`${roboto_mono.className}`}>original_model.xgboost</span>
+                <span className={`${roboto_mono.className}`}>original_model.pt</span>
               </div>
               <span>requires</span>
-              <span className={`${roboto_mono.className} text-emerald-500`}>XGBoost 1.7.x</span>
+              <span className={`${roboto_mono.className} text-emerald-500`}>TorchScript 2.0.x</span>
             </div>
             <HiOutlineArrowDown size={30} />
             <div className='ring-1 ring-slate-700/10 rounded-lg shadow-black/5 shadow-xl p-5 transition-all'>
               <AiOutlineFolderOpen className='text-xl text-slate-400 inline-block' /> <span className={`${roboto_mono.className} text-slate-400`}>model/</span><br />
-              <AiOutlineFile className='text-xl text-slate-400 inline-block' /> <span className={`${roboto_mono.className} text-slate-700 ml-5`}>original_model.xgboost</span><br />
+              <AiOutlineFile className='text-xl text-slate-400 inline-block' /> <span className={`${roboto_mono.className} text-slate-700 ml-5`}>original_model.pt</span><br />
               <AiOutlineFile className='text-xl text-slate-400 inline-block' /> <span className={`${roboto_mono.className} text-slate-400`}>carton.toml</span><br />
               <span className={`${roboto_mono.className} text-slate-400`}>...</span><br />
             </div>
@@ -188,7 +188,7 @@ export default function Home() {
             <HiOutlineArrowDown size={30} />
             <div className='flex flex-row justify-center items-center gap-x-1'>
               <span>Loading with</span>
-              <span className={`text-emerald-500`}>XGBoost 1.7.4</span>
+              <span className={`text-emerald-500`}>TorchScript 2.0.1</span>
               <span>runner...</span>
             </div>
           </div>
@@ -214,7 +214,7 @@ export default function Home() {
             </div>
             <HiArrowsUpDown size={30} />
             <div className='border w-64 h-20 bg-slate-100 flex justify-center items-center'>
-              <span className={`${roboto_mono.className}`}>XGBoost 1.7.4 Runner</span>
+              <span className={`${roboto_mono.className}`}>TorchScript 2.0.1 Runner</span>
             </div>
           </div>
         </div>
