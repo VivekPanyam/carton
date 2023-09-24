@@ -614,6 +614,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "carton-runner-torch"
+version = "0.1.0"
+dependencies = [
+ "carton",
+ "carton-runner-interface",
+ "carton-runner-packager",
+ "clap 4.1.1",
+ "env_logger",
+ "escargot",
+ "fetch-deps",
+ "log",
+ "lunchbox",
+ "ndarray",
+ "semver 1.0.16",
+ "serde_json",
+ "target-lexicon",
+ "tch",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "carton-utils"
 version = "0.0.1"
 dependencies = [
@@ -1199,6 +1221,7 @@ name = "fetch-deps"
 version = "0.0.1"
 dependencies = [
  "carton-utils",
+ "semver 1.0.16",
  "tempfile",
  "tokio",
 ]
@@ -3288,8 +3311,7 @@ dependencies = [
 [[package]]
 name = "torch-sys"
 version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42b2b81a479510717464df1d07c02cb4aebb26539a39b5db6637dda114a476cb"
+source = "git+https://github.com/VivekPanyam/tch-rs.git?branch=fix_dict_bug#d7ed2c0ecd072cbdc40fae10dfc7517700f3da96"
 dependencies = [
  "anyhow",
  "cc",

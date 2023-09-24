@@ -1,8 +1,23 @@
 # Pack a PyTorch model
 
+There are two different types of PyTorch models:
+
+- [TorchScript models](https://pytorch.org/docs/stable/jit.html)
+- Other PyTorch models
+
+See the sections below for more details.
+
+## PyTorch
+
 Because PyTorch models can contain arbitrary python code, they are packed the same as arbitrary python code.
 
 Please see the [Python packing docs](/docs/packing/python).
+
+## TorchScript
+
+Carton can run TorchScript models without requiring Python at runtime. This allows you to run your model completely in native code.
+
+Please see the [TorchScript packing docs](/docs/packing/torchscript).
 
 import DocsLayout from '@/components/docslayout'
 export default ({children}) => <DocsLayout>{children}</DocsLayout>

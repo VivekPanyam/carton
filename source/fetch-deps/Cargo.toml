@@ -8,3 +8,4 @@ publish = false
 tokio = { version = "1", features = ["full"] }
 carton-utils = { path = "../carton-utils" }
 tempfile = "3.3.0"
+semver = {version = "1.0.16"}

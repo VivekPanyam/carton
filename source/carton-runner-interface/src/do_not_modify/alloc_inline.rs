@@ -146,9 +146,9 @@ where
 {
     static POOL_ALLOCATOR: Lazy<InlineAllocator> = Lazy::new(|| InlineAllocator::without_pool());
 
-    let numel = shape.iter().product::<u64>() as usize;
+    let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = POOL_ALLOCATOR.alloc(numel);
+    let data = <InlineAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,
@@ -164,9 +164,9 @@ where
 {
     static POOL_ALLOCATOR: Lazy<InlineAllocator> = Lazy::new(|| InlineAllocator::new());
 
-    let numel = shape.iter().product::<u64>() as usize;
+    let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = POOL_ALLOCATOR.alloc(numel);
+    let data = <InlineAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,
