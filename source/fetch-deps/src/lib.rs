@@ -25,3 +25,5 @@ pub mod libtorch {
     pub const URL: &str = "https://github.com/VivekPanyam/libtorch-prebuilts/releases/download/2.0.1/libtorch-amd64-macos-2.0.1.zip";
     pub const SHA256: &str = "ad304b78d24f7c52f7926b836d9aadee89d145039ff47c9b313d2d816028c05d";
 }
+
+pub const LIBTORCH_VERSION: semver::Version = semver::Version::new(2, 0, 1);

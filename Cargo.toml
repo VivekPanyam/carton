@@ -12,6 +12,7 @@ members = [
     "source/carton-runner-noop",
     "source/carton-runner-py",
     "source/carton-runner-rust-bert",
+    "source/carton-runner-torch",
     "source/carton-utils-py",
     "source/anywhere",
     "source/fetch-deps",
@@ -26,3 +27,4 @@ debug = true
 zipfs = { git = "https://github.com/VivekPanyam/ZipFS.git", branch = "read_full" }
 async_zip = { git = "https://github.com/VivekPanyam/rs-async-zip.git", branch = "fix_zip64" }
 lunchbox = { git = "https://github.com/VivekPanyam/lunchbox.git", branch = "main" }
+torch-sys = { git = "https://github.com/VivekPanyam/tch-rs.git", branch = "fix_dict_bug" }

@@ -378,9 +378,9 @@ where
 {
     static POOL_ALLOCATOR: Lazy<SHMAllocator> = Lazy::new(|| SHMAllocator::without_pool());
 
-    let numel = shape.iter().product::<u64>() as usize;
+    let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = POOL_ALLOCATOR.alloc(numel);
+    let data = <SHMAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,
@@ -396,9 +396,9 @@ where
 {
     static POOL_ALLOCATOR: Lazy<SHMAllocator> = Lazy::new(|| SHMAllocator::new());
 
-    let numel = shape.iter().product::<u64>() as usize;
+    let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = POOL_ALLOCATOR.alloc(numel);
+    let data = <SHMAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,

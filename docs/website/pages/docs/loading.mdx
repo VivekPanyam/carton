@@ -130,7 +130,6 @@ await carton.load(
     override_runner_opts = {
         # For example, if we know this is a torchscript model and we want to set
         # threading configuration for running this model.
-        # TODO: torchscript support isn't implemented yet
         "num_interop_threads": 4,
         "num_threads": 1,
     },
@@ -149,7 +148,6 @@ Carton::load(
             [
                 // For example, if we know this is a torchscript model and we want to set
                 // threading configuration for running this model.
-                // TODO: torchscript support isn't implemented yet
                 ("num_interop_threads".into(), RunnerOpt::Integer(4)),
                 ("num_threads".into(), RunnerOpt::Integer(1)),
             ].into(),

@@ -9,3 +9,4 @@ target = ["x86_64-unknown-linux-gnu"]
 
 [env]
 LIBTORCH = {value = "./libtorch", relative = true}
+LIBTORCH_BYPASS_VERSION_CHECK = {value = "true"}
