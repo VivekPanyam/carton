@@ -39,7 +39,6 @@ At the moment, loading and packing models are not supported from WASM. NodeJS bi
 If you want to run an existing carton model (or "a carton" for short), you can just pass in a file path or URL.
 
 ```python forLang='python'
-# TODO: actually make this a runnable example with correct output
 import asyncio
 import cartonml as carton
 
@@ -50,15 +49,14 @@ async def main():
     })
     print(out)
     # {
-    #     'scores': array([[0.93568176, 0.01602578, 0.01426921, 0.00474347, 0.00451515]]),
-    #     'tokens': array([['day', 'morning', 'time', 'week', 'night']], dtype='<U7')
+    #     'scores': array([[12.977381]]),
+    #     'tokens': array([['day']], dtype='<U3')
     # }
 
 asyncio.run(main())
 ```
 
 ```rust forLang='rust'
-// TODO: actually make this a runnable example with correct output
 use carton::Carton;
 use carton::types::LoadOpts;
 

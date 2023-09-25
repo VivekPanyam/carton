@@ -30,7 +30,9 @@ async fn main() {
         .current_release()
         .current_target()
         .arg("--timings")
+        // TODO: remove when https://github.com/rust-lang/cargo/issues/12434 is fixed
         .env_remove("LIBTORCH")
+        .env_remove("LIBTORCH_BYPASS_VERSION_CHECK")
         .run()
         .unwrap()
         .path()

@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use carton::info::LinkedFile;
 use carton_runner_interface::{slowlog::slowlog, types::Tensor};
 use lunchbox::{types::ReadableFile, ReadableFileSystem};
+use masked_language::CartonMaskedLanguageConfig;
 use qa::CartonQAConfig;
 use sentiment_analysis::CartonSentimentAnalysisConfig;
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,7 @@ use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
 use translate::CartonTranslationConfig;
 use zero_shot::CartonZeroShotConfig;
 
+pub mod masked_language;
 pub mod qa;
 pub mod sentiment_analysis;
 pub mod summarize;
@@ -31,7 +33,7 @@ pub enum ModelConfig {
     QuestionAnswering(CartonQAConfig),
     KeywordExtraction,
     TextClassification,
-    FillMask,
+    FillMask(CartonMaskedLanguageConfig),
     SentenceEmbeddings,
     TextGeneration(CartonTextGenerationConfig),
 }

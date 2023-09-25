@@ -44,7 +44,7 @@ async fn main() {
                     }
                     ModelConfig::KeywordExtraction => todo!(),
                     ModelConfig::TextClassification => todo!(),
-                    ModelConfig::FillMask => todo!(),
+                    ModelConfig::FillMask(config) => model = Some(Box::new(config.load(&fs).await)),
                     ModelConfig::SentenceEmbeddings => todo!(),
                     ModelConfig::TextGeneration(config) => {
                         model = Some(Box::new(config.load(&fs).await))

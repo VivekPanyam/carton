@@ -62,6 +62,7 @@ async fn test_pack() {
         gpt2_medium_path,
         bart_mnli_path,
         distilbert_sst2_path,
+        bert_base_uncased_path,
     ) = tokio::join!(
         carton_runner_rust_bert::translate::pack::pack_m2m100(),
         carton_runner_rust_bert::summarize::pack::pack_bart_cnn_dm(),
@@ -69,6 +70,7 @@ async fn test_pack() {
         carton_runner_rust_bert::text_generation::pack::pack_gpt2_medium(),
         carton_runner_rust_bert::zero_shot::pack::pack_bart_mnli(),
         carton_runner_rust_bert::sentiment_analysis::pack::pack_distilbert_sst2(),
+        carton_runner_rust_bert::masked_language::pack::pack_bert_base_uncased(),
     );
 
     log::info!("Testing m2m100 model: {m2m100_path:#?}");
@@ -88,6 +90,9 @@ async fn test_pack() {
 
     log::info!("Testing distilbert_sst2 model: {distilbert_sst2_path:#?}");
     test_model(distilbert_sst2_path).await;
+
+    log::info!("Testing bert_base_uncased model: {bert_base_uncased_path:#?}");
+    test_model(bert_base_uncased_path).await;
 }
 
 /// Note: this currently just runs the model and does not verify expected outputs
