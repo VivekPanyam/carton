@@ -110,7 +110,7 @@ export default function Home() {
             <span className='text-slate-300 inline-block'> *</span>
           </h1>
           <p className="text-center max-w-3xl m-auto pb-10">
-            One API for all frameworks.
+            One open-source API for all frameworks.
           </p>
           <RotatingFrameworkHeader />
         </div>
