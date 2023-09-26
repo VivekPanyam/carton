@@ -15,11 +15,14 @@ Once you have a packed model, you can pass in a file path or URL to the model.
 ```python forLang='python'
 import asyncio
 import cartonml as carton
+import numpy as np
 
 async def main():
+    # Note this might take a while the first time you use Carton.
+    # Make sure to enable logging as described in the quickstart
     model = await carton.load("https://carton.pub/google-research/bert-base-uncased")
     out = await model.infer({
-        "input_sequences": np.array(["Today is a good [MASK]."])
+        "input": np.array(["Today is a good [MASK]."])
     })
     print(out)
     # {
