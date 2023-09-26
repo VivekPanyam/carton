@@ -239,6 +239,7 @@ where
         discovery::RunnerFilterConstraints,
         fetch::{get_or_install_runner, RunnerInstallConstraints},
     };
+    use runner_interface_v1::slowlog::slowlog;
 
     // Filter the runners to ones that match our requirements
     let filters = RunnerFilterConstraints {
@@ -249,6 +250,17 @@ where
         platform: target_lexicon::HOST.to_string(),
     };
 
+    let mut sl = slowlog(
+        format!(
+            "Fetching runner for '{}' version '{}'",
+            filters.runner_name.as_ref().unwrap(),
+            filters.framework_version_range.as_ref().unwrap()
+        ),
+        5,
+    )
+    .await
+    .without_progress();
+
     let candidate = get_or_install_runner(
         // TODO: make this configurable
         "https://nightly.carton.run/v1/runners",
@@ -256,6 +268,8 @@ where
         false,
     )
     .await;
+
+    sl.done();
 
     match candidate {
         Ok(candidate) => {
