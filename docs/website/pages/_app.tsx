@@ -7,6 +7,7 @@ import { useContext, useEffect, useState } from 'react'
 import { MDXProvider } from '@mdx-js/react'
 import Code from '@/components/code'
 import Link from 'next/link'
+import Script from 'next/script'
 
 const Pre = ({ children, className, forLang, ...props }: any) => {
   const { currentLanguage, setCurrentLanguage: _ } = useContext(LanguageContext)
@@ -104,13 +105,25 @@ export default function App({ Component, pageProps }: AppProps) {
   const cl = currentLanguage || DEFAULT_LANGUAGE;
 
   return (
-    <MDXProvider components={components}>
-      <LanguageContext.Provider value={{
-        currentLanguage: cl,
-        setCurrentLanguage
-      }}>
-        <Component {...pageProps} />
-      </LanguageContext.Provider>
-    </MDXProvider>
+    <>
+      <Script async src="https://www.googletagmanager.com/gtag/js?id=G-PH6SHEGY2M" />
+      <Script id="google-analytics">
+        {`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-PH6SHEGY2M');
+        `}
+      </Script>
+      <MDXProvider components={components}>
+        <LanguageContext.Provider value={{
+          currentLanguage: cl,
+          setCurrentLanguage
+        }}>
+          <Component {...pageProps} />
+        </LanguageContext.Provider>
+      </MDXProvider>
+    </>
   )
 }
