@@ -288,6 +288,7 @@ export default function Home() {
               <li>x86_64 Linux and macOS</li>
               <li>aarch64 Linux (e.g. Linux on AWS Graviton)</li>
               <li>aarch64 macOS (e.g. M1 and M2 Apple Silicon chips)</li>
+              <li>WebAssembly (metadata access only for now, but WebGPU runners are coming soon)</li>
             </ul>
           </FAQItem>
           <FAQItem title={`What is "a carton"?`}>A carton is the output of the packing step. It is a zip file that contains your original model and some metadata. It <i>does not</i> modify the original model, avoiding error-prone conversion steps.</FAQItem>
