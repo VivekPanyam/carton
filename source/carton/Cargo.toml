@@ -35,6 +35,7 @@ dashmap = "5.4.0"
 log = "0.4"
 pathdiff = "0.2.1"
 tokio-stream = "0.1"
+async-stream = "0.3"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 dlopen = "0.1"

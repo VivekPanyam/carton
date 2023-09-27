@@ -9,7 +9,7 @@ carton-runner-interface = { path = "../carton-runner-interface" }
 carton-utils = { path = "../carton-utils" }
 tokio = { version = "1", features = ["full"] }
 pyo3 = { version = "0.18"}
-pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime"] }
+pyo3-asyncio = { version = "0.18", features = ["attributes", "tokio-runtime", "unstable-streams"] }
 numpy = "0.18"
 ndarray = { version = "0.15" }
 lazy_static = "1.4.0"
@@ -28,6 +28,9 @@ bytesize = {version = "1.1.0"}
 findshlibs = "0.10.2"
 carton-utils-py = {path = "../carton-utils-py"}
 tracing = "0.1"
+futures = "0.3"
+async-stream = "0.3"
+futures-util = "0.3"
 
 # Used by the `build_releases` binary
 semver = {version = "1.0.16"}

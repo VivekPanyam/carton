@@ -29,6 +29,9 @@ pub(crate) struct RPCRequest {
 pub(crate) struct RPCResponse {
     pub id: RpcId,
 
+    // Whether this is the final response for this request
+    pub complete: bool,
+
     pub data: RPCResponseData,
 }
 
@@ -107,10 +110,16 @@ pub(crate) enum RPCRequestData {
 
     InferWithTensors {
         tensors: HashMap<String, Handle<Tensor>>,
+
+        // Do we support a streaming response
+        streaming: bool,
     },
 
     InferWithHandle {
         handle: SealHandle,
+
+        // Do we support a streaming response
+        streaming: bool,
     },
 }
 
@@ -144,6 +153,8 @@ pub(crate) enum RPCResponseData {
     LogMessage {
         record: LogRecord,
     },
+
+    Empty,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

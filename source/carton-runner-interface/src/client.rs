@@ -31,12 +31,17 @@ use crate::{
     multiplexer::Multiplexer,
 };
 
+enum ResponseQueue {
+    OneShot(oneshot::Sender<RPCResponseData>),
+    Streaming(mpsc::Sender<RPCResponseData>),
+}
+
 pub(crate) struct Client {
     // Comms
     comms: OwnedComms,
 
     // RPC handling
-    inflight: Arc<DashMap<RpcId, oneshot::Sender<RPCResponse>>>,
+    inflight: Arc<DashMap<RpcId, ResponseQueue>>,
     rpc_id_gen: AtomicU64,
     rpc_sender: mpsc::Sender<RPCRequest>,
 
@@ -57,7 +62,7 @@ impl Client {
             .await;
 
         // Hold inflight requests
-        let inflight: Arc<DashMap<RpcId, oneshot::Sender<RPCResponse>>> = Arc::new(DashMap::new());
+        let inflight: Arc<DashMap<RpcId, ResponseQueue>> = Arc::new(DashMap::new());
         let inflight_clone = inflight.clone();
 
         // Handle rpc responses
@@ -68,8 +73,19 @@ impl Client {
                     record.do_log();
                 } else {
                     // Send the response to the callback
-                    let callback = inflight_clone.remove(&response.id).unwrap().1;
-                    callback.send(response).unwrap();
+                    if response.complete {
+                        match inflight_clone.remove(&response.id).unwrap().1 {
+                            ResponseQueue::OneShot(v) => v.send(response.data).unwrap(),
+                            ResponseQueue::Streaming(v) => v.send(response.data).await.unwrap(),
+                        }
+                    } else {
+                        match inflight_clone.get(&response.id).unwrap().value() {
+                            ResponseQueue::OneShot(_) => {
+                                panic!("Got a streaming response for a non-streaming RPC")
+                            }
+                            ResponseQueue::Streaming(v) => v.send(response.data).await.unwrap(),
+                        }
+                    }
                 }
             }
         });
@@ -150,16 +166,38 @@ impl Client {
 
         // Setup our response handler
         let (tx, rx) = oneshot::channel();
-        self.inflight.insert(req.id, tx);
+        self.inflight.insert(req.id, ResponseQueue::OneShot(tx));
 
         // Send the request
         self.rpc_sender.send(req).await.unwrap();
 
         // Wait for the response
         match rx.await {
-            Ok(v) => v.data,
+            Ok(v) => v,
             Err(_) => panic!("The sender dropped!"),
         }
+    }
+
+    /// Make an RPC request and get the response
+    pub(crate) async fn do_streaming_rpc(
+        &self,
+        data: RPCRequestData,
+    ) -> mpsc::Receiver<RPCResponseData> {
+        // Set the RPC ID
+        let id = self
+            .rpc_id_gen
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+
+        let req = RPCRequest { id, data };
+
+        // Setup our response handler
+        let (tx, rx) = mpsc::channel(16);
+        self.inflight.insert(req.id, ResponseQueue::Streaming(tx));
+
+        // Send the request
+        self.rpc_sender.send(req).await.unwrap();
+
+        rx
     }
 
     pub(crate) fn get_comms(&self) -> &Comms {

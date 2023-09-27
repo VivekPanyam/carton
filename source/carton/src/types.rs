@@ -245,6 +245,20 @@ for_each_carton_type! {
     }
 }
 
+for_each_carton_type! {
+    impl<Storage: TensorStorage, Storage2: TensorStorage> PartialEq<Tensor<Storage2>> for Tensor<Storage> {
+        fn eq(&self, other: &Tensor<Storage2>) -> bool {
+            match (self, other) {
+                $(
+                    (Self::$CartonType(me), Tensor::<Storage2>::$CartonType(other))  => me.view() == other.view(),
+                )*
+                (Self::NestedTensor(me), Tensor::<Storage2>::NestedTensor(other)) => std::iter::zip(me, other).map(|(a, b)| a == b).all(|v| v),
+                _ => false,
+            }
+        }
+    }
+}
+
 pub trait TensorStorage {
     /// Storage for each tensor type
     type TypedStorage<T>: TypedStorage<T> + MaybeSend + MaybeSync

@@ -98,7 +98,7 @@ async fn main() {
 
                 seal_counter += 1;
             }
-            RequestData::InferWithTensors { tensors } => {
+            RequestData::InferWithTensors { tensors, .. } => {
                 // TODO: error handling
                 let result = model.as_ref().map(|m| m.infer(tensors));
 
@@ -112,7 +112,7 @@ async fn main() {
                     .await
                     .unwrap();
             }
-            RequestData::InferWithHandle { handle } => {
+            RequestData::InferWithHandle { handle, .. } => {
                 // TODO: error handling
                 let result = sealed
                     .remove(&handle.get())

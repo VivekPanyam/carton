@@ -16,7 +16,7 @@ use std::{
     any::Any,
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc},
+    sync::{atomic::AtomicBool, Arc, Mutex},
 };
 
 use anywhere::types::{AnywhereFS, ReadOnlyFS, ReadWriteFS};
@@ -42,8 +42,8 @@ pub struct Server {
     outgoing: mpsc::Sender<RPCResponse>,
     incoming: mpsc::Receiver<RPCRequest>,
 
-    // Keep this alive while the serve is up
-    _keepalive: Vec<Box<dyn Any>>,
+    // Keep this alive while the server is up
+    _keepalive: Vec<Box<dyn Any + Send + Sync>>,
 
     // A flag that stops us from attempting to send log messages after shutdown
     is_shutdown: Arc<AtomicBool>,
@@ -134,10 +134,16 @@ pub enum RequestData {
 
     InferWithTensors {
         tensors: HashMap<String, Tensor>,
+
+        // Do we support a streaming response
+        streaming: bool,
     },
 
     InferWithHandle {
         handle: SealHandle,
+
+        // Do we support a streaming response
+        streaming: bool,
     },
 }
 
@@ -182,11 +188,13 @@ impl RequestData {
             RPCRequestData::Seal { tensors } => Self::Seal {
                 tensors: from_handles(tensors).await,
             },
-            RPCRequestData::InferWithTensors { tensors } => Self::InferWithTensors {
+            RPCRequestData::InferWithTensors { tensors, streaming } => Self::InferWithTensors {
                 tensors: from_handles(tensors).await,
+                streaming,
             },
-            RPCRequestData::InferWithHandle { handle } => Self::InferWithHandle {
+            RPCRequestData::InferWithHandle { handle, streaming } => Self::InferWithHandle {
                 handle: handle.into(),
+                streaming,
             },
         }
     }
@@ -222,6 +230,8 @@ pub enum ResponseData {
     LogMessage {
         record: LogRecord,
     },
+
+    Empty,
 }
 
 impl ResponseData {
@@ -246,6 +256,7 @@ impl ResponseData {
             },
             ResponseData::Error { e } => RPCResponseData::Error { e },
             ResponseData::LogMessage { record } => RPCResponseData::LogMessage { record },
+            ResponseData::Empty => RPCResponseData::Empty,
         }
     }
 }
@@ -275,6 +286,7 @@ impl Server {
                     let status = out
                         .send(RPCResponse {
                             id: 0,
+                            complete: true,
                             data: RPCResponseData::LogMessage { record },
                         })
                         .await;
@@ -316,6 +328,23 @@ impl Server {
         self.outgoing
             .send(RPCResponse {
                 id: req_id,
+                complete: true,
+                data: res.to_rpc(&self.comms).await,
+            })
+            .await
+            .map_err(|_| SendError(()))
+    }
+
+    pub async fn send_streaming_response_for_request(
+        &self,
+        req_id: u64,
+        complete: bool,
+        res: ResponseData,
+    ) -> Result<(), SendError<()>> {
+        self.outgoing
+            .send(RPCResponse {
+                id: req_id,
+                complete,
                 data: res.to_rpc(&self.comms).await,
             })
             .await
@@ -410,7 +439,7 @@ pub async fn init_runner() -> Server {
     let mut s = Server::connect(&PathBuf::from(args.uds_path), pass_through_logger).await;
 
     if let Some(ka) = keepalive {
-        s._keepalive.push(Box::new(ka));
+        s._keepalive.push(Box::new(Mutex::new(ka)));
     }
 
     s

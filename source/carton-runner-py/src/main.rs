@@ -12,8 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use carton_runner_interface::server::{init_runner, RequestData, ResponseData};
+use std::collections::HashMap;
 
+use carton_runner_interface::{
+    server::{init_runner, RequestData, ResponseData, Server},
+    types::Tensor,
+};
+
+use futures_util::{pin_mut, StreamExt};
 use packager::update_or_generate_lockfile;
 
 mod env;
@@ -24,12 +30,33 @@ mod pip_utils;
 mod python_utils;
 mod wheel;
 
-#[tokio::main]
-async fn main() {
-    let mut server = init_runner().await;
+// This is basically the expanded version of
+// #[pyo3_asyncio::tokio::main]
+// but modified to call `crate::python_utils::init();` before setting up python
+fn main() {
+    async fn main() -> pyo3::PyResult<()> {
+        main_inner().await;
+        Ok(())
+    }
 
     // Setup the isolated python env
     crate::python_utils::init();
+
+    pyo3::prepare_freethreaded_python();
+    let mut builder = pyo3_asyncio::tokio::re_exports::runtime::Builder::new_multi_thread();
+    builder.enable_all();
+    pyo3_asyncio::tokio::init(builder);
+    pyo3::Python::with_gil(|py| {
+        pyo3_asyncio::tokio::run(py, main())
+            .map_err(|e| {
+                e.print_and_set_sys_last_vars(py);
+            })
+            .unwrap();
+    });
+}
+
+async fn main_inner() {
+    let mut server = init_runner().await;
 
     let mut model = None;
 
@@ -94,46 +121,79 @@ async fn main() {
                         .unwrap(),
                 }
             }
-            RequestData::InferWithTensors { tensors } => {
+            RequestData::InferWithTensors { tensors, streaming } => {
                 // Call `model.infer_with_tensors`
-                match model.as_mut().unwrap().infer_with_tensors(tensors) {
-                    Ok(out) => server
-                        .send_response_for_request(req_id, ResponseData::Infer { tensors: out })
-                        .await
-                        .unwrap(),
-                    Err(e) => server
-                        .send_response_for_request(
-                            req_id,
-                            ResponseData::Error {
-                                e: format!(
-                                    "Error calling `infer_with_tensors` method on model: {e}"
-                                ),
-                            },
-                        )
-                        .await
-                        .unwrap(),
-                }
+                let res = model.as_mut().unwrap().infer_with_tensors(tensors).await;
+                send_infer_response(&server, res, streaming, req_id, "infer_with_tensors").await;
             }
-            RequestData::InferWithHandle { handle } => {
+            RequestData::InferWithHandle { handle, streaming } => {
                 // Call `model.infer_with_handle`
-                match model.as_mut().unwrap().infer_with_handle(handle) {
-                    Ok(out) => server
-                        .send_response_for_request(req_id, ResponseData::Infer { tensors: out })
-                        .await
-                        .unwrap(),
-                    Err(e) => server
-                        .send_response_for_request(
-                            req_id,
-                            ResponseData::Error {
-                                e: format!(
-                                    "Error calling `infer_with_handle` method on model: {e}"
-                                ),
-                            },
-                        )
-                        .await
-                        .unwrap(),
-                }
+                let res = model.as_mut().unwrap().infer_with_handle(handle).await;
+                send_infer_response(&server, res, streaming, req_id, "infer_with_handle").await;
             }
         }
+    }
+}
+
+fn transform_res(v: Result<HashMap<String, Tensor>, String>, method: &'static str) -> ResponseData {
+    match v {
+        Ok(out) => ResponseData::Infer { tensors: out },
+        Err(e) => ResponseData::Error {
+            e: format!("Error calling `{method}` method on model: {e}"),
+        },
+    }
+}
+
+/// A utility to send inference responses
+async fn send_infer_response(
+    server: &Server,
+    res: Result<impl futures::Stream<Item = Result<HashMap<String, Tensor>, String>>, String>,
+    streaming: bool,
+    req_id: u64,
+    method: &'static str,
+) {
+    match res {
+        Ok(stream) => {
+            pin_mut!(stream);
+
+            let mut last_val = None;
+            while let Some(item) = stream.next().await {
+                if streaming {
+                    server
+                        .send_streaming_response_for_request(
+                            req_id,
+                            false,
+                            transform_res(item, method),
+                        )
+                        .await
+                        .unwrap()
+                } else {
+                    // Not a streaming response so just store the values
+                    last_val = Some(item);
+                }
+            }
+
+            if streaming {
+                // If we're sending a streaming response, send a completion message
+                server
+                    .send_streaming_response_for_request(req_id, true, ResponseData::Empty)
+                    .await
+                    .unwrap()
+            } else {
+                server
+                    .send_response_for_request(req_id, transform_res(last_val.unwrap(), method))
+                    .await
+                    .unwrap()
+            }
+        }
+        Err(e) => server
+            .send_response_for_request(
+                req_id,
+                ResponseData::Error {
+                    e: format!("Error calling `{method}` method on model: {e}"),
+                },
+            )
+            .await
+            .unwrap(),
     }
 }
