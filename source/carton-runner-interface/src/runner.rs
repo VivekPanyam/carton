@@ -25,6 +25,7 @@ use crate::{
     types::{Handle, RunnerOpt, TensorStorage},
 };
 
+use futures::Stream;
 use lunchbox::types::{MaybeSend, MaybeSync};
 
 pub struct Runner {
@@ -139,7 +140,10 @@ impl Runner {
 
         match self
             .client
-            .do_rpc(RPCRequestData::InferWithTensors { tensors })
+            .do_rpc(RPCRequestData::InferWithTensors {
+                tensors,
+                streaming: false,
+            })
             .await
         {
             RPCResponseData::Infer { tensors } => {
@@ -152,6 +156,44 @@ impl Runner {
             }
             RPCResponseData::Error { e } => Err(e),
             _ => panic!("Unexpected RPC response type!"),
+        }
+    }
+
+    pub async fn streaming_infer_with_inputs(
+        &self,
+        tensors_orig: HashMap<String, Tensor>,
+    ) -> impl Stream<Item = Result<HashMap<String, Tensor>, String>> + '_ {
+        // Wrap each tensor in a handle (this possibly sends the fd for backing SHM chunks to the other process)
+        let comms = self.client.get_comms();
+        let mut tensors = HashMap::new();
+        for (k, v) in tensors_orig.into_iter() {
+            tensors.insert(k, Handle::new(v, comms).await);
+        }
+
+        let mut res = self
+            .client
+            .do_streaming_rpc(RPCRequestData::InferWithTensors {
+                tensors,
+                streaming: true,
+            })
+            .await;
+
+        async_stream::stream! {
+            while let Some(v) = res.recv().await {
+                match v {
+                    RPCResponseData::Infer { tensors } => {
+                        let mut out = HashMap::new();
+                        for (k, v) in tensors.into_iter() {
+                            out.insert(k, v.into_inner(comms).await);
+                        }
+
+                        yield Ok(out)
+                    }
+                    RPCResponseData::Error { e } => yield Err(e),
+                    RPCResponseData::Empty => { } // We can get this on the last message. Do nothing
+                    _ => panic!("Unexpected RPC response type!"),
+                }
+            }
         }
     }
 
@@ -177,6 +219,7 @@ impl Runner {
             .client
             .do_rpc(RPCRequestData::InferWithHandle {
                 handle: SealHandle(handle),
+                streaming: false,
             })
             .await
         {
@@ -190,6 +233,39 @@ impl Runner {
             }
             RPCResponseData::Error { e } => Err(e),
             _ => panic!("Unexpected RPC response type!"),
+        }
+    }
+
+    pub async fn streaming_infer_with_handle(
+        &self,
+        handle: u64,
+    ) -> impl Stream<Item = Result<HashMap<String, Tensor>, String>> + '_ {
+        let comms = self.client.get_comms();
+
+        let mut res = self
+            .client
+            .do_streaming_rpc(RPCRequestData::InferWithHandle {
+                handle: SealHandle(handle),
+                streaming: true,
+            })
+            .await;
+
+        async_stream::stream! {
+            while let Some(v) = res.recv().await {
+                match v {
+                    RPCResponseData::Infer { tensors } => {
+                        let mut out = HashMap::new();
+                        for (k, v) in tensors.into_iter() {
+                            out.insert(k, v.into_inner(comms).await);
+                        }
+
+                        yield Ok(out)
+                    }
+                    RPCResponseData::Error { e } => yield Err(e),
+                    RPCResponseData::Empty => { } // We can get this on the last message. Do nothing
+                    _ => panic!("Unexpected RPC response type!"),
+                }
+            }
         }
     }
 

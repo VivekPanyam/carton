@@ -15,6 +15,7 @@
 use std::collections::HashMap;
 
 use carton_macros::for_each_carton_type;
+use futures::Stream;
 
 use crate::error::Result;
 use crate::load::discover_or_get_runner_and_launch;
@@ -58,17 +59,46 @@ impl Carton {
         T: TensorStorage,
     {
         match &self.runner {
-            Runner::V1(runner) => Ok(convert_map(
-                runner
-                    .infer_with_inputs(
-                        tensors
-                            .into_iter()
-                            .map(|(k, v)| (k.into(), v.into()))
-                            .collect(),
-                    )
-                    .await
-                    .map_err(|e| CartonError::ErrorFromRunner(e))?,
-            )),
+            Runner::V1(runner) => runner
+                .infer_with_inputs(
+                    tensors
+                        .into_iter()
+                        .map(|(k, v)| (k.into(), v.into()))
+                        .collect(),
+                )
+                .await
+                .map_err(|e| CartonError::ErrorFromRunner(e))
+                .map(|v| convert_map(v)),
+        }
+    }
+
+    /// Infer using a set of inputs. This method has support for intermediate streaming responses
+    /// Consider using `seal` and `streaming_infer_with_handle` in pipelines
+    pub async fn streaming_infer<'a, I, S, T>(
+        &'a self,
+        tensors: I,
+    ) -> impl Stream<Item = Result<HashMap<String, Tensor<RunnerStorage>>>> + 'a
+    where
+        I: IntoIterator<Item = (S, Tensor<T>)> + 'a,
+        String: From<S>,
+        T: TensorStorage,
+    {
+        match &self.runner {
+            Runner::V1(runner) => {
+                async_stream::stream! {
+                    for await item in runner
+                        .streaming_infer_with_inputs(
+                            tensors
+                                .into_iter()
+                                .map(|(k, v)| (k.into(), v.into()))
+                                .collect(),
+                        )
+                        .await {
+                            yield item.map_err(|e| CartonError::ErrorFromRunner(e))
+                                .map(|v| convert_map(v))
+                        }
+                }
+            }
         }
     }
 

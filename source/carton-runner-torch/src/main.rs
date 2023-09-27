@@ -104,7 +104,7 @@ async fn main() {
                 seal_counter += 1
             }
 
-            RequestData::InferWithTensors { tensors } => {
+            RequestData::InferWithTensors { tensors, .. } => {
                 // TODO: error handling
                 let m = model.as_ref().unwrap().clone();
                 let out = tokio::task::spawn_blocking(move || infer(m, tensors, device))
@@ -117,7 +117,7 @@ async fn main() {
                     .unwrap();
             }
 
-            RequestData::InferWithHandle { handle } => {
+            RequestData::InferWithHandle { handle, .. } => {
                 // TODO: error handling
                 let tensors = sealed_tensors.remove(&handle.get()).unwrap();
                 let m = model.as_ref().unwrap().clone();

@@ -19,6 +19,7 @@ use carton_runner_interface::{
     types::{Tensor, TensorStorage},
 };
 use carton_utils_py::tensor::PyStringArrayType;
+use futures_util::StreamExt;
 use numpy::{PyArrayDyn, ToPyArray};
 use pyo3::{FromPyObject, PyAny, PyErr, PyObject, Python, ToPyObject};
 
@@ -114,70 +115,67 @@ impl Model {
         .map_err(pyerr_to_string_with_traceback)
     }
 
-    pub fn infer_with_handle(
+    pub async fn infer_with_handle(
         &mut self,
         handle: SealHandle,
-    ) -> Result<HashMap<String, Tensor>, String> {
+    ) -> Result<impl futures::Stream<Item = Result<HashMap<String, Tensor>, String>>, String> {
         match &mut self.seal {
             SealImpl::Py(_) => {
                 // Seal being implemented implies that infer_with_handle is also implemented (as we checked in `new`)
                 let infer_with_handle = self.infer_with_handle.as_ref().unwrap();
-                Python::with_gil(|py| {
-                    infer_with_handle
-                        .call1(py, (handle.get(),))?
-                        .extract(py)
-                        .map(|item: HashMap<String, PythonTensorType>| item.convert())
-                })
+                let res = Python::with_gil(|py| infer_with_handle.call1(py, (handle.get(),)));
+
+                process_infer_output(res).await
             }
             SealImpl::Store { data, .. } => {
                 // TODO: return an error instead of using unwrap
                 let tensors = data.remove(&handle).unwrap();
 
                 // Run inference with tensors
-                Python::with_gil(|py| {
+                let res = Python::with_gil(|py| {
                     self.infer_with_tensors
                         .as_ref()
                         .unwrap()
-                        .call1(py, (tensors,))?
-                        .extract(py)
-                        .map(|item: HashMap<String, PythonTensorType>| item.convert())
-                })
+                        .call1(py, (tensors,))
+                });
+
+                process_infer_output(res).await
             }
         }
         .map_err(pyerr_to_string_with_traceback)
     }
 
-    pub fn infer_with_tensors(
+    pub async fn infer_with_tensors(
         &self,
         tensors: HashMap<String, Tensor>,
-    ) -> Result<HashMap<String, Tensor>, String> {
+    ) -> Result<impl futures::Stream<Item = Result<HashMap<String, Tensor>, String>>, String> {
         // Convert to numpy arrays
         let tensors = to_numpy_arrays(tensors);
 
         match &self.infer_with_tensors {
             Some(infer_with_tensors) => {
                 // Run inference with tensors
-                Python::with_gil(|py| {
+                let res = Python::with_gil(|py| {
                     infer_with_tensors
-                        .call1(py, (tensors,))?
-                        .extract(py)
-                        .map(|item: HashMap<String, PythonTensorType>| item.convert())
-                })
+                        .call1(py, (tensors,))
+                });
+
+                process_infer_output(res).await
             }
             None => {
                 // Implement on top of `seal` and `infer_with_handle`
                 if let SealImpl::Py(seal) = &self.seal {
-                    Python::with_gil(|py| {
+                    let res = Python::with_gil(|py| {
                         let handle: u64 = seal.call1(py, (tensors,))?.extract(py)?;
 
                         // Seal being implemented implies that infer_with_handle is also implemented (as we checked in `new`)
                         let infer_with_handle = self.infer_with_handle.as_ref().unwrap();
 
                         infer_with_handle
-                            .call1(py, (handle,))?
-                            .extract(py)
-                            .map(|item: HashMap<String, PythonTensorType>| item.convert())
-                    })
+                            .call1(py, (handle,))
+                    });
+
+                    process_infer_output(res).await
                 } else {
                     panic!("`infer_with_tensors` wasn't implemented and `seal` wasn't implemented either");
                 }
@@ -285,4 +283,41 @@ fn to_numpy_arrays(tensors: HashMap<String, Tensor>) -> HashMap<String, pyo3::Py
             })
             .collect()
     })
+}
+
+/// Takes the output of an infer call and handles async iteration responses correctly
+async fn process_infer_output(
+    res: pyo3::PyResult<pyo3::Py<PyAny>>,
+) -> pyo3::PyResult<impl futures::Stream<Item = Result<HashMap<String, Tensor>, String>>> {
+    let res = res?;
+
+    // Check if it's just a dictionary
+    let dict = Python::with_gil(|py| {
+        // Try and extract a dictionary
+        res.extract(py)
+            .map(|item: HashMap<String, PythonTensorType>| item.convert())
+            .map_err(pyerr_to_string_with_traceback)
+    });
+
+    let stream = async_stream::try_stream! {
+        if dict.is_ok() {
+            // We're returning a single response
+            yield dict?;
+        } else {
+            // Treat the response as an async iterator
+            let mut rx = Python::with_gil(|py| pyo3_asyncio::tokio::into_stream_v2(res.as_ref(py)).map_err(pyerr_to_string_with_traceback))?;
+            while let Some(item) = rx.next().await {
+                let dict = Python::with_gil(|py| {
+                    // Try and extract a dictionary
+                    item.extract(py)
+                        .map(|item: HashMap<String, PythonTensorType>| item.convert())
+                        .map_err(pyerr_to_string_with_traceback)
+                });
+
+                yield dict?;
+            }
+        }
+    };
+
+    Ok(stream)
 }

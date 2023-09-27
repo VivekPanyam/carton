@@ -57,7 +57,7 @@ async fn main() {
                     .unwrap();
             }
 
-            RequestData::InferWithTensors { tensors } => {
+            RequestData::InferWithTensors { tensors, .. } => {
                 // Let's just return the input tensors for now
                 server
                     .send_response_for_request(req_id, ResponseData::Infer { tensors })
@@ -65,7 +65,7 @@ async fn main() {
                     .unwrap();
             }
 
-            RequestData::InferWithHandle { handle } => {
+            RequestData::InferWithHandle { handle, .. } => {
                 // TODO: return an error instead of using unwrap
                 let tensors = sealed_tensors.remove(&handle).unwrap();
 

@@ -16,10 +16,11 @@ use std::path::PathBuf;
 
 use carton::{
     info::RunnerInfo,
-    types::{CartonInfo, GenericStorage, LoadOpts, PackOpts, RunnerOpt},
+    types::{CartonInfo, GenericStorage, LoadOpts, PackOpts, RunnerOpt, Tensor},
     Carton,
 };
 use carton_runner_packager::RunnerPackage;
+use futures_util::StreamExt;
 use semver::VersionReq;
 use tokio::process::Command;
 
@@ -149,13 +150,17 @@ async fn test_pack_python_model() {
 import os
 import os.path
 import xgboost as xgb
+import numpy as np
 
 class Model:
     def __init__(self):
         pass
 
-    def infer_with_tensors(self, tensors):
-        pass
+    async def infer_with_tensors(self, tensors):
+        for i in range(5):
+            yield {
+                "a": np.zeros(i, dtype=np.float32)
+            }
 
 def get_model(an_example_custom_option, another_example_custom_option):
     print("Loaded python model!")
@@ -212,10 +217,55 @@ def get_model(an_example_custom_option, another_example_custom_option):
     .await
     .unwrap();
 
-    let _model = Carton::load(
+    let model = Carton::load(
         packed_path.to_str().unwrap().to_owned(),
         LoadOpts::default(),
     )
     .await
     .unwrap();
+
+    // Make sure streaming inference works
+    let res = model.streaming_infer::<_, &str, GenericStorage>([]).await;
+
+    futures_util::pin_mut!(res);
+
+    assert_eq!(
+        res.next().await.unwrap().unwrap().get("a").unwrap(),
+        &Tensor::<GenericStorage>::Float(ndarray::ArrayD::from_shape_vec(vec![0], vec![]).unwrap())
+    );
+    assert_eq!(
+        res.next().await.unwrap().unwrap().get("a").unwrap(),
+        &Tensor::<GenericStorage>::Float(
+            ndarray::ArrayD::from_shape_vec(vec![1], vec![0.0]).unwrap()
+        )
+    );
+    assert_eq!(
+        res.next().await.unwrap().unwrap().get("a").unwrap(),
+        &Tensor::<GenericStorage>::Float(
+            ndarray::ArrayD::from_shape_vec(vec![2], vec![0.0, 0.0]).unwrap()
+        )
+    );
+    assert_eq!(
+        res.next().await.unwrap().unwrap().get("a").unwrap(),
+        &Tensor::<GenericStorage>::Float(
+            ndarray::ArrayD::from_shape_vec(vec![3], vec![0.0, 0.0, 0.0]).unwrap()
+        )
+    );
+    assert_eq!(
+        res.next().await.unwrap().unwrap().get("a").unwrap(),
+        &Tensor::<GenericStorage>::Float(
+            ndarray::ArrayD::from_shape_vec(vec![4], vec![0.0, 0.0, 0.0, 0.0]).unwrap()
+        )
+    );
+
+    assert!(res.next().await.is_none());
+
+    // Make sure regular inference works
+    let res = model.infer::<_, &str, GenericStorage>([]).await.unwrap();
+    assert_eq!(
+        res.get("a").unwrap(),
+        &Tensor::<GenericStorage>::Float(
+            ndarray::ArrayD::from_shape_vec(vec![4], vec![0.0, 0.0, 0.0, 0.0]).unwrap()
+        )
+    );
 }
