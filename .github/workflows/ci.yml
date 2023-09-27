@@ -26,34 +26,22 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v1
         with:
           command: check bans licenses sources
-  # build_and_test_native:
-  #   name: Native Build ${{ matrix.os }}
-  #   runs-on: ${{ matrix.os }}
-  #   container:
-  #     # TODO: only on linux
-  #     image: vpanyam/manylinux2014-rust-python310:x86_64
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - os: ubuntu-latest
-  #           target: x86_64-unknown-linux-gnu
-  #         # For now, don't run macos builds on every commit.
-  #         # TODO: reenable this when the repo is public
-  #         # - os: macos-latest
-  #         #   target: x86_64-apple-darwin
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v3
-  #     - run: rustup default stable
-  #     - uses: Swatinem/rust-cache@v2
-  #     - run: pip3 install toml maturin==0.14.13
-  #     - run: python3 ci/build.py --target ${{ matrix.target }}
-  #     - name: Upload `carton_logs` on failure
-  #       if: ${{ failure() }}
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: tmp_carton_logs
-  #         path: /tmp/carton_logs
+  build_and_test_x86_mac:
+    name: Native Build x86_64-apple-darwin
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - run: rustup default stable
+      - uses: Swatinem/rust-cache@v2
+      - run: pip3 install toml maturin==0.14.13
+      - run: python3 ci/build.py --target x86_64-apple-darwin
+      - name: Upload `carton_logs` on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: tmp_carton_logs
+          path: /tmp/carton_logs
   build_wasi:
     name: WASM Build wasm32-wasi
     runs-on: ubuntu-latest
