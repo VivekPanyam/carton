@@ -2,10 +2,15 @@
 name = "carton-runner-packager"
 version = "0.0.1"
 edition = "2021"
-publish = false
+authors = ["Vivek Panyam <hello@vivekpanyam.com>"]
+description = "Runner packaging utils used by `carton`"
+license = "Apache-2.0"
+repository = "https://github.com/VivekPanyam/carton"
+keywords = []
+categories = []
 
 [dependencies]
-carton-utils = { path = "../carton-utils" }
+carton-utils = { path = "../carton-utils", version = "0.0.1"}
 tokio = { version = "1", features = ["full"] }
 toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
