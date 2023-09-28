@@ -24,6 +24,7 @@ import Prism from "prism-react-renderer/prism";
 
 
 require("prismjs/components/prism-rust")
+require("prismjs/components/prism-toml")
 
 // From https://github.com/LekoArts/gatsby-themes/blob/main/packages/themes-utils/src/index.ts
 // (MIT licensed)
@@ -60,6 +61,7 @@ const LANGUAGE_TAGS = {
     "js": {"bg": "bg-emerald-500", tag: "js"},
     "rust": {"bg": "bg-violet-500", tag: "rust"},
     "json": { "bg": "bg-orange-500", tag: "json" },
+    "toml": { "bg": "bg-orange-500", tag: "toml" },
 }
 
 const Code = ({

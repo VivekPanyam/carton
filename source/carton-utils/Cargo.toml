@@ -2,7 +2,12 @@
 name = "carton-utils"
 version = "0.0.1"
 edition = "2021"
-publish = false
+authors = ["Vivek Panyam <hello@vivekpanyam.com>"]
+description = "Utilities used by `carton`"
+license = "Apache-2.0"
+repository = "https://github.com/VivekPanyam/carton"
+keywords = []
+categories = []
 
 [dependencies]
 tokio = { version = "1", features = [] }

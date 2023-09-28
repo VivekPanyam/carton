@@ -35,9 +35,13 @@ asyncio.run(main())
 
 ```rust forLang='rust'
 use carton::Carton;
-use carton::types::LoadOpts;
+use carton::types::{LoadOpts, Tensor, GenericStorage};
 
+#[tokio::main]
 async fn main() {
+    // See the logging section in the quickstart guide
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
     // Load the model
     let model = Carton::load(
         "https://carton.pub/google-research/bert-base-uncased",
@@ -55,12 +59,27 @@ async fn main() {
 
     // Run inference
     let out = model
-        .infer([("input_sequences", Tensor::<GenericStorage>::String(arr))])
+        .infer([("input", Tensor::<GenericStorage>::String(arr))])
         .await
         .unwrap();
     println!("{out:?}");
 }
 ```
+
+<LanguageSwitch>
+<LanguageItem forLang='rust'>
+
+To run the above, you'll also need these dependencies in your `Cargo.toml` file:
+
+```toml
+[dependencies]
+tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
+ndarray = "0.15"
+env_logger = "0.10"
+```
+
+</LanguageItem>
+</LanguageSwitch>
 
 Carton loads the model (caching it locally if necessary).
 
