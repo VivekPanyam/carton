@@ -8,7 +8,7 @@ publish = false
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-carton = { path = "../carton" }
+carton-core = { package = "carton", path = "../carton" }
 tokio = { version = "1", features = ["full"] }
 ocaml-rust = { git = "https://github.com/LaurentMazare/ocaml-rust", rev = "7487c126bfa0785bd32e72918bc37a16d4d7d203" }
 ocaml-sys = "0.23.0"

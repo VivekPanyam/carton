@@ -1,6 +1,6 @@
 #!/bin/env bash
 
-output=$(cargo build --release --message-format json | tail -n 2 | head -n 1)
+output=$(cargo build $1 --message-format json | tail -n 2 | head -n 1)
 file_names=$(echo "$output" | jq -r ".filenames|.[]")
 
 for name in $file_names; do
