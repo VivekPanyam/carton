@@ -1,0 +1,4 @@
+profile = janestreet
+break-cases = fit
+margin = 77
+wrap-comments = true

@@ -1,0 +1,4 @@
+(library
+ (public_name cartonml)
+ (foreign_archives carton_bindings_ocaml)
+ (c_library_flags (-lpthread -lc -lm)))
