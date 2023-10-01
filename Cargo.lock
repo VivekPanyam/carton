@@ -537,6 +537,7 @@ name = "carton-bindings-ocaml"
 version = "0.1.0"
 dependencies = [
  "carton",
+ "ndarray",
  "ocaml-rust",
  "ocaml-sys",
  "tokio",

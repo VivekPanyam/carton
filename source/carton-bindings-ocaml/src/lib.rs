@@ -1,22 +1,13 @@
-use carton_core::error::CartonError;
-use carton_core::types::{Device, LoadOpts};
-use carton_core::Carton;
-use ocaml_rust::Custom;
-use tokio::runtime::Runtime;
+mod export;
+mod tensor;
 
-#[ocaml_rust::bridge]
-mod ffi {
-    type FFICarton = Custom<Carton>;
-    type FFICartonError = Custom<CartonError>;
-    extern "Rust" {
-        fn load(
-            path: String,
-            visible_device: Option<String>,
-            override_runner_name: Option<String>,
-            override_required_framework_version: Option<String>,
-        ) -> Result<FFICarton, FFICartonError>;
-    }
-}
+use crate::export::Tensor;
+
+use carton_core::error::CartonError;
+use carton_core::types::{Device, LoadOpts, Tensor as CartonTensor};
+use carton_core::Carton;
+use ocaml_rust::{Custom, CustomConst};
+use tokio::runtime::Runtime;
 
 /// Load a carton model
 fn load(
@@ -24,7 +15,7 @@ fn load(
     visible_device: Option<String>,
     override_runner_name: Option<String>,
     override_required_framework_version: Option<String>,
-) -> Result<Custom<Carton>, Custom<CartonError>> {
+) -> Result<CustomConst<Carton>, Custom<CartonError>> {
     Runtime::new().unwrap().block_on(async {
         let opts = LoadOpts {
             override_runner_name,
@@ -37,8 +28,27 @@ fn load(
         };
 
         match Carton::load(path, opts).await {
-            Ok(x) => Ok(Custom::new(x)),
+            Ok(x) => Ok(CustomConst::new(x)),
             Err(x) => Err(Custom::new(x)),
         }
+    })
+}
+
+/// Infer the data
+fn infer(model: CustomConst<Carton>, tensors: Vec<(String, Tensor)>) -> Vec<(String, Tensor)> {
+    Runtime::new().unwrap().block_on(async {
+        let transformed: Vec<(_, CartonTensor<_>)> = tensors
+            .into_iter()
+            .map(|(k, v)| (k, CartonTensor::from(v)))
+            .collect();
+
+        model
+            .inner()
+            .infer(transformed)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|(x, y)| (x, y.into()))
+            .collect()
     })
 }
