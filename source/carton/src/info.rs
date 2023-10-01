@@ -29,15 +29,12 @@ use tokio::{io::AsyncRead, sync::OnceCell};
 
 use crate::{
     conversion_utils::{ConvertFromWithContext, ConvertIntoWithContext},
-    types::{GenericStorage, Tensor, TensorStorage},
+    types::Tensor,
 };
 
 /// Options that can be specified when packing a model
-pub struct PackOpts<T>
-where
-    T: TensorStorage,
-{
-    pub info: CartonInfo<T>,
+pub struct PackOpts {
+    pub info: CartonInfo,
 
     /// Any files to include in the carton as links (instead of the originals)
     pub linked_files: Option<Vec<LinkedFile>>,
@@ -50,10 +47,7 @@ pub struct LinkedFile {
 }
 
 // Info about a carton
-pub struct CartonInfo<T>
-where
-    T: TensorStorage,
-{
+pub struct CartonInfo {
     /// The name of the model
     pub model_name: Option<String>,
 
@@ -87,11 +81,11 @@ where
 
     /// Test data
     /// Can be empty
-    pub self_tests: Option<Vec<SelfTest<T>>>,
+    pub self_tests: Option<Vec<SelfTest>>,
 
     /// Examples
     /// Can be empty
-    pub examples: Option<Vec<Example<T>>>,
+    pub examples: Option<Vec<Example>>,
 
     /// Information about the runner to use
     pub runner: RunnerInfo,
@@ -101,7 +95,7 @@ where
     pub misc_files: Option<HashMap<String, ArcMiscFileLoader>>,
 }
 
-impl<T: TensorStorage> Clone for CartonInfo<T> {
+impl Clone for CartonInfo {
     fn clone(&self) -> Self {
         Self {
             model_name: self.model_name.clone(),
@@ -121,8 +115,8 @@ impl<T: TensorStorage> Clone for CartonInfo<T> {
     }
 }
 
-impl<T: TensorStorage> From<CartonInfo<T>> for PackOpts<T> {
-    fn from(value: CartonInfo<T>) -> Self {
+impl From<CartonInfo> for PackOpts {
+    fn from(value: CartonInfo) -> Self {
         Self {
             info: value,
             linked_files: None,
@@ -132,11 +126,8 @@ impl<T: TensorStorage> From<CartonInfo<T>> for PackOpts<T> {
 
 /// A struct used when loading models. It contains extra things like the
 /// manifest hash
-pub struct CartonInfoWithExtras<T>
-where
-    T: TensorStorage,
-{
-    pub info: CartonInfo<T>,
+pub struct CartonInfoWithExtras {
+    pub info: CartonInfo,
 
     /// The sha256 of the MANIFEST file (if available)
     /// This should always be available unless we're running an unpacked model
@@ -230,19 +221,16 @@ impl<T> From<T> for PossiblyLoaded<T> {
     }
 }
 
-pub struct SelfTest<T>
-where
-    T: TensorStorage,
-{
+pub struct SelfTest {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub inputs: HashMap<String, PossiblyLoaded<Tensor<T>>>,
+    pub inputs: HashMap<String, PossiblyLoaded<Tensor>>,
 
     // Can be empty
-    pub expected_out: Option<HashMap<String, PossiblyLoaded<Tensor<T>>>>,
+    pub expected_out: Option<HashMap<String, PossiblyLoaded<Tensor>>>,
 }
 
-impl<T: TensorStorage> Clone for SelfTest<T> {
+impl Clone for SelfTest {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
@@ -253,45 +241,40 @@ impl<T: TensorStorage> Clone for SelfTest<T> {
     }
 }
 
-impl<T: TensorStorage> SelfTest<T> {
+impl SelfTest {
     /// Returns an input tensor if it exists
-    pub async fn get_input_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    pub async fn get_input_tensor<S>(&self, key: S) -> Option<&Tensor>
     where
         S: AsRef<str>,
-        Tensor<T>: Clone,
     {
         let val = self.inputs.get(key.as_ref())?;
         let tensor = val.get().await;
 
-        Some(tensor.clone())
+        Some(tensor)
     }
 
     /// Returns an output tensor if it exists
-    pub async fn get_output_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    pub async fn get_output_tensor<S>(&self, key: S) -> Option<&Tensor>
     where
         S: AsRef<str>,
-        Tensor<T>: Clone,
     {
         let out = self.expected_out.as_ref()?;
 
         let val = out.get(key.as_ref())?;
         let tensor = val.get().await;
 
-        Some(tensor.clone())
+        Some(tensor)
     }
 }
 
-pub struct Example<T>
-where
-    T: TensorStorage,
-{
+pub struct Example {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub inputs: HashMap<String, TensorOrMisc<T>>,
-    pub sample_out: HashMap<String, TensorOrMisc<T>>,
+    pub inputs: HashMap<String, TensorOrMisc>,
+    pub sample_out: HashMap<String, TensorOrMisc>,
 }
 
-impl<T: TensorStorage> Clone for Example<T> {
+impl Clone for Example {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
@@ -302,34 +285,32 @@ impl<T: TensorStorage> Clone for Example<T> {
     }
 }
 
-impl<T: TensorStorage> Example<T> {
+impl Example {
     /// Returns an input tensor if it exists (and is a tensor)
-    pub async fn get_input_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    pub async fn get_input_tensor<S>(&self, key: S) -> Option<&Tensor>
     where
         S: AsRef<str>,
-        Tensor<T>: Clone,
     {
         let val = self.inputs.get(key.as_ref())?;
         if let TensorOrMisc::Tensor(val) = val {
             let tensor = val.get().await;
 
-            Some(tensor.clone())
+            Some(tensor)
         } else {
             None
         }
     }
 
     /// Returns an output tensor if it exists (and is a tensor)
-    pub async fn get_output_tensor<S>(&self, key: S) -> Option<Tensor<T>>
+    pub async fn get_output_tensor<S>(&self, key: S) -> Option<&Tensor>
     where
         S: AsRef<str>,
-        Tensor<T>: Clone,
     {
         let val = self.sample_out.get(key.as_ref())?;
         if let TensorOrMisc::Tensor(val) = val {
             let tensor = val.get().await;
 
-            Some(tensor.clone())
+            Some(tensor)
         } else {
             None
         }
@@ -355,15 +336,12 @@ pub type ArcMiscFileLoader = Arc<dyn MiscFileLoader>;
 #[cfg(not(target_family = "wasm"))]
 pub type ArcMiscFileLoader = Arc<dyn MiscFileLoader + Send + Sync>;
 
-pub enum TensorOrMisc<T>
-where
-    T: TensorStorage,
-{
-    Tensor(PossiblyLoaded<Tensor<T>>),
+pub enum TensorOrMisc {
+    Tensor(PossiblyLoaded<Tensor>),
     Misc(ArcMiscFileLoader),
 }
 
-impl<T: TensorStorage> Clone for TensorOrMisc<T> {
+impl Clone for TensorOrMisc {
     fn clone(&self) -> Self {
         match self {
             Self::Tensor(v) => Self::Tensor(v.clone()),
@@ -395,7 +373,7 @@ pub struct RunnerInfo {
     pub opts: Option<HashMap<String, RunnerOpt>>,
 }
 
-impl From<RunnerInfo> for PackOpts<GenericStorage> {
+impl From<RunnerInfo> for PackOpts {
     fn from(value: RunnerInfo) -> Self {
         let info = CartonInfo {
             model_name: None,
@@ -528,97 +506,6 @@ impl<'de> Deserialize<'de> for DataType {
         D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_str(DataTypeDeserializeVisitor)
-    }
-}
-
-impl<T, U, C> ConvertFromWithContext<CartonInfoWithExtras<T>, C> for CartonInfoWithExtras<U>
-where
-    CartonInfo<U>: ConvertFromWithContext<CartonInfo<T>, C>,
-    T: TensorStorage,
-    U: TensorStorage,
-    C: Copy,
-{
-    fn from(value: CartonInfoWithExtras<T>, context: C) -> Self {
-        Self {
-            info: value.info.convert_into_with_context(context),
-            manifest_sha256: value.manifest_sha256,
-        }
-    }
-}
-
-impl<T, U, C> ConvertFromWithContext<CartonInfo<T>, C> for CartonInfo<U>
-where
-    SelfTest<U>: ConvertFromWithContext<SelfTest<T>, C>,
-    Example<U>: ConvertFromWithContext<Example<T>, C>,
-    T: TensorStorage,
-    U: TensorStorage,
-    C: Copy,
-{
-    fn from(value: CartonInfo<T>, context: C) -> Self {
-        Self {
-            model_name: value.model_name,
-            short_description: value.short_description,
-            model_description: value.model_description,
-            license: value.license,
-            repository: value.repository,
-            homepage: value.homepage,
-            required_platforms: value.required_platforms,
-            inputs: value.inputs,
-            outputs: value.outputs,
-            self_tests: value.self_tests.convert_into_with_context(context),
-            examples: value.examples.convert_into_with_context(context),
-            runner: value.runner,
-            misc_files: value.misc_files,
-        }
-    }
-}
-
-impl<T, U, C> ConvertFromWithContext<SelfTest<T>, C> for SelfTest<U>
-where
-    PossiblyLoaded<Tensor<U>>: ConvertFromWithContext<PossiblyLoaded<Tensor<T>>, C>,
-    T: TensorStorage,
-    U: TensorStorage,
-    C: Copy,
-{
-    fn from(value: SelfTest<T>, context: C) -> Self {
-        Self {
-            name: value.name,
-            description: value.description,
-            inputs: value.inputs.convert_into_with_context(context),
-            expected_out: value.expected_out.convert_into_with_context(context),
-        }
-    }
-}
-
-impl<T, U, C> ConvertFromWithContext<Example<T>, C> for Example<U>
-where
-    PossiblyLoaded<Tensor<U>>: ConvertFromWithContext<PossiblyLoaded<Tensor<T>>, C>,
-    T: TensorStorage,
-    U: TensorStorage,
-    C: Copy,
-{
-    fn from(value: Example<T>, context: C) -> Self {
-        Self {
-            name: value.name,
-            description: value.description,
-            inputs: value.inputs.convert_into_with_context(context),
-            sample_out: value.sample_out.convert_into_with_context(context),
-        }
-    }
-}
-
-impl<T, U, C> ConvertFromWithContext<TensorOrMisc<T>, C> for TensorOrMisc<U>
-where
-    PossiblyLoaded<Tensor<U>>: ConvertFromWithContext<PossiblyLoaded<Tensor<T>>, C>,
-    T: TensorStorage,
-    U: TensorStorage,
-    C: Copy,
-{
-    fn from(value: TensorOrMisc<T>, context: C) -> Self {
-        match value {
-            TensorOrMisc::Tensor(t) => Self::Tensor(t.convert_into_with_context(context)),
-            TensorOrMisc::Misc(m) => Self::Misc(m),
-        }
     }
 }
 

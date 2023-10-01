@@ -35,7 +35,7 @@ asyncio.run(main())
 
 ```rust forLang='rust'
 use carton::Carton;
-use carton::types::{LoadOpts, Tensor, GenericStorage};
+use carton::types::{LoadOpts, Tensor};
 
 #[tokio::main]
 async fn main() {
@@ -59,7 +59,7 @@ async fn main() {
 
     // Run inference
     let out = model
-        .infer([("input", Tensor::<GenericStorage>::String(arr))])
+        .infer([("input", Tensor::new(arr))])
         .await
         .unwrap();
     println!("{out:?}");

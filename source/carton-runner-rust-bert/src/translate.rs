@@ -156,7 +156,7 @@ pub mod pack {
         info::{
             DataType, Dimension, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec,
         },
-        types::{CartonInfo, GenericStorage, PackOpts, Tensor},
+        types::{CartonInfo, PackOpts, Tensor},
     };
     use rust_bert::{m2m_100::M2M100SourceLanguages, pipelines::translation::Language};
 
@@ -234,7 +234,7 @@ pub mod pack {
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo::<GenericStorage> {
+        let info = CartonInfo {
             model_name: Some("M2M100".into()),
             short_description: Some("M2M100 is a model that can translate directly between any pair of 100 languages.".into()),
             model_description: Some("See [here](https://about.fb.com/news/2020/10/first-multilingual-machine-translation-model/) for more details. M2M100 supports the following languages:\n".to_owned() + &languages.iter().map(|l| format!("- {}", serde_plain::to_string(l).unwrap())).collect::<Vec<_>>().join("\n")),

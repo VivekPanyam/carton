@@ -25,7 +25,7 @@ use walkdir::WalkDir;
 use crate::conversion_utils::{convert_opt_map, convert_opt_vec, convert_vec};
 use crate::error::{CartonError, Result};
 use crate::format::v1::links::Links;
-use crate::types::{PackOpts, TensorStorage};
+use crate::types::PackOpts;
 
 use super::carton_toml::{CartonToml, TensorOrMiscReference};
 
@@ -46,13 +46,10 @@ async fn save_misc_file<'a>(
 
 /// Given a path to a filled `model` dir, this function creates a complete carton by saving all the additonal
 /// info. Returns a path to the saved file
-pub(crate) async fn save<T>(
-    pack_opts: PackOpts<T>,
+pub(crate) async fn save(
+    pack_opts: PackOpts,
     model_dir_path: &std::path::Path,
-) -> Result<std::path::PathBuf>
-where
-    T: TensorStorage,
-{
+) -> Result<std::path::PathBuf> {
     // Extract the model info from pack opts
     let info = pack_opts.info;
 
