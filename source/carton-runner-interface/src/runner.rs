@@ -299,7 +299,7 @@ impl Runner {
         }
     }
 
-    pub async fn alloc_tensor<T: Clone + Default>(&self, shape: Vec<u64>) -> Result<Tensor, String>
+    pub fn alloc_tensor<T: Clone + Default>(&self, shape: Vec<u64>) -> Result<Tensor, String>
     where
         InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
         Tensor: From<TensorStorage<T>>,
