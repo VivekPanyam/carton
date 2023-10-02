@@ -16,7 +16,7 @@ use std::path::PathBuf;
 
 use carton::{
     info::RunnerInfo,
-    types::{GenericStorage, LoadOpts, Tensor, TypedStorage},
+    types::{LoadOpts, Tensor},
 };
 use carton_runner_packager::RunnerPackage;
 use tokio::process::Command;
@@ -92,15 +92,15 @@ async fn test_pack() {
         .unwrap();
 
     // Create an input tensor and run inference
-    let tensor_a = ndarray::ArrayD::from_shape_vec(vec![1], vec![1.5]).unwrap();
+    let tensor_a = ndarray::ArrayD::from_shape_vec(vec![1], vec![1.5f32]).unwrap();
     let tensor_b = ndarray::ArrayD::from_shape_vec(vec![], vec!["scalar".to_owned()]).unwrap();
     let tensor_c =
         ndarray::ArrayD::from_shape_vec(vec![2], vec!["a".to_owned(), "b".to_owned()]).unwrap();
     let out = model
         .infer([
-            ("a", Tensor::<GenericStorage>::Float(tensor_a)),
-            ("b", Tensor::<GenericStorage>::String(tensor_b)),
-            ("c", Tensor::<GenericStorage>::String(tensor_c)),
+            ("a", Tensor::new(tensor_a)),
+            ("b", Tensor::new(tensor_b)),
+            ("c", Tensor::new(tensor_c)),
         ])
         .await
         .unwrap();

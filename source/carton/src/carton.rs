@@ -19,8 +19,7 @@ use futures::Stream;
 
 use crate::error::Result;
 use crate::load::discover_or_get_runner_and_launch;
-use crate::runner_interface::storage::RunnerStorage;
-use crate::types::{DataType, GenericStorage, TensorStorage};
+use crate::types::DataType;
 use crate::{
     conversion_utils::convert_map,
     error::CartonError,
@@ -30,7 +29,7 @@ use crate::{
 };
 
 pub struct Carton {
-    info: CartonInfoWithExtras<GenericStorage>,
+    info: CartonInfoWithExtras,
     runner: Runner,
 
     /// An optional temp dir. This is used in `load_unpacked` to make sure the directory doesn't get
@@ -52,11 +51,10 @@ impl Carton {
 
     /// Infer using a set of inputs.
     /// Consider using `seal` and `infer_with_handle` in pipelines
-    pub async fn infer<I, S, T>(&self, tensors: I) -> Result<HashMap<String, Tensor<RunnerStorage>>>
+    pub async fn infer<I, S>(&self, tensors: I) -> Result<HashMap<String, Tensor>>
     where
-        I: IntoIterator<Item = (S, Tensor<T>)>,
+        I: IntoIterator<Item = (S, Tensor)>,
         String: From<S>,
-        T: TensorStorage,
     {
         match &self.runner {
             Runner::V1(runner) => runner
@@ -74,14 +72,13 @@ impl Carton {
 
     /// Infer using a set of inputs. This method has support for intermediate streaming responses
     /// Consider using `seal` and `streaming_infer_with_handle` in pipelines
-    pub async fn streaming_infer<'a, I, S, T>(
+    pub async fn streaming_infer<'a, I, S>(
         &'a self,
         tensors: I,
-    ) -> impl Stream<Item = Result<HashMap<String, Tensor<RunnerStorage>>>> + 'a
+    ) -> impl Stream<Item = Result<HashMap<String, Tensor>>> + 'a
     where
-        I: IntoIterator<Item = (S, Tensor<T>)> + 'a,
+        I: IntoIterator<Item = (S, Tensor)> + 'a,
         String: From<S>,
-        T: TensorStorage,
     {
         match &self.runner {
             Runner::V1(runner) => {
@@ -105,10 +102,7 @@ impl Carton {
     /// "Seal" a set of inputs that will be used for inference.
     /// This lets carton start processing tensors (e.g. moving them to the correct devices) before
     /// actually running inference and can lead to more efficient pipelines.
-    pub async fn seal<T>(&self, tensors: HashMap<String, Tensor<T>>) -> Result<SealHandle>
-    where
-        T: TensorStorage,
-    {
+    pub async fn seal(&self, tensors: HashMap<String, Tensor>) -> Result<SealHandle> {
         match &self.runner {
             Runner::V1(runner) => Ok(SealHandle(
                 runner
@@ -121,10 +115,7 @@ impl Carton {
 
     /// Infer using a handle from `seal`.
     /// This approach can make inference pipelines more efficient vs just using `infer`
-    pub async fn infer_with_handle(
-        &self,
-        handle: SealHandle,
-    ) -> Result<HashMap<String, Tensor<RunnerStorage>>> {
+    pub async fn infer_with_handle(&self, handle: SealHandle) -> Result<HashMap<String, Tensor>> {
         match &self.runner {
             Runner::V1(runner) => Ok(convert_map(
                 runner
@@ -137,10 +128,9 @@ impl Carton {
 
     /// Pack a carton given a path and options. Returns the path of the output file
     #[cfg(not(target_family = "wasm"))]
-    pub async fn pack<T, O, P: AsRef<str>>(path: P, opts: O) -> Result<std::path::PathBuf>
+    pub async fn pack<O, P: AsRef<str>>(path: P, opts: O) -> Result<std::path::PathBuf>
     where
-        T: TensorStorage,
-        O: Into<PackOpts<T>>,
+        O: Into<PackOpts>,
     {
         use std::sync::Arc;
 
@@ -189,18 +179,15 @@ impl Carton {
     /// Functionally equivalent to `pack` followed by `load`, but implemented in a more
     /// optimized way
     #[cfg(not(target_family = "wasm"))]
-    pub async fn load_unpacked<T, O, P: AsRef<str>>(
+    pub async fn load_unpacked<O, P: AsRef<str>>(
         path: P,
         pack_opts: O,
         load_opts: LoadOpts,
     ) -> Result<Self>
     where
-        T: TensorStorage + 'static,
-        O: Into<PackOpts<T>>,
+        O: Into<PackOpts>,
     {
         use std::sync::Arc;
-
-        use crate::conversion_utils::ConvertInto;
 
         let mut pack_opts = pack_opts.into();
 
@@ -260,21 +247,19 @@ impl Carton {
 
         // Return a Carton
         Ok(Self {
-            info: info_with_extras.convert_into(),
+            info: info_with_extras,
             runner,
             _tempdir: Some(tempdir),
         })
     }
 
     /// Get info for the loaded model
-    pub fn get_info(&self) -> &CartonInfoWithExtras<GenericStorage> {
+    pub fn get_info(&self) -> &CartonInfoWithExtras {
         &self.info
     }
 
     /// Get info for a model
-    pub async fn get_model_info<P: AsRef<str>>(
-        url_or_path: P,
-    ) -> Result<CartonInfoWithExtras<GenericStorage>> {
+    pub async fn get_model_info<P: AsRef<str>>(url_or_path: P) -> Result<CartonInfoWithExtras> {
         crate::load::get_carton_info(url_or_path.as_ref()).await
     }
 
@@ -290,11 +275,7 @@ impl Carton {
     }
 
     /// Allocate a tensor
-    pub async fn alloc_tensor(
-        &self,
-        dtype: DataType,
-        shape: Vec<u64>,
-    ) -> Result<Tensor<RunnerStorage>> {
+    pub async fn alloc_tensor(&self, dtype: DataType, shape: Vec<u64>) -> Result<Tensor> {
         match &self.runner {
             Runner::V1(runner) => {
                 for_each_carton_type! {

@@ -144,7 +144,7 @@ pub mod pack {
 
     use carton::{
         info::{DataType, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
-        types::{CartonInfo, GenericStorage, PackOpts, Tensor},
+        types::{CartonInfo, PackOpts, Tensor},
     };
 
     use crate::{download_file, ModelConfig};
@@ -199,7 +199,7 @@ pub mod pack {
         let linked_files = vec![res.0.unwrap(), res.1.unwrap(), res.2.unwrap()];
 
         // Pack the model and return the path
-        let info = CartonInfo::<GenericStorage> {
+        let info = CartonInfo {
             model_name: Some("DistilBERT base cased distilled SQuAD".into()),
             short_description: Some("A DistilBERT model fine tuned for question answering.".into()),
             model_description: Some("See [here](https://huggingface.co/distilbert-base-cased-distilled-squad) for more details.".into()),

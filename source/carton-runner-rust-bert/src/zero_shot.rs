@@ -193,7 +193,7 @@ pub mod pack {
             CartonInfo, DataType, Dimension, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc,
             TensorSpec,
         },
-        types::{GenericStorage, PackOpts, Tensor},
+        types::{PackOpts, Tensor},
     };
 
     use crate::{download_file, ModelConfig};
@@ -259,7 +259,7 @@ pub mod pack {
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo::<GenericStorage> {
+        let info = CartonInfo {
             model_name: Some("BART Large MNLI".into()),
             short_description: Some("BART Large MNLI is a model that can do zero shot classificiation.".into()),
             model_description: Some("See [here](https://huggingface.co/facebook/bart-large-mnli) for more details.\n\nNote: This model performs multi-label classification (i.e. zero or more labels may be true for each input).".into()),
