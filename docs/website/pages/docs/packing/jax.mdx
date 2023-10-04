@@ -1,0 +1,106 @@
+# Pack a JAX model
+
+Carton supports packing any JAX model that works with [`jax.jit`](https://jax.readthedocs.io/en/latest/jax-101/02-jitting.html) in a way that does not require Python at runtime. It runs these models using [XLA](https://github.com/openxla/xla), which is the optimizing ML compiler that JAX uses under the hood. The main constraint is that the input shapes and types of your model must be known at packing time.
+
+For models that don't work with `jax.jit` or need to work with dynamic shapes, you can package them as [arbitrary Python code](/docs/packing/python).
+
+import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
+
+<LanguageSwitch>
+<LanguageItem forLang='python'>
+
+### Packing a model
+
+Let's create a simple model to pack:
+
+```python forLang="python" withLineNumbers
+import asyncio
+import jax.numpy as jnp
+
+# The "model" we want to package
+def selu(x, alpha=1.67, lambda_=1.05):
+    return lambda_ * jnp.where(x > 0, x, alpha * jnp.exp(x) - alpha)
+
+async def main():
+    # ...
+
+asyncio.run(main())
+```
+
+As mentioned above, this can be anything that works with `jax.jit`.
+
+Next, we can use the `pack_jax_for_xla` utility to package it:
+
+```python forLang="python" withLineNumbers highlight='4,5,14-40'
+import asyncio
+import jax.numpy as jnp
+
+from cartonml import TensorSpec
+from cartonml.utils.jax import pack_jax_for_xla
+
+# The "model" we want to package
+def selu(x, alpha=1.67, lambda_=1.05):
+    return {
+        "out": lambda_ * jnp.where(x > 0, x, alpha * jnp.exp(x) - alpha)
+    }
+
+async def main():
+    packed_model_path = await pack_jax_for_xla(
+        model = selu,
+
+        # A mapping of arg names to shapes and datatypes
+        # Note that shapes need to be concrete (i.e `None` and symbols are not allowed). This
+        # means the shape and datatypes of your inputs at runtime must match the shapes and
+        # datatypes below.
+        inputs = [
+            TensorSpec(
+                name = "x",
+                dtype = "float32",
+                shape = [1000],
+            )
+        ],
+
+        # All the output tensors need to be specified, but you can use `None` and symbols in
+        # `shape`
+        outputs = [
+            TensorSpec(
+                name = "out",
+                dtype = "float32",
+                shape = [None],
+            )
+        ],
+        # ...
+        # See the link below for a list of other information you can provide when packing a model
+    )
+
+asyncio.run(main())
+```
+
+The model at `packed_model_path` can now be loaded from any programming language supported by Carton!
+
+For more details on `inputs` and `outputs` along with several other options you can provide when packing a model (e.g. description, examples, etc.), see [here](/docs/packing/options).
+
+### Differences from `carton.pack`
+
+If you've used the `carton.pack` function for other model types, the `pack_jax_for_xla` utility is very similar. The major differences are:
+
+* It takes a jittable JAX function as a `model` input (instead of a path)
+* `inputs` and `outputs` are required arguments and all shapes must be concrete (i.e `None` and symbols are not allowed)
+
+It calls `carton.pack` internally after it exports the JAX model and supports all the optional arguments that `pack` does.
+
+</LanguageItem>
+<LanguageItem>
+<div class="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 rounded-md drop-shadow-lg p-5">
+    <div class="flex items-center flex-col">
+    <span class="text-white pb-5">This guide is currently only available for Python. Please change your language selection to see it</span>
+    <div className="flex not-prose">
+        <LanguageSelect/>
+    </div>
+    </div>
+</div>
+</LanguageItem>
+</LanguageSwitch>
+
+import DocsLayout from '@/components/docslayout'
+export default ({children}) => <DocsLayout>{children}</DocsLayout>
