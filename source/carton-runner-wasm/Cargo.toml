@@ -1,0 +1,17 @@
+[package]
+name = "carton-runner-wasm"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+carton = { path = "../carton" }
+carton-runner-interface = { path = "../carton-runner-interface" }
+color-eyre = "0.6.2"
+wasmtime = "13.0.0"
+tokio = "1.32.0"
+serde = "1.0.188"
+serde_json = "1.0.107"
+ndarray = "0.15.6"

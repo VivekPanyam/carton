@@ -13,6 +13,7 @@ members = [
     "source/carton-runner-py",
     "source/carton-runner-rust-bert",
     "source/carton-runner-torch",
+    "source/carton-runner-wasm",
     "source/carton-utils-py",
     "source/anywhere",
     "source/fetch-deps",
