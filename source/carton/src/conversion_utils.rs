@@ -48,9 +48,6 @@ where
 /// Several useful conversions are not allowed by rust because they happen to overlap with the core
 /// `impl<T> From<T> for T`.
 ///
-/// For example, if we wanted to convert any tensor to a GenericTensor, we couldn't implement `From`
-/// because it overlaps with converting a `GenericTensor` to a `GenericTensor` (i.e. From<T> for T)
-///
 /// Therefore, we create a separate conversion trait that is almost identical to From, but it doesn't
 /// have an impl for From<T> for T
 ///

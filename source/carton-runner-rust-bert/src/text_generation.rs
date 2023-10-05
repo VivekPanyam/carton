@@ -119,7 +119,7 @@ pub mod pack {
 
     use carton::{
         info::{DataType, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
-        types::{CartonInfo, GenericStorage, PackOpts, Tensor},
+        types::{CartonInfo, PackOpts, Tensor},
     };
 
     use crate::{download_file, ModelConfig};
@@ -185,7 +185,7 @@ pub mod pack {
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo::<GenericStorage> {
+        let info = CartonInfo {
             model_name: Some("GPT2 Medium".into()),
             short_description: Some("GPT2 Medium".into()),
             model_description: Some("See [here](https://github.com/openai/gpt-2) for more details.".into()),

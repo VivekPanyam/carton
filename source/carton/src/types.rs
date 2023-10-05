@@ -16,9 +16,6 @@ pub use carton_macros::{for_each_carton_type, for_each_numeric_carton_type};
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::conversion_utils::{ConvertFromWithContext, ConvertIntoWithContext};
-use lunchbox::types::{MaybeSend, MaybeSync};
-
 /// An opaque handle returned by `seal`
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct SealHandle(pub(crate) u64);
@@ -166,16 +163,17 @@ impl<'de> Deserialize<'de> for Device {
 }
 
 /// Options that can be specified when packing a model
-pub type PackOpts<T> = crate::info::PackOpts<T>;
+pub type PackOpts = crate::info::PackOpts;
 
-pub type CartonInfo<T> = crate::info::CartonInfo<T>;
+pub type CartonInfo = crate::info::CartonInfo;
 
 for_each_numeric_carton_type! {
     /// The core tensor type
-    pub enum Tensor<Storage> where Storage: TensorStorage {
-        $($CartonType(Storage::TypedStorage::<$RustType>),)*
+    #[derive(Clone)]
+    pub enum Tensor {
+        $($CartonType(GenericTensorStorage::<$RustType>),)*
 
-        String(Storage::TypedStringStorage),
+        String(GenericTensorStorage::<String>),
 
         /// A Nested Tensor / Ragged Tensor
         /// Effectively a list of tensors. Most frameworks have constraints on what these tensors can
@@ -191,49 +189,38 @@ for_each_numeric_carton_type! {
         /// TensorFlow requires that the number of dimensions and the type of each contained tensor
         /// is the same:
         /// https://www.tensorflow.org/guide/ragged_tensor#what_you_can_store_in_a_ragged_tensor
-        NestedTensor(Vec<Tensor<Storage>>)
+        NestedTensor(Vec<Tensor>)
     }
 }
 
 for_each_carton_type! {
-    impl Clone for Tensor<GenericStorage> {
-        fn clone(&self) -> Self {
-            match self {
-                $(
-                    Self::$CartonType(item) => Self::$CartonType(item.clone()),
-                )*
-                Self::NestedTensor(item) => Self::NestedTensor(item.clone()),
+    $(
+        impl From<GenericTensorStorage<$RustType>> for Tensor {
+            fn from(value: GenericTensorStorage<$RustType>) -> Self {
+                Self::$CartonType(value)
             }
         }
-    }
+
+        impl<S: TypedStorage<$RustType> + 'static> From<S> for GenericTensorStorage<$RustType> {
+            fn from(value: S) -> Self {
+                Self::new(value)
+            }
+        }
+    )*
 }
 
-for_each_numeric_carton_type! {
-    /// Implement conversions between tensor of different types
-    impl<T, U, C> ConvertFromWithContext<Tensor<T>, C> for Tensor<U>
+impl Tensor {
+    pub fn new<T: 'static, S: TypedStorage<T>>(item: S) -> Self
     where
-        T: TensorStorage,
-        U: TensorStorage,
-        C: Copy,
-        U::TypedStringStorage: ConvertFromWithContext<T::TypedStringStorage, C>,
-        $(
-            U::TypedStorage<$RustType>: ConvertFromWithContext<T::TypedStorage<$RustType>, C>,
-        )*
+        GenericTensorStorage<T>: From<S>,
+        Tensor: From<GenericTensorStorage<T>>,
     {
-        fn from(item: Tensor<T>, context: C) -> Self {
-            match item {
-                $(
-                    Tensor::$CartonType(item) => Self::$CartonType(item.convert_into_with_context(context)),
-                )*
-                Tensor::String(item) => Self::String(item.convert_into_with_context(context)),
-                Tensor::NestedTensor(item) => Self::NestedTensor(item.convert_into_with_context(context))
-            }
-        }
+        GenericTensorStorage::from(item).into()
     }
 }
 
 for_each_carton_type! {
-    impl<Storage: TensorStorage> std::fmt::Debug for Tensor<Storage> {
+    impl std::fmt::Debug for Tensor {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 $(
@@ -246,26 +233,17 @@ for_each_carton_type! {
 }
 
 for_each_carton_type! {
-    impl<Storage: TensorStorage, Storage2: TensorStorage> PartialEq<Tensor<Storage2>> for Tensor<Storage> {
-        fn eq(&self, other: &Tensor<Storage2>) -> bool {
+    impl PartialEq for Tensor {
+        fn eq(&self, other: &Tensor) -> bool {
             match (self, other) {
                 $(
-                    (Self::$CartonType(me), Tensor::<Storage2>::$CartonType(other))  => me.view() == other.view(),
+                    (Self::$CartonType(me), Tensor::$CartonType(other))  => me.view() == other.view(),
                 )*
-                (Self::NestedTensor(me), Tensor::<Storage2>::NestedTensor(other)) => std::iter::zip(me, other).map(|(a, b)| a == b).all(|v| v),
+                (Self::NestedTensor(me), Tensor::NestedTensor(other)) => std::iter::zip(me, other).map(|(a, b)| a == b).all(|v| v),
                 _ => false,
             }
         }
     }
-}
-
-pub trait TensorStorage {
-    /// Storage for each tensor type
-    type TypedStorage<T>: TypedStorage<T> + MaybeSend + MaybeSync
-    where
-        T: MaybeSend + MaybeSync;
-
-    type TypedStringStorage: TypedStorage<String> + MaybeSend + MaybeSync;
 }
 
 pub trait TypedStorage<T> {
@@ -278,12 +256,6 @@ pub trait TypedStorage<T> {
 
 pub type DataType = crate::info::DataType;
 
-pub struct GenericStorage;
-impl TensorStorage for GenericStorage {
-    type TypedStorage<T> = ndarray::ArrayD<T>  where T: MaybeSend + MaybeSync;
-    type TypedStringStorage = ndarray::ArrayD<String>;
-}
-
 impl<T> TypedStorage<T> for ndarray::ArrayD<T> {
     fn view(&self) -> ndarray::ArrayViewD<T> {
         self.view()
@@ -294,14 +266,46 @@ impl<T> TypedStorage<T> for ndarray::ArrayD<T> {
     }
 }
 
-impl<Other, T, C> ConvertFromWithContext<Other, C> for ndarray::ArrayD<T>
-where
-    Other: TypedStorage<T>,
-    T: Clone,
-    C: Copy,
-{
-    fn from(value: Other, _context: C) -> Self {
-        // TODO: refactor to improve performance
-        value.view().to_owned()
+/// This helps us do type erasure with the Tensor storage type
+pub struct GenericTensorStorage<T: 'static> {
+    // SAFETY: 'static is okay because the data stays alive as long as _keepalive is around
+    view: ndarray::ArrayViewMutD<'static, T>,
+
+    // To ensure the underlying data stays alive while this tensor exists
+    // Note: after creation, this has no dynamic dispatch overhead until destruction; we never call a method on _keepalive
+    _keepalive: Box<dyn TypedStorage<T>>,
+}
+
+impl<T: Clone> Clone for GenericTensorStorage<T> {
+    fn clone(&self) -> Self {
+        // Make a copy
+        let copy = self.view.to_owned();
+        Self::new(copy)
     }
 }
+
+impl<T> GenericTensorStorage<T> {
+    pub(crate) fn new<S: TypedStorage<T> + 'static>(value: S) -> Self {
+        let mut v = Box::new(value);
+
+        // SAFETY: it's safe to extend the lifetime of `view` because we ensure that the underlying data
+        // does not get deallocated until `view` is no longer accessible.
+        let view = unsafe { std::mem::transmute(v.view_mut()) };
+        Self {
+            view,
+            _keepalive: v,
+        }
+    }
+
+    pub fn view<'a>(&'a self) -> ndarray::ArrayViewD<'a, T> {
+        self.view.view()
+    }
+
+    pub fn view_mut<'a>(&'a mut self) -> ndarray::ArrayViewMutD<'a, T> {
+        self.view.view_mut()
+    }
+}
+
+// TODO: explain why this is okay
+unsafe impl<T: Send> Send for GenericTensorStorage<T> {}
+unsafe impl<T: Sync> Sync for GenericTensorStorage<T> {}

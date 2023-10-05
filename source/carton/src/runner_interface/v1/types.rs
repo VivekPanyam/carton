@@ -17,8 +17,7 @@
 use crate::conversion_utils::convert_vec;
 use carton_macros::for_each_carton_type;
 
-use crate::runner_interface::storage::{RunnerStorage, TypedRunnerStorage};
-use crate::types::{Device, RunnerOpt, Tensor, TensorStorage, TypedStorage};
+use crate::types::{Device, RunnerOpt, Tensor, TypedStorage};
 
 impl From<Device> for runner_interface_v1::types::Device {
     fn from(value: Device) -> Self {
@@ -42,8 +41,8 @@ impl From<RunnerOpt> for runner_interface_v1::types::RunnerOpt {
 
 // Implement conversions between tensor types
 for_each_carton_type! {
-    impl<T> From<Tensor<T>> for runner_interface_v1::types::Tensor where T: TensorStorage {
-        fn from(value: Tensor<T>) -> Self {
+    impl From<Tensor> for runner_interface_v1::types::Tensor {
+        fn from(value: Tensor) -> Self {
             match value {
                 $(
                     Tensor::$CartonType(v) => Self::$CartonType(v.view().into()),
@@ -53,15 +52,25 @@ for_each_carton_type! {
         }
     }
 
-    impl From<runner_interface_v1::types::Tensor> for Tensor<RunnerStorage> {
+    impl From<runner_interface_v1::types::Tensor> for Tensor {
         fn from(value: runner_interface_v1::types::Tensor) -> Self {
             match value {
                 $(
                     // TODO: this makes a copy
-                    runner_interface_v1::types::Tensor::$CartonType(v) => Self::$CartonType(TypedRunnerStorage::V1(v)),
+                    runner_interface_v1::types::Tensor::$CartonType(v) => Self::$CartonType(v.into()),
                 )*
                 runner_interface_v1::types::Tensor::NestedTensor(v) => Self::NestedTensor(convert_vec(v)),
             }
         }
+    }
+}
+
+impl<T> TypedStorage<T> for runner_interface_v1::types::TensorStorage<T> {
+    fn view(&self) -> ndarray::ArrayViewD<T> {
+        self.view()
+    }
+
+    fn view_mut(&mut self) -> ndarray::ArrayViewMutD<T> {
+        self.view_mut()
     }
 }

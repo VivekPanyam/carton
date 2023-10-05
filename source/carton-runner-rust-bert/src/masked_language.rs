@@ -185,7 +185,7 @@ pub mod pack {
         info::{
             DataType, Dimension, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec,
         },
-        types::{CartonInfo, GenericStorage, PackOpts, Tensor},
+        types::{CartonInfo, PackOpts, Tensor},
     };
 
     use crate::{download_file, ModelConfig};
@@ -242,7 +242,7 @@ pub mod pack {
         let linked_files = vec![res.0.unwrap(), res.1.unwrap(), res.2.unwrap()];
 
         // Pack the model and return the path
-        let info = CartonInfo::<GenericStorage> {
+        let info = CartonInfo {
             model_name: Some("bert-base-uncased".into()),
             short_description: Some("A language model that can fill masked tokens in sentences".into()),
             model_description: Some("This model can predict masked tokens in a sentence. For example, it might predict `capital` given `Paris is the [MASK] of France.`.\n\nSee [here](https://huggingface.co/bert-base-uncased) for more details.".into()),

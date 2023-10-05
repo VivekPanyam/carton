@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use carton_core::types::{Tensor, TensorStorage, TypedStorage};
+use carton_core::types::{Tensor, TypedStorage};
 use carton_utils_py::tensor::PyStringArrayType;
 use ndarray::ShapeBuilder;
 use numpy::{PyArrayDyn, ToPyArray};
@@ -33,16 +33,6 @@ pub(crate) enum SupportedTensorType<'py> {
     U64(&'py PyArrayDyn<u64>),
 
     String(PyStringArrayType<'py>),
-}
-
-pub(crate) struct PyTensorStorage {}
-
-impl TensorStorage for PyTensorStorage {
-    type TypedStorage<T> = TypedPyTensorStorage<T>
-    where
-        T: Send + Sync;
-
-    type TypedStringStorage = StringPyTensorStorage;
 }
 
 pub(crate) struct TypedPyTensorStorage<T> {
@@ -136,31 +126,35 @@ impl TypedStorage<String> for StringPyTensorStorage {
     }
 }
 
-impl From<SupportedTensorType<'_>> for Tensor<PyTensorStorage> {
+impl From<SupportedTensorType<'_>> for Tensor {
     fn from(value: SupportedTensorType<'_>) -> Self {
         match value {
-            SupportedTensorType::Float(item) => Tensor::Float(item.into()),
-            SupportedTensorType::Double(item) => Tensor::Double(item.into()),
+            SupportedTensorType::Float(item) => {
+                Tensor::Float(TypedPyTensorStorage::from(item).into())
+            }
+            SupportedTensorType::Double(item) => {
+                Tensor::Double(TypedPyTensorStorage::from(item).into())
+            }
             SupportedTensorType::String(item) => {
                 let arr = item.to_ndarray();
                 let out = StringPyTensorStorage::new(arr);
-                Tensor::String(out)
+                Tensor::String(out.into())
             }
 
-            SupportedTensorType::I8(item) => Tensor::I8(item.into()),
-            SupportedTensorType::I16(item) => Tensor::I16(item.into()),
-            SupportedTensorType::I32(item) => Tensor::I32(item.into()),
-            SupportedTensorType::I64(item) => Tensor::I64(item.into()),
+            SupportedTensorType::I8(item) => Tensor::I8(TypedPyTensorStorage::from(item).into()),
+            SupportedTensorType::I16(item) => Tensor::I16(TypedPyTensorStorage::from(item).into()),
+            SupportedTensorType::I32(item) => Tensor::I32(TypedPyTensorStorage::from(item).into()),
+            SupportedTensorType::I64(item) => Tensor::I64(TypedPyTensorStorage::from(item).into()),
 
-            SupportedTensorType::U8(item) => Tensor::U8(item.into()),
-            SupportedTensorType::U16(item) => Tensor::U16(item.into()),
-            SupportedTensorType::U32(item) => Tensor::U32(item.into()),
-            SupportedTensorType::U64(item) => Tensor::U64(item.into()),
+            SupportedTensorType::U8(item) => Tensor::U8(TypedPyTensorStorage::from(item).into()),
+            SupportedTensorType::U16(item) => Tensor::U16(TypedPyTensorStorage::from(item).into()),
+            SupportedTensorType::U32(item) => Tensor::U32(TypedPyTensorStorage::from(item).into()),
+            SupportedTensorType::U64(item) => Tensor::U64(TypedPyTensorStorage::from(item).into()),
         }
     }
 }
 
-pub(crate) fn tensor_to_py<T: TensorStorage>(item: &Tensor<T>) -> PyObject {
+pub(crate) fn tensor_to_py(item: &Tensor) -> PyObject {
     // TODO this makes a copy
     Python::with_gil(|py| {
         match item {

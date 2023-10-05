@@ -21,7 +21,7 @@ npm install @cartonml/wasm@next
 ```
 
 ```bash linePrompt='$' forLang='rust'
-cargo add carton
+cargo add --git https://github.com/VivekPanyam/carton carton
 ```
 
 <LanguageSwitch>
@@ -61,7 +61,7 @@ asyncio.run(main())
 
 ```rust forLang='rust'
 use carton::Carton;
-use carton::types::{LoadOpts, Tensor, GenericStorage};
+use carton::types::{LoadOpts, Tensor};
 
 #[tokio::main]
 async fn main() {
@@ -85,7 +85,7 @@ async fn main() {
 
     // Run inference
     let out = model
-        .infer([("input", Tensor::<GenericStorage>::String(arr))])
+        .infer([("input", Tensor::new(arr))])
         .await
         .unwrap();
     println!("{out:?}");
