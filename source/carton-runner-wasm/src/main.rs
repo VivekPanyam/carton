@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::path::Path;
 
 use wasmtime::Engine;
+use lunchbox::{path::Path, types::WritableFileSystem, ReadableFileSystem};
 
 use carton_runner_interface::server::{init_runner, RequestData, ResponseData};
 use carton_runner_wasm::{OutputMetadata, WASMModelInstance};
@@ -27,7 +27,7 @@ async fn main() {
 				let output_md = &fs.read("output_md.json")
 					.await
 					.expect("Failed to load output metadata");
-				let output_md: HashMap<String, OutputMetadata> = serde_json::from_slice(output_md)?;
+				let output_md: HashMap<String, OutputMetadata> = serde_json::from_slice(output_md).unwrap();
 				model = Some(WASMModelInstance::from_bytes(&engine, bin, output_md)
 					.expect("Failed to initialize WASM instance"));
 				server
@@ -56,8 +56,8 @@ async fn main() {
 			}
 			RequestData::InferWithTensors { tensors, .. } => {
 				let result = model
-					.as_ref()
-					.map(|mut m| m.infer(tensors))
+					.as_mut()
+					.map(|m| m.infer(tensors))
 					.unwrap();
                 server
                     .send_response_for_request(
