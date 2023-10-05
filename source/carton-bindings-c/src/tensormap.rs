@@ -70,6 +70,29 @@ impl CartonTensorMap {
         value_out: *mut *mut CartonTensor,
     ) {
         let key = unsafe { CStr::from_ptr(key).to_str().unwrap() };
+        self.carton_tensormap_get_and_remove_inner(key, value_out);
+    }
+
+    /// Get a tensor from the map by name. `value_out` is set to null if there was no value for `key`
+    /// This transfers ownership of `value_out` to the caller.
+    #[no_mangle]
+    pub extern "C" fn carton_tensormap_get_and_remove_with_strlen(
+        &mut self,
+        key: *const c_char,
+        strlen: u64,
+        value_out: *mut *mut CartonTensor,
+    ) {
+        let key = unsafe {
+            std::str::from_utf8(std::slice::from_raw_parts(key as *const _, strlen as _)).unwrap()
+        };
+        self.carton_tensormap_get_and_remove_inner(key, value_out);
+    }
+
+    fn carton_tensormap_get_and_remove_inner(
+        &mut self,
+        key: &str,
+        value_out: *mut *mut CartonTensor,
+    ) {
         match self.inner.remove(key) {
             Some(v) => unsafe { *value_out = v.into() },
             None => unsafe { *value_out = std::ptr::null_mut() },
@@ -85,6 +108,25 @@ impl CartonTensorMap {
         value: *mut CartonTensor,
     ) {
         let key = unsafe { CStr::from_ptr(key).to_str().unwrap() };
+        self.carton_tensormap_insert_inner(key, value);
+    }
+
+    /// Insert a tensor into the map.
+    /// This function takes ownership of `value`.
+    #[no_mangle]
+    pub extern "C" fn carton_tensormap_insert_with_strlen(
+        &mut self,
+        key: *const c_char,
+        strlen: u64,
+        value: *mut CartonTensor,
+    ) {
+        let key = unsafe {
+            std::str::from_utf8(std::slice::from_raw_parts(key as *const _, strlen as _)).unwrap()
+        };
+        self.carton_tensormap_insert_inner(key, value);
+    }
+
+    fn carton_tensormap_insert_inner(&mut self, key: &str, value: *mut CartonTensor) {
         self.inner.insert(key.to_owned(), value.into());
     }
 

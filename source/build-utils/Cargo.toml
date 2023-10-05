@@ -1,0 +1,10 @@
+[package]
+name = "build-utils"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[dependencies]
+escargot = "0.5.8"
+log = "0.4"
+cc = "1.0"

@@ -44,6 +44,31 @@ pub extern "C" fn carton_load(
             .unwrap()
     };
 
+    carton_load_inner(url_or_path, callback, callback_arg);
+}
+
+/// Load a carton by providing a url and length
+#[no_mangle]
+pub extern "C" fn carton_load_with_strlen(
+    url_or_path: *const c_char,
+    strlen: u64,
+    callback: CartonLoadCallback,
+    callback_arg: CallbackArg,
+) {
+    // Need to make a copy because we can only assume the string is valid until the function returns.
+    let url_or_path = unsafe {
+        std::str::from_utf8(std::slice::from_raw_parts(
+            url_or_path as *const _,
+            strlen as _,
+        ))
+        .unwrap()
+        .to_owned()
+    };
+
+    carton_load_inner(url_or_path, callback, callback_arg);
+}
+
+fn carton_load_inner(url_or_path: String, callback: CartonLoadCallback, callback_arg: CallbackArg) {
     // Spawn on the runtime
     runtime().spawn(async move {
         // TODO: expose LoadOpts
@@ -84,8 +109,8 @@ impl Carton {
 
     /// Destroy a Carton
     #[no_mangle]
-    pub extern "C" fn carton_destroy(map: *mut Carton) {
-        let item: Box<Carton> = map.into();
+    pub extern "C" fn carton_destroy(carton: *mut Carton) {
+        let item: Box<Carton> = carton.into();
         drop(item)
     }
 }

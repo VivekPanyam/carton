@@ -14,6 +14,8 @@ To help ease these restrictions, we provide `CartonAsyncNotifier`. This lets use
 
 See `tests/notifier.c` for an example.
 
+See the [C++ bindings readme](../carton-bindings-cpp/README.md) for more detail and diagrams.
+
 ## Integrating with external event systems/async code
 
 The callback interface makes it easy to integrate with applications already using an event system like [libevent](https://libevent.org/) or [libuv](https://libuv.org/).

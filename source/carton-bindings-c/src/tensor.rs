@@ -74,8 +74,8 @@ impl CartonTensor {
     pub extern "C" fn carton_tensor_numeric_from_blob(
         data: *const c_void,
         dtype: DataType,
-        shape: *const usize,
-        strides: *const usize,
+        shape: *const u64,
+        strides: *const u64,
         num_dims: u64,
         deleter: extern "C" fn(arg: *const c_void),
         deleter_arg: *const c_void,
@@ -87,7 +87,12 @@ impl CartonTensor {
         for_each_numeric_carton_type! {
             match dtype {
                 $(DataType::$CartonType => {
-                    let view = unsafe { ndarray::ArrayViewMutD::from_shape_ptr(shape.strides(strides), data as *mut $RustType) };
+                    let view = unsafe {
+                        ndarray::ArrayViewMutD::from_shape_ptr(
+                            shape.into_iter().map(|v| (*v) as _).collect::<Vec<_>>().strides(strides.into_iter().map(|v| (*v) as _).collect()),
+                            data as *mut $RustType
+                        )
+                    };
                     let ebr = ExternalBlobWrapper {
                         deleter,
                         deleter_arg,
@@ -109,7 +114,7 @@ impl CartonTensor {
     #[no_mangle]
     pub extern "C" fn carton_tensor_create(
         dtype: DataType,
-        shape: *const usize,
+        shape: *const u64,
         num_dims: u64,
         tensor_out: *mut *mut CartonTensor,
     ) {
@@ -118,7 +123,7 @@ impl CartonTensor {
         for_each_carton_type! {
             match dtype {
                 $(DataType::$CartonType => {
-                    let item = ndarray::ArrayD::<$RustType>::default(shape);
+                    let item = ndarray::ArrayD::<$RustType>::default(shape.into_iter().map(|v| (*v) as _).collect::<Vec<_>>());
 
                     let tensor = carton_core::types::Tensor::new(item);
                     let tensor = Box::new(CartonTensor::from(tensor));
@@ -204,15 +209,33 @@ impl CartonTensor {
     /// For a string tensor, set a string at a particular (flattened) index.
     #[no_mangle]
     pub extern "C" fn carton_tensor_set_string(&mut self, index: u64, string: *const c_char) {
+        let new = unsafe { CStr::from_ptr(string).to_str().unwrap().to_owned() };
+        self.carton_tensor_set_string_inner(index, new);
+    }
+
+    #[no_mangle]
+    pub extern "C" fn carton_tensor_set_string_with_strlen(
+        &mut self,
+        index: u64,
+        string: *const c_char,
+        strlen: u64,
+    ) {
+        let new = unsafe {
+            std::str::from_utf8(std::slice::from_raw_parts(string as *const _, strlen as _))
+                .unwrap()
+                .to_owned()
+        };
+
+        self.carton_tensor_set_string_inner(index, new);
+    }
+
+    fn carton_tensor_set_string_inner(&mut self, index: u64, string: String) {
         if let carton_core::types::Tensor::String(v) = &mut self.inner {
             let mut view = v.view_mut();
             let item = view.iter_mut().nth(index as _).unwrap();
-            let new = unsafe { CStr::from_ptr(string).to_str().unwrap() };
-
-            // TODO: we shouldn't need to_owned
-            *item = new.to_owned();
+            *item = string;
         } else {
-            panic!("Tried to call `get_string` on a non-string tensor")
+            panic!("Tried to call `set_string` on a non-string tensor")
         }
     }
 
