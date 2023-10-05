@@ -1,0 +1,1 @@
+wit_bindgen::generate!("wasm-tensor");

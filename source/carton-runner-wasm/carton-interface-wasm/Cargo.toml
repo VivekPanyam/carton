@@ -1,0 +1,10 @@
+[package]
+name = "carton-interface-wasm"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen = { git = "https://github.com/bytecodealliance/wit-bindgen", version = "0.12.0" }

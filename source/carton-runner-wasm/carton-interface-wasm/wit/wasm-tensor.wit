@@ -1,0 +1,35 @@
+package carton:wasm-tensor
+
+interface tensor {
+    enum dtype {
+        f32,
+        f64,
+        i8,
+        i16,
+        i32,
+        i64,
+        ui8,
+        ui16,
+        ui32,
+        ui64,
+    }
+    record tensor-numeric {
+        buffer: list<u8>,
+        dtype: dtype,
+        shape: list<u64>,
+        stride: option<list<u64>>,
+    }
+    record tensor-string {
+        buffer: list<string>,
+        shape: list<u64>,
+        stride: option<list<u64>>,
+    }
+    variant tensor {
+        numeric(tensor-numeric),
+        str(tensor-string),
+    }
+}
+
+world wasm-tensor {
+    export tensor
+}
