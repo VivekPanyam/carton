@@ -1,16 +1,21 @@
-use std::collections::HashMap;
-
-use wasmtime::Engine;
-use lunchbox::{path::Path, types::WritableFileSystem, ReadableFileSystem};
+use color_eyre::eyre::{eyre, Result};
+use lunchbox::{path::Path, ReadableFileSystem, types::WritableFileSystem};
+use wasmtime::{Config, Engine};
 
 use carton_runner_interface::server::{init_runner, RequestData, ResponseData};
-use carton_runner_wasm::{OutputMetadata, WASMModelInstance};
+use carton_runner_wasm::WASMModelInstance;
+
+fn new_engine() -> Result<Engine> {
+	let mut config = Config::new();
+	config.wasm_component_model(true);
+	Engine::new(&config).map_err(|e| eyre!(e))
+}
 
 #[tokio::main]
 async fn main() {
+	color_eyre::install().unwrap();
 	let mut server = init_runner().await;
-
-	let engine = Engine::default();
+	let engine = new_engine().unwrap();
 	let mut model: Option<WASMModelInstance> = None;
 
     while let Some(req) = server.get_next_request().await {
@@ -23,20 +28,15 @@ async fn main() {
 					.unwrap();
 				let bin = &fs.read("model.wasm")
 					.await
-					.expect("Failed to load model binary");
-				let output_md = &fs.read("output_md.json")
-					.await
-					.expect("Failed to load output metadata");
-				let output_md: HashMap<String, OutputMetadata> = serde_json::from_slice(output_md).unwrap();
-				model = Some(WASMModelInstance::from_bytes(&engine, bin, output_md)
-					.expect("Failed to initialize WASM instance"));
+					.unwrap();
+				model = Some(WASMModelInstance::from_bytes(&engine, bin)
+					.expect("Failed to initialize WASM model"));
 				server
                     .send_response_for_request(req_id, ResponseData::Load)
                     .await
                     .unwrap();
 			}
 			RequestData::Pack { input_path, temp_folder, fs } => {
-				// Same as torch runner
 				let fs = server.get_writable_filesystem(fs).await.unwrap();
 				fs.symlink(input_path, Path::new(&temp_folder))
                     .await

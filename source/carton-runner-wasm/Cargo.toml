@@ -13,7 +13,7 @@ carton = { path = "../carton" }
 carton-runner-interface = { path = "../carton-runner-interface" }
 color-eyre = "0.6.2"
 lunchbox = { version = "0.1", features = ["serde"], default-features = false }
-wasmtime = "13.0.0"
+wasmtime = { version = "13.0.0", features = ["component-model"] }
 tokio = "1.32.0"
 serde = "1.0.188"
 serde_json = "1.0.107"
