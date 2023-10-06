@@ -1,13 +1,4 @@
-wit_bindgen::generate!({
-	world: "model",
-	path: "./wit/lib.wit",
-	exports: {
-		world: Model
-	}
-});
+pub use component::{Tensor, TensorNumeric, TensorString, Dtype};
 
-pub use carton_wasm::lib::types::*;
-
-mod candle;
-
-struct Model;
+pub mod candle;
+mod component;

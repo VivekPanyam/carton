@@ -1,21 +1,62 @@
 use color_eyre::{Report, Result};
+use color_eyre::eyre::eyre;
 use carton_runner_interface::types::{
     Tensor as CartonTensor,
+	TensorStorage as CartonStorage,
 };
 
-use crate::component::{Dtype, Tensor};
+use crate::component::{
+	Tensor as WasmTensor,
+	TensorNumeric,
+	TensorString,
+	Dtype
+};
 
-impl TryFrom<CartonTensor> for Tensor {
-	type Error = Report;
-
-	fn try_from(value: CartonTensor) -> Result<Self> {
+impl Into<CartonTensor> for WasmTensor {
+	fn into(self) -> CartonTensor {
 		todo!()
 	}
 }
 
-impl Into<CartonTensor> for Tensor {
-	fn into(self) -> CartonTensor {
-		todo!()
+impl TryFrom<CartonTensor> for WasmTensor {
+	type Error = Report;
+
+	fn try_from(value: CartonTensor) -> Result<Self> {
+		Ok(match value {
+			CartonTensor::Float(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::Double(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::I8(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::I16(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::I32(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::I64(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::U8(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::U16(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::U32(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::U64(t) => WasmTensor::Numeric(t.into()),
+			CartonTensor::String(t) => WasmTensor::String(t.into()),
+			CartonTensor::NestedTensor(_) => return Err(eyre!("Nested tensors are not supported")),
+		})
+	}
+}
+
+impl<T: DTypeOf> From<CartonStorage<T>> for TensorNumeric {
+	fn from(value: CartonStorage<T>) -> Self {
+		let (buffer, shape) = unsafe { value.into_bytes() };
+		TensorNumeric {
+			buffer,
+			dtype: T::dtype(),
+			shape,
+		}
+	}
+}
+
+impl From<CartonStorage<String>> for TensorString {
+	fn from(value: CartonStorage<String>) -> Self {
+		let (buffer, shape) = value.into_vec();
+		TensorString {
+			buffer,
+			shape,
+		}
 	}
 }
 
