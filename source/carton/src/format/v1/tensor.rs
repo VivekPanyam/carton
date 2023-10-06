@@ -23,10 +23,7 @@ use lunchbox::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    info::PossiblyLoaded,
-    types::{GenericStorage, Tensor, TensorStorage, TypedStorage},
-};
+use crate::{info::PossiblyLoaded, types::Tensor};
 
 #[derive(Default, Serialize, Deserialize)]
 struct IndexToml {
@@ -53,13 +50,10 @@ struct StringsToml {
     data: Vec<String>,
 }
 
-pub(crate) fn save_tensors<T>(
+pub(crate) fn save_tensors(
     tensor_data_path: &std::path::Path,
-    tensors: HashMap<String, &Tensor<T>>,
-) -> crate::error::Result<()>
-where
-    T: TensorStorage,
-{
+    tensors: HashMap<String, &Tensor>,
+) -> crate::error::Result<()> {
     let mut index_toml = IndexToml::default();
 
     // First, split out all nested tensors
@@ -184,7 +178,7 @@ fn bytes_per_elem<T>(_array: &ndarray::ArrayViewD<T>) -> usize {
 pub(crate) async fn load_tensors<T>(
     fs: &Arc<T>,
     tensor_data_path: &lunchbox::path::Path,
-) -> crate::error::Result<HashMap<String, PossiblyLoaded<Tensor<GenericStorage>>>>
+) -> crate::error::Result<HashMap<String, PossiblyLoaded<Tensor>>>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
@@ -194,7 +188,7 @@ where
         toml::from_slice(&fs.read(tensor_data_path.join("index.toml")).await.unwrap()).unwrap();
 
     // Create loaders for all the unnested tensors
-    let mut unnested: HashMap<String, PossiblyLoaded<Tensor<GenericStorage>>> = HashMap::new();
+    let mut unnested: HashMap<String, PossiblyLoaded<Tensor>> = HashMap::new();
     for t in &index_toml.tensor {
         for_each_numeric_carton_type! {
             let loader = match t.dtype.as_str() {
@@ -210,7 +204,7 @@ where
                     PossiblyLoaded::from_loader(Box::pin(async move {
                         let data = fs.read(path).await.unwrap();
                         let strings: StringsToml = toml::from_slice(&data).unwrap();
-                        Tensor::String(ndarray::ArrayD::<String>::from_shape_vec(shape, strings.data).unwrap())
+                        Tensor::String(ndarray::ArrayD::<String>::from_shape_vec(shape, strings.data).unwrap().into())
                     }))
                 },
                 $(
@@ -230,7 +224,7 @@ where
 
                             let typed_data = unsafe { std::slice::from_raw_parts(data.as_ptr() as *const $RustType, numel) }.to_vec();
 
-                            Tensor::$CartonType(ndarray::ArrayD::<$RustType>::from_shape_vec(shape, typed_data).unwrap())
+                            Tensor::$CartonType(ndarray::ArrayD::<$RustType>::from_shape_vec(shape, typed_data).unwrap().into())
                         }))
                     },
                 )*

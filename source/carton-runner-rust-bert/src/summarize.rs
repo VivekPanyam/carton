@@ -119,7 +119,7 @@ pub mod pack {
 
     use carton::{
         info::{DataType, Example, LinkedFile, RunnerInfo, Shape, TensorOrMisc, TensorSpec},
-        types::{CartonInfo, GenericStorage, PackOpts, Tensor},
+        types::{CartonInfo, PackOpts, Tensor},
     };
 
     use crate::{download_file, ModelConfig};
@@ -205,7 +205,7 @@ Since Hubble’s discovery of Earendel, Webb has detected other very distant sta
         ];
 
         // Pack the model and return the path
-        let info = CartonInfo::<GenericStorage> {
+        let info = CartonInfo {
             model_name: Some("BART".into()),
             short_description: Some("A BART model fine-tuned on CNN/Daily Mail to summarize text.".into()),
             model_description: Some("See [here](https://github.com/facebookresearch/fairseq/blob/main/examples/bart/README.md) for more details.".into()),

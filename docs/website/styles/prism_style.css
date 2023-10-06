@@ -75,3 +75,8 @@ pre {
 .token.inserted.prefix {
     @apply text-emerald-200 text-opacity-75 select-none !important;
 }
+
+/* For toml */
+.token.table {
+    display: inline;
+}

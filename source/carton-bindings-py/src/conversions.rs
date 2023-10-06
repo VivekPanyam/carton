@@ -20,8 +20,7 @@ use std::{collections::HashMap, str::FromStr};
 use async_trait::async_trait;
 use carton_core::conversion_utils::{convert_map, convert_opt_map, convert_opt_vec, convert_vec};
 use carton_core::info::LinkedFile;
-use carton_core::types::{DataType, GenericStorage, RunnerOpt, Tensor};
-use numpy::ToPyArray;
+use carton_core::types::{DataType, RunnerOpt, Tensor};
 use pyo3::types::PyBytes;
 use pyo3::{exceptions::PyValueError, prelude::*, PyDowncastError};
 use semver::VersionReq;
@@ -29,7 +28,7 @@ use target_lexicon::Triple;
 use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 
-use crate::tensor::{tensor_to_py, PyTensorStorage, SupportedTensorType};
+use crate::tensor::{tensor_to_py, SupportedTensorType};
 
 pub(crate) fn create_load_opts(
     visible_device: Option<Device>,
@@ -77,7 +76,7 @@ pub(crate) fn create_pack_opts(
     examples: Option<Vec<Example>>,
     misc_files: Option<HashMap<String, Vec<u8>>>,
     linked_files: Option<HashMap<String, Vec<String>>>,
-) -> PyResult<carton_core::types::PackOpts<PyTensorStorage>> {
+) -> PyResult<carton_core::types::PackOpts> {
     let misc_files: Option<HashMap<String, LazyLoadedMiscFile>> = convert_opt_map(misc_files);
 
     Ok(carton_core::types::PackOpts {
@@ -199,8 +198,8 @@ fn convert_required_platforms(r: Option<Vec<String>>) -> PyResult<Option<Vec<Tri
     })
 }
 
-impl From<carton_core::types::CartonInfo<carton_core::types::GenericStorage>> for CartonInfo {
-    fn from(value: carton_core::types::CartonInfo<carton_core::types::GenericStorage>) -> Self {
+impl From<carton_core::types::CartonInfo> for CartonInfo {
+    fn from(value: carton_core::types::CartonInfo) -> Self {
         Self {
             model_name: value.model_name,
             short_description: value.short_description,
@@ -431,7 +430,7 @@ impl SelfTest {
     }
 }
 
-impl From<SelfTest> for carton_core::info::SelfTest<PyTensorStorage> {
+impl From<SelfTest> for carton_core::info::SelfTest {
     fn from(value: SelfTest) -> Self {
         Self {
             name: value.name,
@@ -442,8 +441,8 @@ impl From<SelfTest> for carton_core::info::SelfTest<PyTensorStorage> {
     }
 }
 
-impl From<carton_core::info::SelfTest<carton_core::types::GenericStorage>> for SelfTest {
-    fn from(value: carton_core::info::SelfTest<carton_core::types::GenericStorage>) -> Self {
+impl From<carton_core::info::SelfTest> for SelfTest {
+    fn from(value: carton_core::info::SelfTest) -> Self {
         Self {
             name: value.name,
             description: value.description,
@@ -502,7 +501,7 @@ impl Example {
     }
 }
 
-impl From<Example> for carton_core::info::Example<PyTensorStorage> {
+impl From<Example> for carton_core::info::Example {
     fn from(value: Example) -> Self {
         Self {
             name: value.name,
@@ -513,8 +512,8 @@ impl From<Example> for carton_core::info::Example<PyTensorStorage> {
     }
 }
 
-impl From<carton_core::info::Example<GenericStorage>> for Example {
-    fn from(value: carton_core::info::Example<GenericStorage>) -> Self {
+impl From<carton_core::info::Example> for Example {
+    fn from(value: carton_core::info::Example) -> Self {
         Self {
             name: value.name,
             description: value.description,
@@ -527,7 +526,7 @@ impl From<carton_core::info::Example<GenericStorage>> for Example {
 #[pyclass]
 #[derive(Clone)]
 pub(crate) struct LazyLoadedTensor {
-    inner: carton_core::info::PossiblyLoaded<Tensor<PyTensorStorage>>,
+    inner: carton_core::info::PossiblyLoaded<Tensor>,
 }
 
 impl std::fmt::Debug for LazyLoadedTensor {
@@ -555,44 +554,15 @@ impl LazyLoadedTensor {
     }
 }
 
-impl From<LazyLoadedTensor> for carton_core::info::PossiblyLoaded<Tensor<PyTensorStorage>> {
+impl From<LazyLoadedTensor> for carton_core::info::PossiblyLoaded<Tensor> {
     fn from(value: LazyLoadedTensor) -> Self {
         value.inner
     }
 }
 
-impl From<carton_core::info::PossiblyLoaded<carton_core::types::Tensor<GenericStorage>>>
-    for LazyLoadedTensor
-{
-    fn from(
-        value: carton_core::info::PossiblyLoaded<carton_core::types::Tensor<GenericStorage>>,
-    ) -> Self {
-        Self {
-            inner: carton_core::info::PossiblyLoaded::from_loader(Box::pin(async move {
-                let item = value.get().await;
-
-                // TODO: this makes a copy
-                Python::with_gil(|py| {
-                    match item {
-                        Tensor::Float(item) => Tensor::Float(item.view().to_pyarray(py).into()),
-                        Tensor::Double(item) => Tensor::Double(item.view().to_pyarray(py).into()),
-                        // Tensor::String(item) => item.view().to_pyarray(py).to_object(py),
-                        Tensor::String(_) => panic!("String tensor output not implemented yet"),
-                        Tensor::I8(item) => Tensor::I8(item.view().to_pyarray(py).into()),
-                        Tensor::I16(item) => Tensor::I16(item.view().to_pyarray(py).into()),
-                        Tensor::I32(item) => Tensor::I32(item.view().to_pyarray(py).into()),
-                        Tensor::I64(item) => Tensor::I64(item.view().to_pyarray(py).into()),
-                        Tensor::U8(item) => Tensor::U8(item.view().to_pyarray(py).into()),
-                        Tensor::U16(item) => Tensor::U16(item.view().to_pyarray(py).into()),
-                        Tensor::U32(item) => Tensor::U32(item.view().to_pyarray(py).into()),
-                        Tensor::U64(item) => Tensor::U64(item.view().to_pyarray(py).into()),
-                        Tensor::NestedTensor(_) => {
-                            panic!("Nested tensor output not implemented yet")
-                        }
-                    }
-                })
-            })),
-        }
+impl From<carton_core::info::PossiblyLoaded<carton_core::types::Tensor>> for LazyLoadedTensor {
+    fn from(inner: carton_core::info::PossiblyLoaded<carton_core::types::Tensor>) -> Self {
+        Self { inner }
     }
 }
 
@@ -705,7 +675,7 @@ pub(crate) enum TensorOrMisc {
     Misc(LazyLoadedMiscFile),
 }
 
-impl From<TensorOrMisc> for carton_core::info::TensorOrMisc<PyTensorStorage> {
+impl From<TensorOrMisc> for carton_core::info::TensorOrMisc {
     fn from(value: TensorOrMisc) -> Self {
         match value {
             TensorOrMisc::Tensor(v) => Self::Tensor(v.into()),
@@ -714,8 +684,8 @@ impl From<TensorOrMisc> for carton_core::info::TensorOrMisc<PyTensorStorage> {
     }
 }
 
-impl From<carton_core::info::TensorOrMisc<GenericStorage>> for TensorOrMisc {
-    fn from(value: carton_core::info::TensorOrMisc<GenericStorage>) -> Self {
+impl From<carton_core::info::TensorOrMisc> for TensorOrMisc {
+    fn from(value: carton_core::info::TensorOrMisc) -> Self {
         match value {
             carton_core::info::TensorOrMisc::Tensor(v) => Self::Tensor(v.into()),
             carton_core::info::TensorOrMisc::Misc(v) => Self::Misc(v.into()),

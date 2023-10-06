@@ -68,7 +68,14 @@ pub(crate) async fn framed_transport<T, U, R, W>(
                 Err(mpsc::error::TryRecvError::Empty) => {
                     // Nothing to recv
                     // Flush the writer
-                    bw.flush().await.unwrap();
+                    match bw.flush().await {
+                        Ok(_) => {}
+                        Err(e) if e.kind() == ErrorKind::BrokenPipe => {
+                            // Disconnected
+                            break;
+                        }
+                        e => e.unwrap(),
+                    }
 
                     // Blocking wait for new things to send
                     match req_rx.recv().await {

@@ -19,7 +19,7 @@ use wasm_bindgen::prelude::*;
 use carton_core::{
     conversion_utils::convert_vec,
     info::{ArcMiscFileLoader, PossiblyLoaded},
-    types::{for_each_numeric_carton_type, GenericStorage, Tensor},
+    types::{for_each_numeric_carton_type, Tensor},
 };
 use serde::ser::Serialize;
 use tokio_util::compat::TokioAsyncReadCompatExt;
@@ -105,8 +105,8 @@ pub struct CartonInfo {
     pub manifest_sha256: Option<String>,
 }
 
-impl From<carton_core::info::CartonInfoWithExtras<GenericStorage>> for CartonInfo {
-    fn from(info: carton_core::info::CartonInfoWithExtras<GenericStorage>) -> Self {
+impl From<carton_core::info::CartonInfoWithExtras> for CartonInfo {
+    fn from(info: carton_core::info::CartonInfoWithExtras) -> Self {
         let value = info.info;
         let serializer = serde_wasm_bindgen::Serializer::json_compatible();
         Self {
@@ -161,8 +161,8 @@ pub struct Example {
     pub sample_out: js_sys::Map, // HashMap<String, TensorOrMisc>,
 }
 
-impl From<carton_core::info::Example<GenericStorage>> for Example {
-    fn from(value: carton_core::info::Example<GenericStorage>) -> Self {
+impl From<carton_core::info::Example> for Example {
+    fn from(value: carton_core::info::Example) -> Self {
         Self {
             name: value.name,
             description: value.description,
@@ -198,8 +198,8 @@ impl From<TensorOrMisc> for JsValue {
     }
 }
 
-impl From<carton_core::info::TensorOrMisc<GenericStorage>> for TensorOrMisc {
-    fn from(value: carton_core::info::TensorOrMisc<GenericStorage>) -> Self {
+impl From<carton_core::info::TensorOrMisc> for TensorOrMisc {
+    fn from(value: carton_core::info::TensorOrMisc) -> Self {
         match value {
             carton_core::info::TensorOrMisc::Tensor(v) => Self::Tensor(v.into()),
             carton_core::info::TensorOrMisc::Misc(v) => Self::Misc(MiscFileLoaderWrapper(v)),
@@ -217,8 +217,8 @@ pub struct SelfTest {
     pub expected_out: Option<js_sys::Map>, // Option<HashMap<String, PossiblyLoadedWrapper>>,
 }
 
-impl From<carton_core::info::SelfTest<GenericStorage>> for SelfTest {
-    fn from(value: carton_core::info::SelfTest<GenericStorage>) -> Self {
+impl From<carton_core::info::SelfTest> for SelfTest {
+    fn from(value: carton_core::info::SelfTest) -> Self {
         Self {
             name: value.name,
             description: value.description,
@@ -249,14 +249,14 @@ pub struct TensorWrapper {
     pub stride: Vec<usize>,
 
     // Keep the tensor alive
-    _keepalive: PossiblyLoaded<Tensor<GenericStorage>>,
+    _keepalive: PossiblyLoaded<Tensor>,
 }
 
 #[wasm_bindgen]
 pub struct PossiblyLoadedWrapper(PossiblyLoaded<TensorWrapper>);
 
-impl From<PossiblyLoaded<Tensor<GenericStorage>>> for PossiblyLoadedWrapper {
-    fn from(value: PossiblyLoaded<Tensor<GenericStorage>>) -> Self {
+impl From<PossiblyLoaded<Tensor>> for PossiblyLoadedWrapper {
+    fn from(value: PossiblyLoaded<Tensor>) -> Self {
         Self(PossiblyLoaded::from_loader(Box::pin(async move {
             let t = value.get().await;
 

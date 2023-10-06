@@ -16,7 +16,7 @@ use std::{
     any::Any,
     collections::HashMap,
     path::{Path, PathBuf},
-    sync::{atomic::AtomicBool, Arc, Mutex},
+    sync::Mutex,
 };
 
 use anywhere::types::{AnywhereFS, ReadOnlyFS, ReadWriteFS};
@@ -44,9 +44,6 @@ pub struct Server {
 
     // Keep this alive while the server is up
     _keepalive: Vec<Box<dyn Any + Send + Sync>>,
-
-    // A flag that stops us from attempting to send log messages after shutdown
-    is_shutdown: Arc<AtomicBool>,
 }
 
 /// A handle that represents a map of sealed tensors
@@ -271,34 +268,21 @@ impl Server {
 
         let (tx, rx) = comms.get_channel(ChannelId::Rpc).await;
 
-        let is_shutdown = Arc::new(AtomicBool::new(false));
         if let Some(logger) = logger {
             let mut messages = logger.get_rx();
             let out = tx.clone();
-            let is_shutdown = is_shutdown.clone();
             tokio::spawn(async move {
                 while let Some(record) = messages.recv().await {
-                    if is_shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-                        break;
-                    }
-
                     // TODO: don't hardcode 0
-                    let status = out
+                    // If we get a send error, that means we're disconnected from the main process (because the other end of the channel is dropped).
+                    // This primarily happens during shutdown so `panic`ing saying we couldn't send a log message isn't particularly helpful
+                    let _ = out
                         .send(RPCResponse {
                             id: 0,
                             complete: true,
                             data: RPCResponseData::LogMessage { record },
                         })
                         .await;
-
-                    // Ignore send errors only when we're shutting down
-                    if let Err(s) = status {
-                        if is_shutdown.load(std::sync::atomic::Ordering::Relaxed) {
-                            break;
-                        } else {
-                            Err(s).unwrap()
-                        }
-                    }
                 }
             });
         }
@@ -309,7 +293,6 @@ impl Server {
             incoming: rx,
             outgoing: tx,
             _keepalive: Vec::new(),
-            is_shutdown,
         }
     }
 
@@ -366,15 +349,6 @@ impl Server {
         let (tx, rx) = self.fs_multiplexer.get_stream_for_id(token.0).await;
 
         anywhere::transport::serde::connect(tx, rx).await
-    }
-}
-
-impl Drop for Server {
-    fn drop(&mut self) {
-        // Mark that we shutdown
-        // TODO: we should be able to remove this once we remove the `unwrap`s in comms
-        self.is_shutdown
-            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
 }
 

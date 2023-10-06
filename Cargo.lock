@@ -73,7 +73,7 @@ checksum = "2cb2f989d18dd141ab8ae82f64d1a8cdd37e0840f73a406896cf5e99502fab61"
 
 [[package]]
 name = "anywhere"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "async-trait",
  "bincode",
@@ -187,9 +187,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "async_zip"
-version = "0.0.15"
-source = "git+https://github.com/VivekPanyam/rs-async-zip.git?branch=fix_zip64#fdce4981a54aa80e3e02ab22b4b800f50c8967bd"
+name = "async_zip2"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "201aabc95456ea2a0fa400f8772ae3af09b1ecd7001a57e1a48089daa6c1bd74"
 dependencies = [
  "async-compression 0.4.2",
  "chrono",
@@ -393,7 +394,7 @@ dependencies = [
 
 [[package]]
 name = "carton"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -487,7 +488,7 @@ dependencies = [
 
 [[package]]
 name = "carton-macros"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "proc-macro2 1.0.47",
  "quote 1.0.21",
@@ -538,7 +539,7 @@ dependencies = [
 name = "carton-runner-packager"
 version = "0.0.1"
 dependencies = [
- "async_zip 0.0.11",
+ "async_zip",
  "base64 0.21.0",
  "carton-utils",
  "chrono",
@@ -656,7 +657,7 @@ dependencies = [
 name = "carton-utils"
 version = "0.0.1"
 dependencies = [
- "async_zip 0.0.11",
+ "async_zip",
  "bytes",
  "flate2",
  "futures",
@@ -1815,8 +1816,9 @@ dependencies = [
 
 [[package]]
 name = "lunchbox"
-version = "0.1.3"
-source = "git+https://github.com/VivekPanyam/lunchbox.git?branch=main#375d35f887bc2ab86af25e9228bcb04bd8772310"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09eda175c38af45f3884135536bd707777ae506c5fe0efe4640504b19757deaf"
 dependencies = [
  "async-trait",
  "path-clean",
@@ -3954,11 +3956,12 @@ dependencies = [
 
 [[package]]
 name = "zipfs"
-version = "0.0.1"
-source = "git+https://github.com/VivekPanyam/ZipFS.git?branch=read_full#0c27172f53c86ac6cd4a5bd57174a19bc5e4a7e7"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5a98b9edc12b0a2b18f41e8929438239c0aadd7505542d5b05094f263bdb4e7"
 dependencies = [
  "async-trait",
- "async_zip 0.0.15",
+ "async_zip2",
  "lunchbox",
  "path-clean",
  "pin-project",

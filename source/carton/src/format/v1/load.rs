@@ -29,7 +29,7 @@ use crate::conversion_utils::{
 };
 use crate::error::{CartonError, Result};
 use crate::info::{CartonInfoWithExtras, PossiblyLoaded};
-use crate::types::{CartonInfo, GenericStorage};
+use crate::types::CartonInfo;
 
 struct MiscFileLoader<T> {
     fs: Arc<T>,
@@ -48,7 +48,7 @@ where
     }
 }
 
-pub(crate) async fn load<T>(fs: &Arc<T>) -> Result<CartonInfoWithExtras<GenericStorage>>
+pub(crate) async fn load<T>(fs: &Arc<T>) -> Result<CartonInfoWithExtras>
 where
     T: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     T::FileType: ReadableFile + MaybeSend + MaybeSync + Unpin + 'static,
@@ -132,11 +132,11 @@ where
 
 struct LoadContext<'a, F> {
     fs: &'a Arc<F>,
-    tensors: HashMap<String, PossiblyLoaded<crate::types::Tensor<GenericStorage>>>,
+    tensors: HashMap<String, PossiblyLoaded<crate::types::Tensor>>,
 }
 
 impl<'a, F> ConvertFromWithContext<super::carton_toml::TensorReference, &LoadContext<'a, F>>
-    for PossiblyLoaded<crate::types::Tensor<GenericStorage>>
+    for PossiblyLoaded<crate::types::Tensor>
 where
     F: ReadableFileSystem + MaybeSend + MaybeSync + 'static,
     F::FileType: ReadableFile + MaybeSend + MaybeSync + 'static,
@@ -164,10 +164,10 @@ where
 }
 
 impl<C> ConvertFromWithContext<super::carton_toml::TensorOrMiscReference, C>
-    for crate::info::TensorOrMisc<GenericStorage>
+    for crate::info::TensorOrMisc
 where
     C: Copy,
-    PossiblyLoaded<crate::types::Tensor<GenericStorage>>:
+    PossiblyLoaded<crate::types::Tensor>:
         ConvertFromWithContext<super::carton_toml::TensorReference, C>,
     crate::info::ArcMiscFileLoader:
         ConvertFromWithContext<super::carton_toml::MiscFileReference, C>,
@@ -184,12 +184,10 @@ where
     }
 }
 
-impl<C> ConvertFromWithContext<super::carton_toml::Example, C>
-    for crate::info::Example<GenericStorage>
+impl<C> ConvertFromWithContext<super::carton_toml::Example, C> for crate::info::Example
 where
     C: Copy,
-    crate::info::TensorOrMisc<GenericStorage>:
-        ConvertFromWithContext<super::carton_toml::TensorOrMiscReference, C>,
+    crate::info::TensorOrMisc: ConvertFromWithContext<super::carton_toml::TensorOrMiscReference, C>,
 {
     fn from(item: super::carton_toml::Example, context: C) -> Self {
         Self {
@@ -201,11 +199,10 @@ where
     }
 }
 
-impl<C> ConvertFromWithContext<super::carton_toml::SelfTest, C>
-    for crate::info::SelfTest<GenericStorage>
+impl<C> ConvertFromWithContext<super::carton_toml::SelfTest, C> for crate::info::SelfTest
 where
     C: Copy,
-    PossiblyLoaded<crate::types::Tensor<GenericStorage>>:
+    PossiblyLoaded<crate::types::Tensor>:
         ConvertFromWithContext<super::carton_toml::TensorReference, C>,
 {
     fn from(item: super::carton_toml::SelfTest, context: C) -> Self {

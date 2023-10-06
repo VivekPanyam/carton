@@ -1,8 +1,13 @@
 [package]
 name = "carton"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
-publish = false
+authors = ["Vivek Panyam <hello@vivekpanyam.com>"]
+description = "Run any ML model from any programming language."
+license = "Apache-2.0"
+repository = "https://github.com/VivekPanyam/carton"
+keywords = []
+categories = []
 
 # Ignore all test_data/ folders
 exclude = ["test_data/"]
@@ -12,7 +17,7 @@ serde = { version = "1.0", features = ["derive"] }
 ndarray = { version = "0.15", features = ["serde"] }
 tokio = { version = "1", features = ["rt"] }
 tempfile = "3.3.0"
-carton-macros = { path = "../carton-macros" }
+carton-macros = { path = "../carton-macros", version = "0.0.1"}
 chrono = {version = "0.4.23", features = ["serde"]}
 toml = "0.5"
 semver = {version = "1.0.16", features = ["serde"]}
@@ -20,10 +25,10 @@ target-lexicon = {version = "0.12.7", features = ["serde_support"]}
 lazy_static = "1.4.0"
 reqwest = { version = "0.11", features = ["json", "rustls-tls", "stream"], default-features = false }
 bytes = "1.3.0"
-zipfs = "0.0.1"
+zipfs = "0.0.2"
 url = "2.3.1"
 async-trait = "0.1"
-runner_interface_v1 = { package = "carton-runner-interface", path = "../carton-runner-interface" }
+runner_interface_v1 = { package = "carton-runner-interface", path = "../carton-runner-interface", version = "0.0.1"}
 thiserror = "1"
 sha2 = "0.10.6"
 walkdir = "2.3.2"
@@ -42,9 +47,9 @@ dlopen = "0.1"
 dlopen_derive = "0.1"
 uuid = "1.3"
 lunchbox = { version = "0.1", features = ["serde", "localfs"]}
-carton-runner-packager = { path = "../carton-runner-packager" }
+carton-runner-packager = { path = "../carton-runner-packager", version = "0.0.1"}
 zip = {version = "0.6", features = ["zstd"]}
-carton-utils = { path = "../carton-utils" }
+carton-utils = { path = "../carton-utils", version = "0.0.1"}
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 lunchbox = { version = "0.1", features = ["serde"]}
