@@ -223,4 +223,65 @@ mod tests {
             return panic!("Expected WasmTensor::Numeric variant");
         }
     }
+
+	#[test]
+    fn wasm_tensor_to_carton_tensor_string() {
+        let buffer = vec!["hello".to_string(), "world".to_string()];
+        let tensor = WasmTensor::Str(TensorString {
+            buffer: buffer.clone(),
+            shape: vec![2],
+        });
+        let carton_tensor: CartonTensor = tensor.into();
+        if let CartonTensor::String(storage) = carton_tensor {
+            assert_eq!(storage.view().as_slice().unwrap(), &buffer);
+        } else {
+            return panic!("Expected CartonTensor::String variant");
+        }
+    }
+
+    #[test]
+    fn carton_tensor_to_wasm_tensor_string() {
+        let buffer = vec!["hello".to_string(), "world".to_string()];
+        let mut storage = CartonStorage::<String>::new(vec![2]);
+        storage.view_mut().as_slice_mut().unwrap().clone_from_slice(&buffer);
+		let carton_tensor = CartonTensor::String(storage);
+        let wasm_tensor = WasmTensor::try_from(carton_tensor).unwrap();
+        if let WasmTensor::Str(tensor_string) = wasm_tensor {
+            assert_eq!(tensor_string.buffer, buffer);
+        } else {
+            return panic!("Expected WasmTensor::Str variant");
+        }
+    }
+
+    #[test]
+    fn wasm_tensor_to_carton_tensor_i32() {
+        let buffer = slice_to_bytes(&[1i32, 2, 3]);
+        let tensor = WasmTensor::Numeric(TensorNumeric {
+            buffer: buffer.to_vec(),
+            dtype: Dtype::I32,
+            shape: vec![3],
+        });
+        let carton_tensor: CartonTensor = tensor.into();
+        if let CartonTensor::I32(storage) = carton_tensor {
+            assert_eq!(storage.view().as_slice().unwrap(), &[1i32, 2, 3]);
+        } else {
+            return panic!("Expected CartonTensor::I32 variant");
+        }
+    }
+
+    #[test]
+    fn wasm_tensor_to_carton_tensor_u32() {
+        let buffer = slice_to_bytes(&[1u32, 2, 3]);
+        let tensor = WasmTensor::Numeric(TensorNumeric {
+            buffer: buffer.to_vec(),
+            dtype: Dtype::Ui32,
+            shape: vec![3],
+        });
+        let carton_tensor: CartonTensor = tensor.into();
+        if let CartonTensor::U32(storage) = carton_tensor {
+            assert_eq!(storage.view().as_slice().unwrap(), &[1u32, 2, 3]);
+        } else {
+            return panic!("Expected CartonTensor::U32 variant");
+        }
+    }
 }
