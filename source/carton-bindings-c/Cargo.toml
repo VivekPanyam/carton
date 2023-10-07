@@ -1,0 +1,31 @@
+[package]
+name = "carton-bindings-c"
+version = "0.0.1"
+edition = "2021"
+publish = false
+authors = ["Vivek Panyam <hello@vivekpanyam.com>"]
+description = "C bindings for Carton"
+license = "Apache-2.0"
+repository = "https://github.com/VivekPanyam/carton"
+keywords = []
+categories = []
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cxx = "1.0"
+carton_core = { path = "../carton", package = "carton"}
+ndarray = "0.15"
+tokio = {version = "1", features = ["rt-multi-thread"]}
+dashmap = "5.4.0"
+
+[build-dependencies]
+cbindgen = "0.26"
+
+[dev-dependencies]
+env_logger = "0.9"
+escargot = "0.5.8"
+log = "0.4"
+cc = "1.0"
+tempfile = "3.3.0"
