@@ -60,24 +60,4 @@ where
         let data = self.data.as_mut_ptr();
         unsafe { ndarray::ArrayViewMut::from_shape_ptr(self.get_shape(), data) }
     }
-
-    pub unsafe fn into_bytes(self) -> (Vec<u8>, Vec<u64>) {
-        // TODO: unsafe because not guaranteed to be numeric, maybe move elsewhere.
-        let len = self.strides.iter().product() as usize * std::mem::size_of::<T>();
-        let buffer = unsafe { Vec::from_raw_parts(
-            self.data.as_ptr() as *mut u8,
-            len,
-            len,
-        ) };
-        (buffer, self.shape)
-    }
-
-    pub fn into_vec(self) -> (Vec<T>, Vec<u64>) {
-        let len = self.strides.iter().product() as usize;
-        let buffer = unsafe { Vec::from_raw_parts(
-            self.data.as_ptr() as *mut T,
-            len,
-            len,
-        ) };
-    }
 }

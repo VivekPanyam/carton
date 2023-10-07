@@ -1,6 +1,6 @@
 wasmtime::component::bindgen!({
     world: "model",
-    path: "./carton-interface-wasm/wit/",
+    path: "./wit",
 });
 
 pub(crate) use carton_wasm::lib::types::{TensorNumeric, TensorString, Dtype};
