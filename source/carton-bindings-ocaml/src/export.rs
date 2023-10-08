@@ -2,7 +2,7 @@ use crate::*;
 
 #[ocaml_rust::bridge]
 mod ffi {
-    type FFICarton = CustomConst<Carton>;
+    type FFICarton = Custom<Carton>;
     type FFICartonError = Custom<CartonError>;
 
     #[derive(Clone, Debug)]
