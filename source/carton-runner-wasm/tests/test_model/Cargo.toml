@@ -1,0 +1,16 @@
+[package]
+name = "basic_model"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen = "0.12.0"
+
+[workspace]
+
+[profile.release]
+lto = true
+opt-level = 'z'

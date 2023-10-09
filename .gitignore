@@ -2,7 +2,7 @@ target/
 .vscode/
 libtorch/
 
-# csharp
 .idea/
+*.DS_Store
 bin/
 obj/

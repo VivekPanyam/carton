@@ -62,6 +62,8 @@ const LANGUAGE_TAGS = {
     "rust": {"bg": "bg-violet-500", tag: "rust"},
     "json": { "bg": "bg-orange-500", tag: "json" },
     "toml": { "bg": "bg-orange-500", tag: "toml" },
+    "c": { "bg": "bg-lime-500", tag: "c" },
+    "cpp": { "bg": "bg-cyan-500", tag: "c++" },
 }
 
 const Code = ({

@@ -1,0 +1,19 @@
+[package]
+name = "carton-bindings-cpp"
+version = "0.0.1"
+edition = "2021"
+publish = false
+authors = ["Vivek Panyam <hello@vivekpanyam.com>"]
+description = "C++ bindings for Carton"
+license = "Apache-2.0"
+repository = "https://github.com/VivekPanyam/carton"
+keywords = []
+categories = []
+
+[dev-dependencies]
+env_logger = "0.9"
+escargot = "0.5.8"
+log = "0.4"
+cc = "1.0"
+tempfile = "3.3.0"
+build-utils = { path = "../build-utils"}

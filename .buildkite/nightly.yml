@@ -3,11 +3,12 @@ steps:
   - name: "Native Build x86_64-unknown-linux-gnu"
     agents:
       queue: default
-    command: "python3 ci/build.py --release --target x86_64-unknown-linux-gnu --nightly --runner_release_dir target/runner_releases"
+    command: "python3 ci/build.py --release --target x86_64-unknown-linux-gnu --nightly --runner_release_dir target/runner_releases --c_cpp_bindings_release_dir target/bindings_releases"
     artifact_paths:
       - "target/cargo-timings/*"
       - "target/wheels/*"
       - "target/runner_releases/*"
+      - "target/bindings_releases/*"
     plugins:
       - docker-compose#v3.7.0:
           run: x86_64
@@ -16,11 +17,12 @@ steps:
   - name: "Native Build aarch64-unknown-linux-gnu"
     agents:
       queue: arm64
-    command: "python3 ci/build.py --release --target aarch64-unknown-linux-gnu --nightly --runner_release_dir target/runner_releases"
+    command: "python3 ci/build.py --release --target aarch64-unknown-linux-gnu --nightly --runner_release_dir target/runner_releases --c_cpp_bindings_release_dir target/bindings_releases"
     artifact_paths:
       - "target/cargo-timings/*"
       - "target/wheels/*"
       - "target/runner_releases/*"
+      - "target/bindings_releases/*"
     plugins:
       - docker-compose#v3.7.0:
           run: arm64

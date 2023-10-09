@@ -18,7 +18,7 @@ jobs:
       - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
       - run: pip3 install toml maturin==0.14.13
-      - run: python3 ci/build.py --target x86_64-apple-darwin --release --nightly --runner_release_dir /tmp/runner_releases
+      - run: python3 ci/build.py --target x86_64-apple-darwin --release --nightly --runner_release_dir /tmp/runner_releases --c_cpp_bindings_release_dir /tmp/bindings_releases
       - name: Upload runners
         uses: actions/upload-artifact@v3
         with:
@@ -29,6 +29,11 @@ jobs:
         with:
           name: py-wheels-macos-x86
           path: target/wheels/
+      - name: Upload C/C++ bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: c-cpp-bindings-x86_64-apple-darwin
+          path: /tmp/bindings_releases
   nightly_release_mac_aarch64:
     name: "Native Build macOS aarch64"
     runs-on: ubuntu-latest
@@ -50,6 +55,11 @@ jobs:
         with:
           name: py-wheels-macos-aarch64
           path: /tmp/target/wheels/
+      - name: Upload C/C++ bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: c-cpp-bindings-macos-aarch64
+          path: /tmp/bindings_releases
   nightly_release_buildkite:
     name: "Native Builds Linux (x86_64 and aarch64)"
     runs-on: ubuntu-latest
@@ -71,6 +81,11 @@ jobs:
         with:
           name: py-wheels-linux
           path: /tmp/target/wheels/
+      - name: Upload C/C++ bindings
+        uses: actions/upload-artifact@v3
+        with:
+          name: c-cpp-bindings-linux
+          path: /tmp/target/bindings_releases
 
   upload_nightly_builds:
     name: "Upload nightly builds"
@@ -101,6 +116,14 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_NIGHTLY_TOKEN }}
           TWINE_NON_INTERACTIVE: true
+      - name: Upload C and C++ bindings
+        run: cargo run --package build-utils --bin upload_c_cpp_bindings
+        env:
+          CARTON_NIGHTLY_S3_BUCKET: ${{ vars.CARTON_NIGHTLY_S3_BUCKET }}
+          CARTON_NIGHTLY_S3_REGION: ${{ vars.CARTON_NIGHTLY_S3_REGION }}
+          CARTON_NIGHTLY_S3_ENDPOINT: ${{ secrets.CARTON_NIGHTLY_S3_ENDPOINT }}
+          CARTON_NIGHTLY_ACCESS_KEY_ID: ${{ secrets.CARTON_NIGHTLY_ACCESS_KEY_ID }}
+          CARTON_NIGHTLY_SECRET_ACCESS_KEY: ${{ secrets.CARTON_NIGHTLY_SECRET_ACCESS_KEY }}
   build_wasm:
     name: WASM Build wasm32-unknown-unknown
     runs-on: ubuntu-latest
