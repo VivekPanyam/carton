@@ -1,5 +1,8 @@
 import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languageselect";
 
+<LanguageSwitch>
+<LanguageItem forLang='python,rust,javascript,typescript'>
+
 # Model Metadata
 
 It's possible to fetch model metadata without loading a model. This approach only fetches the data needed to provide the requested information and is therefore quite efficient even with large models.
@@ -308,6 +311,18 @@ The sha256 of the manifest of the model.
 console.log(info.manifest_sha256)
 ```
 
+</LanguageItem>
+</LanguageSwitch>
+
+
+</LanguageItem>
+<LanguageItem>
+
+This language currently does not support fetching model metadata. Please check the [quickstart guide](/quickstart) for more info or select a different language.
+
+<div className="flex not-prose">
+    <LanguageSelect/>
+</div>
 </LanguageItem>
 </LanguageSwitch>
 

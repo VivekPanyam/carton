@@ -275,7 +275,7 @@ impl Carton {
     }
 
     /// Allocate a tensor
-    pub async fn alloc_tensor(&self, dtype: DataType, shape: Vec<u64>) -> Result<Tensor> {
+    pub fn alloc_tensor(&self, dtype: DataType, shape: Vec<u64>) -> Result<Tensor> {
         match &self.runner {
             Runner::V1(runner) => {
                 for_each_carton_type! {
@@ -284,7 +284,6 @@ impl Carton {
                             DataType::$CartonType =>
                                 Ok(runner
                                     .alloc_tensor::<$RustType>(shape)
-                                    .await
                                     .map_err(|e| CartonError::ErrorFromRunner(e))?
                                     .into()),
                         )*

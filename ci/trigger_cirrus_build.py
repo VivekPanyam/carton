@@ -108,11 +108,13 @@ nightly_macos_task:
   build_and_test_script:
     - source $HOME/.cargo/env
     - pip3 install toml maturin==0.14.13
-    - python3 ci/build.py --target aarch64-apple-darwin --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases
+    - python3 ci/build.py --target aarch64-apple-darwin --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases  --c_cpp_bindings_release_dir $CIRRUS_WORKING_DIR/bindings_releases
   binaries_artifacts:
     path: "runner_releases/*"
   wheels_artifacts:
     path: "target/wheels/*"
+  bindings_artifacts:
+    path: "bindings_releases/*"
 
 """
 
@@ -169,4 +171,14 @@ with open("/tmp/wheels.zip", "wb") as f:
     f.write(res.content)
 
 with zipfile.ZipFile("/tmp/wheels.zip", 'r') as zip_ref:
+    zip_ref.extractall("/tmp")
+
+
+print("Downloading bindings...")
+res = requests.get(f"https://api.cirrus-ci.com/v1/artifact/build/{build_id}/bindings.zip", headers={"Authorization": CIRRUS_AUTH})
+
+with open("/tmp/bindings.zip", "wb") as f:
+    f.write(res.content)
+
+with zipfile.ZipFile("/tmp/bindings.zip", 'r') as zip_ref:
     zip_ref.extractall("/tmp")

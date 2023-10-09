@@ -8,6 +8,88 @@ import LanguageSelect, {LanguageSwitch, LanguageItem} from "@/components/languag
     <LanguageSelect/>
 </div>
 
+<LanguageSwitch>
+<LanguageItem forLang='c,c++'>
+
+```bash linePrompt='$' forLang='c'
+# Pick the appropriate file for your OS and arch
+wget https://nightly-assets.carton.run/bindings/carton_c_aarch64-apple-darwin.tar.gz
+wget https://nightly-assets.carton.run/bindings/carton_c_aarch64-unknown-linux-gnu.tar.gz
+wget https://nightly-assets.carton.run/bindings/carton_c_x86_64-apple-darwin.tar.gz
+wget https://nightly-assets.carton.run/bindings/carton_c_x86_64-unknown-linux-gnu.tar.gz
+```
+
+```bash linePrompt='$' forLang='c++'
+# Pick the appropriate file for your OS and arch
+wget https://nightly-assets.carton.run/bindings/carton_cpp_aarch64-apple-darwin.tar.gz
+wget https://nightly-assets.carton.run/bindings/carton_cpp_aarch64-unknown-linux-gnu.tar.gz
+wget https://nightly-assets.carton.run/bindings/carton_cpp_x86_64-apple-darwin.tar.gz
+wget https://nightly-assets.carton.run/bindings/carton_cpp_x86_64-unknown-linux-gnu.tar.gz
+```
+
+&nbsp;
+# Load and run a model
+
+If you want to run an existing carton model (or "a carton" for short), you can just pass in a file path or URL.
+
+```c forLang='c'
+#include "carton.h"
+
+void load_callback(Carton *model, CartonStatus status, void *callback_arg)
+{
+    // ...
+}
+
+int main()
+{
+    int load_callback_arg = 123;
+    carton_load("https://carton.pub/google-research/bert-base-uncased", load_callback, (void *)load_callback_arg);
+
+    // Make sure the program doesn't end before the async task completes
+    sleep(60);
+}
+```
+
+```cpp forLang='c++'
+#include <iostream>
+
+#include "carton.hh"
+
+int main()
+{
+    // Load a model, wait for the future to complete, unwrap the result
+    auto model = carton::Carton::load("https://carton.pub/google-research/bert-base-uncased").get().get_or_throw();
+
+    // Create an input tensor
+    uint64_t shape[]{1};
+    auto tensor = carton::Tensor(carton::DataType::kString, shape);
+    tensor.set_string(0, "Today is a good [MASK].");
+
+    // Create a map of inputs
+    std::unordered_map<std::string, carton::Tensor> inputs;
+    inputs.insert(std::make_pair("input", std::move(tensor)));
+
+    // Run inference, wait for the future to complete, unwrap the result
+    auto out = model.infer(std::move(inputs)).get().get_or_throw();
+
+    // Get the output tensors
+    const auto tokens = out.get_and_remove("tokens");
+    const auto scores = out.get_and_remove("scores");
+
+    const auto scores_data = static_cast<const float *>(scores.data());
+
+    std::cout << "Got output token: " << tokens.get_string(0) << std::endl;
+    std::cout << "Got output scores: " << scores_data[0] << std::endl;
+}
+```
+
+See the ["Loading a model"](/docs/loading) docs for complete examples of how to load a model and run inference.
+
+At the moment, packing models and fetching metadata are not supported from C or C++.
+
+</LanguageItem>
+<LanguageItem>
+
 ```bash linePrompt='$' forLang='python'
 pip install cartonml-nightly
 ```
@@ -296,6 +378,8 @@ async fn main() {
 
 Carton routes all of its log messages to the console. If you want to see trace logging, you may need to enable the verbose log level in your browser's console.
 
+</LanguageItem>
+</LanguageSwitch>
 </LanguageItem>
 </LanguageSwitch>
 

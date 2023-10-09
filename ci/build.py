@@ -63,11 +63,15 @@ if __name__ == "__main__":
     parser.add_argument("--nightly", action="store_true", help="Update version numbers with a dev build suffix")
     parser.add_argument("--hide_output", action="store_true", help="Redirect all subprocess output to /dev/null")
     parser.add_argument("--runner_release_dir", help="The runner release dir (if any)")
+    parser.add_argument("--c_cpp_bindings_release_dir", help="The C/C++ bindings release dir (if any)")
     args = parser.parse_args()
 
     TARGET = args.target
     RELEASE_FLAG = "--release" if args.release else None
     HIDE_OUTPUT = args.hide_output
+
+    # We don't use `--locked` on nightly builds because we need to change version numbers
+    LOCKED_FLAG = "--locked" if not args.nightly else None
 
     print(f"""
     Building with configuration:
@@ -75,12 +79,17 @@ if __name__ == "__main__":
         Release mode: {args.release}
         Nightly mode: {args.nightly}
         Runner release dir: {args.runner_release_dir}
+        Bindings release dir: {args.c_cpp_bindings_release_dir}
     """)
 
     # Check up front so we don't build and then fail
     if args.runner_release_dir is not None:
         if os.path.exists(args.runner_release_dir):
             raise ValueError("Supplied runner release dir already exists! Please remove it and try again.")
+
+    if args.c_cpp_bindings_release_dir is not None:
+        if os.path.exists(args.c_cpp_bindings_release_dir):
+            raise ValueError("Supplied runner bindings dir already exists! Please remove it and try again.")
 
     # Update version numbers if this is a nightly build
     if args.nightly:
@@ -94,10 +103,10 @@ if __name__ == "__main__":
         os.environ["LIBTORCH_CXX11_ABI"] = "0"
 
     # Fetch deps (always in release mode)
-    run_command(["cargo", "run", "--timings", "--release", "-p", "fetch-deps", "--target", TARGET])
+    run_command(["cargo", "run", LOCKED_FLAG, "--timings", "--release", "-p", "fetch-deps", "--target", TARGET])
 
     # Build everything
-    run_command(["cargo", "build", RELEASE_FLAG, "--verbose", "--timings", "--target", TARGET])
+    run_command(["cargo", "build", LOCKED_FLAG, RELEASE_FLAG, "--verbose", "--timings", "--target", TARGET])
 
     # Build wheels for the python bindings
     # TODO: store timing info
@@ -116,6 +125,11 @@ if __name__ == "__main__":
         run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-py", "--bin", "build_releases", "--", "--output-path", args.runner_release_dir])
         run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-rust-bert", "--bin", "build_rust_bert_releases", "--", "--output-path", args.runner_release_dir])
         run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-torch", "--bin", "build_torch_releases", "--", "--output-path", args.runner_release_dir])
+        run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-wasm", "--bin", "build_wasm_releases", "--", "--output-path", args.runner_release_dir])
+
+    if args.c_cpp_bindings_release_dir is not None:
+        os.makedirs(args.c_cpp_bindings_release_dir)
+        run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "build-utils", "--bin", "build_c_cpp_bindings", "--", "--bindings-path", args.c_cpp_bindings_release_dir, "--target", TARGET])
 
     # Show sccache stats
     RUSTC_WRAPPER = os.getenv("RUSTC_WRAPPER", "")

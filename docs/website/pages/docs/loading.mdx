@@ -213,6 +213,184 @@ Carton::load(
 )
 ```
 </LanguageItem>
+<LanguageItem forLang='c'>
+
+# Loading a model
+
+<div className="flex items-center space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
+
+Once you have a packed model, you can load it with a file path or URL. There are two ways to load a model from C. The first uses callbacks:
+
+```c forLang='c'
+#include "carton.h"
+
+void load_callback(Carton *model, CartonStatus status, void *callback_arg);
+
+int main()
+{
+    int load_callback_arg = 123;
+    carton_load("https://carton.pub/google-research/bert-base-uncased", load_callback, (void *)load_callback_arg);
+
+    // Make sure the program doesn't end before the async task completes
+    sleep(60);
+}
+```
+
+This approach can be useful for integrating with existing async/event systems like [libevent](https://libevent.org/) or [libuv](https://libuv.org/).
+
+One of the caveats is that these callbacks are executed from within opaque Carton-owned threads. As a general rule, it's important to avoid doing blocking I/O or extended periods of CPU-bound work within these callbacks. Doing so could block other tasks within Carton's internal async runtime from executing.
+
+To help ease these restrictions, we provide another approach with `CartonAsyncNotifier`. This lets users wait for or poll for new callbacks on a thread they control, removing the above restrictions and making basic C integrations simpler:
+
+```c forLang='c'
+#include "carton.h"
+
+int main()
+{
+    // Create an async notifier
+    CartonAsyncNotifier *notifier;
+    carton_async_notifier_create(&notifier);
+
+    // Load the model
+    Carton *model;
+    CartonNotifierCallback callback;
+    void *callback_arg = (void *)23;
+    carton_async_notifier_register(notifier, &callback, &callback_arg);
+    carton_load("https://carton.pub/google-research/bert-base-uncased", (CartonLoadCallback)callback, callback_arg);
+
+    // Wait for the model to load
+    void *notifier_callback_arg_out;
+    CartonStatus status;
+    carton_async_notifier_wait(notifier, (void **)&model, &status, &notifier_callback_arg_out);
+    assert(notifier_callback_arg_out == (void *)23);
+
+    // ...
+}
+```
+
+With both approaches, Carton loads the model (caching it locally if necessary).
+
+Callbacks and notifications are available for every async function in Carton's interface.
+
+For complete, runnable examples of loading and running a model from C, take a look at this [callback example](https://github.com/VivekPanyam/carton/blob/main/source/carton-bindings-c/tests/basic.c) or this [notifier example](https://github.com/VivekPanyam/carton/blob/main/source/carton-bindings-c/tests/notifier.c).
+
+For more info on async functions in the Carton C interface, see [here](https://github.com/VivekPanyam/carton/blob/main/source/carton-bindings-c/README.md).
+
+If you don't yet have a packed model, take a look at the [packing docs](/docs/packing) or explore the [community model registry](https://carton.pub).
+
+
+</LanguageItem>
+<LanguageItem forLang='c++'>
+
+# Loading a model
+
+<div className="flex items-center space-x-3 not-prose">
+    <p>Select a programming language:</p>
+    <LanguageSelect/>
+</div>
+
+Once you have a packed model, you can load it with a file path or URL. There are three ways to load a model from C++. The first uses futures:
+
+```cpp forLang='c++'
+#include <iostream>
+
+#include "carton.hh"
+
+int main()
+{
+    // Load a model, wait for the future to complete, unwrap the result
+    auto model = carton::Carton::load("https://carton.pub/google-research/bert-base-uncased").get().get_or_throw();
+
+    // Create an input tensor
+    uint64_t shape[]{1};
+    auto tensor = carton::Tensor(carton::DataType::kString, shape);
+    tensor.set_string(0, "Today is a good [MASK].");
+
+    // Create a map of inputs
+    std::unordered_map<std::string, carton::Tensor> inputs;
+    inputs.insert(std::make_pair("input", std::move(tensor)));
+
+    // Run inference, wait for the future to complete, unwrap the result
+    auto out = model.infer(std::move(inputs)).get().get_or_throw();
+
+    // Get the output tensors
+    const auto tokens = out.get_and_remove("tokens");
+    const auto scores = out.get_and_remove("scores");
+
+    const auto scores_data = static_cast<const float *>(scores.data());
+
+    std::cout << "Got output token: " << tokens.get_string(0) << std::endl;
+    std::cout << "Got output scores: " << scores_data[0] << std::endl;
+}
+```
+
+In the above example, `load` and `infer` both return `std::future`s.
+
+The second approach uses callbacks:
+
+```cpp forLang='c++'
+#include "carton.hh"
+
+void load_callback(carton::Result<carton::Carton> model_result, void *arg);
+
+int main()
+{
+    // Load a model
+    int load_callback_arg = 42;
+    carton::Carton::load(
+        "https://carton.pub/google-research/bert-base-uncased",
+        load_callback,
+        (void *)load_callback_arg);
+
+    // Make sure the program doesn't end before the async task completes
+    sleep(60);
+}
+```
+
+This approach can be useful for integrating with existing async/event systems like [libevent](https://libevent.org/) or [libuv](https://libuv.org/).
+
+One of the caveats is that these callbacks are executed from within opaque Carton-owned threads. As a general rule, it's important to avoid doing blocking I/O or extended periods of CPU-bound work within these callbacks. Doing so could block other tasks within Carton's internal async runtime from executing.
+
+To help ease these restrictions, we provide a third approach with `carton::AsyncNotifier`. This lets users wait for or poll for new callbacks on a thread they control, removing the above restrictions. It also makes waiting on several futures more efficient because you get notified when one is ready instead of having to poll all of them.
+
+```cpp forLang='c++'
+#include "carton.hh"
+
+int main()
+{
+    // Create an async notifier
+    carton::AsyncNotifier<carton::Carton> load_notifier;
+
+    // Load a model
+    carton::Carton::load(
+        "https://carton.pub/google-research/bert-base-uncased",
+        load_notifier.handle(),
+        (void *)42);
+
+    // Wait for the model to load
+    auto [model_result, arg] = load_notifier.wait();
+    assert(arg == (void *)42);
+    auto model = model_result.get_or_throw();
+
+    // ...
+}
+```
+
+With all three approaches, Carton loads the model (caching it locally if necessary).
+
+Futures, callbacks and notifications are available for every async function in Carton's interface.
+
+For complete, runnable examples of loading and running a model from C++, take a look at this [callback example](https://github.com/VivekPanyam/carton/blob/main/source/carton-bindings-cpp/tests/callback.cc), this [future example](https://github.com/VivekPanyam/carton/blob/main/source/carton-bindings-cpp/tests/future.cc) or this [notifier example](https://github.com/VivekPanyam/carton/blob/main/source/carton-bindings-cpp/tests/notifier.cc).
+
+For more info on async functions in the Carton C++ interface, see [here](https://github.com/VivekPanyam/carton/blob/main/source/carton-bindings-cpp/README.md).
+
+If you don't yet have a packed model, take a look at the [packing docs](/docs/packing) or explore the [community model registry](https://carton.pub).
+
+
+</LanguageItem>
 <LanguageItem>
 
 This language currently does not support loading models. Please check the [quickstart guide](/quickstart) for more info or select a different language.

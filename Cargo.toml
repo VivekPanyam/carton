@@ -5,6 +5,8 @@ members = [
     "source/carton-utils",
     "source/carton-runner-packager",
     "source/carton-runner-interface",
+    "source/carton-bindings-c",
+    "source/carton-bindings-cpp",
     "source/carton-bindings-py",
     "source/carton-bindings-nodejs",
     "source/carton-bindings-wasm",
@@ -13,9 +15,11 @@ members = [
     "source/carton-runner-py",
     "source/carton-runner-rust-bert",
     "source/carton-runner-torch",
+    "source/carton-runner-wasm",
     "source/carton-utils-py",
     "source/anywhere",
     "source/fetch-deps",
+    "source/build-utils",
 ]
 
 [profile.release]
