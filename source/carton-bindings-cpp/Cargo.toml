@@ -1,27 +1,14 @@
 [package]
-name = "carton-bindings-c"
+name = "carton-bindings-cpp"
 version = "0.0.1"
 edition = "2021"
 publish = false
 authors = ["Vivek Panyam <hello@vivekpanyam.com>"]
-description = "C bindings for Carton"
+description = "C++ bindings for Carton"
 license = "Apache-2.0"
 repository = "https://github.com/VivekPanyam/carton"
 keywords = []
 categories = []
-
-[lib]
-crate-type = ["staticlib"]
-
-[dependencies]
-cxx = "1.0"
-carton_core = { path = "../carton", package = "carton"}
-ndarray = "0.15"
-tokio = {version = "1", features = ["rt-multi-thread"]}
-dashmap = "5.4.0"
-
-[build-dependencies]
-cbindgen = "0.26"
 
 [dev-dependencies]
 env_logger = "0.9"

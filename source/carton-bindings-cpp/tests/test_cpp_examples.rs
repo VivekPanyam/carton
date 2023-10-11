@@ -14,15 +14,16 @@
 
 use std::{path::PathBuf, process::Command, time::Instant};
 
-/// This test compiles all of the c files in this directory and tests them
 #[test]
-fn test_c_examples() {
+fn test_cpp_examples() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     // Build the bindings
-    let lib_path = build_utils::build_c_bindings();
+    let bindings_dir = tempfile::tempdir().unwrap();
+    let bindings_path = bindings_dir.path().join("libcarton_cpp.so");
+    build_utils::build_cpp_bindings(&bindings_path);
 
-    // For each c file in the tests dir
+    // For each cc file in the tests dir
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests")
         .read_dir()
@@ -30,14 +31,15 @@ fn test_c_examples() {
     for entry in dir {
         let entry = entry.unwrap();
         let file_name = entry.file_name().to_str().unwrap().to_owned();
-        if file_name.ends_with(".c") {
+        if file_name.ends_with(".cc") {
             // Compile the file
             let path = entry.path();
-            log::info!("About to build and test C example: {path:?}");
+            log::info!("About to build and test C++ example: {path:?}");
 
             // cc builds libs, but we want to build an executable
             // This is based on https://github.com/Hywan/inline-c-rs
             let compiler = cc::Build::new()
+                .cpp(true)
                 .cargo_metadata(false)
                 .target(escargot::CURRENT_TARGET)
                 .opt_level(1)
@@ -48,21 +50,12 @@ fn test_c_examples() {
             let tempdir = tempfile::tempdir().unwrap();
 
             let mut command = Command::new(compiler.path());
+            command.arg("-std=c++20");
             command.arg(path);
-            command.arg(lib_path.as_path());
+            command.arg(bindings_path.as_path());
             command.args(compiler.args());
             command.arg("-o").arg(tempdir.path().join("test"));
             command.arg("-lm");
-
-            #[cfg(not(target_os = "macos"))]
-            command.arg("-pthread").arg("-ldl");
-
-            #[cfg(target_os = "macos")]
-            command
-                .arg("-framework")
-                .arg("CoreFoundation")
-                .arg("-framework")
-                .arg("Security");
 
             let mut compiler_output = command.spawn().unwrap();
             assert!(compiler_output.wait().unwrap().success());
