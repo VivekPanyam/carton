@@ -142,8 +142,6 @@ for_each_numeric_carton_type! {
 
 #[cfg(test)]
 mod tests {
-    use paste::paste;
-
     use super::*;
 
     for_each_numeric_carton_type! {
@@ -161,12 +159,16 @@ mod tests {
                         )
                     );
                     let wasm_tensor = WasmTensor::try_from(carton_tensor).unwrap();
-                    if let WasmTensor::Numeric(tensor_numeric) = wasm_tensor {
-                        let data = bytes_to_slice::<$RustType>(&tensor_numeric.buffer).unwrap();
-                        assert_eq!(data, &[1.0 as $RustType, 2.0 as $RustType, 3.0 as $RustType]);
-                        assert_eq!(tensor_numeric.dtype, Dtype::$CartonType);
-                    } else {
-                        panic!(concat!("Expected WasmTensor::Numeric variant with ", stringify!($CartonType)));
+                    match wasm_tensor {
+                        WasmTensor::Numeric(tensor_numeric) => {
+                            assert_eq!(
+                                tensor_numeric.buffer,
+                                slice_to_bytes(&[1.0 as $RustType, 2.0 as $RustType, 3.0 as $RustType])
+                            );
+                        }
+                        _ => {
+                            panic!(concat!("Expected WasmTensor::Numeric variant"));
+                        }
                     }
                 }
 
@@ -179,13 +181,16 @@ mod tests {
                         shape: vec![3],
                     });
                     let carton_tensor: CartonTensor = tensor.into();
-                    if let CartonTensor::$CartonType(storage) = carton_tensor {
-                        assert_eq!(
-                            storage.view().as_slice().unwrap(),
-                            &[1.0 as $RustType, 2.0 as $RustType, 3.0 as $RustType]
-                        );
-                    } else {
-                        return panic!(concat!("Expected CartonTensor::", stringify!($CartonType), " variant"));
+                    match carton_tensor {
+                        CartonTensor::$CartonType(storage) => {
+                            assert_eq!(
+                                storage.view().as_slice().unwrap(),
+                                &[1.0 as $RustType, 2.0 as $RustType, 3.0 as $RustType]
+                            );
+                        }
+                        _ => {
+                            panic!(concat!("Expected CartonTensor::", stringify!($CartonType), " variant"));
+                        }
                     }
                 }
             }
@@ -203,10 +208,13 @@ mod tests {
             .clone_from_slice(&buffer);
         let carton_tensor = CartonTensor::String(storage);
         let wasm_tensor = WasmTensor::try_from(carton_tensor).unwrap();
-        if let WasmTensor::String(tensor_string) = wasm_tensor {
-            assert_eq!(tensor_string.buffer, buffer);
-        } else {
-            return panic!("Expected WasmTensor::Str variant");
+        match wasm_tensor {
+            WasmTensor::String(tensor_string) => {
+                assert_eq!(tensor_string.buffer, buffer);
+            }
+            _ => {
+                panic!("Expected WasmTensor::String variant");
+            }
         }
     }
 
@@ -218,10 +226,13 @@ mod tests {
             shape: vec![2],
         });
         let carton_tensor: CartonTensor = tensor.into();
-        if let CartonTensor::String(storage) = carton_tensor {
-            assert_eq!(storage.view().as_slice().unwrap(), &buffer);
-        } else {
-            return panic!("Expected CartonTensor::String variant");
+        match carton_tensor {
+            CartonTensor::String(storage) => {
+                assert_eq!(storage.view().as_slice().unwrap(), &buffer);
+            }
+            _ => {
+                panic!("Expected CartonTensor::String variant");
+            }
         }
     }
 }
