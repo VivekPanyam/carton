@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Result};
-use wasmtime::{Engine, Store};
 use wasmtime::component::{Component, Linker};
+use wasmtime::{Engine, Store};
 
 use carton_runner_interface::types::Tensor as CartonTensor;
 
@@ -34,10 +34,7 @@ impl WASMModelInstance {
         Model::add_to_linker(&mut linker, |state: &mut HostImpl| state).unwrap();
         let mut store = Store::new(&engine, HostImpl);
         let (model, _) = Model::instantiate(&mut store, &comp, &linker).unwrap();
-        Ok(Self {
-            store,
-            model,
-        })
+        Ok(Self { store, model })
     }
 
     pub fn infer(

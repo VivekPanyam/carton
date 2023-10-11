@@ -21,9 +21,7 @@ async fn main() {
     while let Some(req) = server.get_next_request().await {
         let req_id = req.id;
         match req.data {
-            RequestData::Load {
-                fs, ..
-            } => {
+            RequestData::Load { fs, .. } => {
                 let fs = server.get_readonly_filesystem(fs).await.unwrap();
                 let bin = &fs.read("model.wasm").await.unwrap();
                 model = Some(
