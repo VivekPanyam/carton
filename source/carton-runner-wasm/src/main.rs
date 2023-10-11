@@ -22,7 +22,7 @@ async fn main() {
         let req_id = req.id;
         match req.data {
             RequestData::Load {
-                fs, runner_opts, ..
+                fs, ..
             } => {
                 let fs = server.get_readonly_filesystem(fs).await.unwrap();
                 let bin = &fs.read("model.wasm").await.unwrap();
@@ -54,7 +54,7 @@ async fn main() {
                     .await
                     .unwrap();
             }
-            RequestData::Seal { tensors } => {
+            RequestData::Seal { .. } => {
                 todo!()
             }
             RequestData::InferWithTensors { tensors, .. } => {
@@ -69,7 +69,7 @@ async fn main() {
                     .await
                     .unwrap();
             }
-            RequestData::InferWithHandle { handle, .. } => {
+            RequestData::InferWithHandle { .. } => {
                 todo!()
             }
         }

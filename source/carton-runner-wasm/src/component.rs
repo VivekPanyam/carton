@@ -6,6 +6,6 @@ wasmtime::component::bindgen!({
 use crate::component::carton_wasm::lib::types::Host;
 pub(crate) use carton_wasm::lib::types::{Dtype, TensorNumeric, TensorString};
 
-pub(crate) struct DummyState;
+pub(crate) struct HostImpl;
 
-impl Host for DummyState {}
+impl Host for HostImpl {}

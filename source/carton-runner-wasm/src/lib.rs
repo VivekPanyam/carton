@@ -6,23 +6,36 @@ use wasmtime::{Engine, Store};
 
 use carton_runner_interface::types::Tensor as CartonTensor;
 
-use crate::component::{DummyState, Model, Tensor};
+use crate::component::{HostImpl, Model, Tensor};
 
 mod component;
 mod types;
 
 pub struct WASMModelInstance {
     instance: Instance,
-    store: Store<DummyState>,
+    store: Store<HostImpl>,
     model: Model,
 }
 
 impl WASMModelInstance {
     pub fn from_bytes(engine: &Engine, bytes: &[u8]) -> Result<Self> {
+        /*
+        see https://docs.wasmtime.dev/api/wasmtime/component/macro.bindgen.html
+        Some of the names may be confusing, here is the general idea from my
+        understanding:
+        - HostImpl is the host side implementation of what a interface imports
+          since our current interface does not import anything, this is an empty
+          struct
+        - Model is the loaded and linked interface, i.e. the API we expect the
+          user to implement. (Non stateful)
+          TODO: rename to ModelInterface
+        - Instance is the state of the actual WASM module, we actually don't need
+          to store it if we don't need to access any resources from the module.
+         */
         let comp = Component::from_binary(&engine, bytes).unwrap();
-        let mut linker = Linker::<DummyState>::new(&engine);
-        Model::add_to_linker(&mut linker, |state: &mut DummyState| state).unwrap();
-        let mut store = Store::new(&engine, DummyState);
+        let mut linker = Linker::<HostImpl>::new(&engine);
+        Model::add_to_linker(&mut linker, |state: &mut HostImpl| state).unwrap();
+        let mut store = Store::new(&engine, HostImpl);
         let (model, instance) = Model::instantiate(&mut store, &comp, &linker).unwrap();
         Ok(Self {
             instance,
