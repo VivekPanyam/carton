@@ -116,6 +116,7 @@ if __name__ == "__main__":
         run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-py", "--bin", "build_releases", "--", "--output-path", args.runner_release_dir])
         run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-rust-bert", "--bin", "build_rust_bert_releases", "--", "--output-path", args.runner_release_dir])
         run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-torch", "--bin", "build_torch_releases", "--", "--output-path", args.runner_release_dir])
+        run_command(["cargo", "run", RELEASE_FLAG, "--timings", "--target", TARGET, "-p", "carton-runner-wasm", "--bin", "build_wasm_releases", "--", "--output-path", args.runner_release_dir])
 
     # Show sccache stats
     RUSTC_WRAPPER = os.getenv("RUSTC_WRAPPER", "")

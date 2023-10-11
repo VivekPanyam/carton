@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Result};
-use wasmtime::{Engine, Store};
 use wasmtime::component::*;
+use wasmtime::{Engine, Store};
 
 use carton_runner_interface::types::Tensor as CartonTensor;
 
@@ -31,11 +31,17 @@ impl WASMModelInstance {
         })
     }
 
-    pub fn infer(&mut self, inputs: HashMap<String, CartonTensor>) -> Result<HashMap<String, CartonTensor>> {
-        let inputs = inputs.into_iter()
+    pub fn infer(
+        &mut self,
+        inputs: HashMap<String, CartonTensor>,
+    ) -> Result<HashMap<String, CartonTensor>> {
+        let inputs = inputs
+            .into_iter()
             .map(|(k, v)| Ok((k, v.try_into()?)))
             .collect::<Result<Vec<(String, Tensor)>>>()?;
-        let outputs = self.model.call_infer(&mut self.store, inputs.as_ref())
+        let outputs = self
+            .model
+            .call_infer(&mut self.store, inputs.as_ref())
             .map_err(|e| eyre!(e))?;
         let mut ret = HashMap::new();
         for (k, v) in outputs.into_iter() {

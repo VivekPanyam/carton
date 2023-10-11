@@ -2,16 +2,16 @@ package carton-wasm:lib
 
 interface types {
     enum dtype {
-        f32,
-        f64,
-        i8,
-        i16,
-        i32,
-        i64,
-        ui8,
-        ui16,
-        ui32,
-        ui64,
+        float,
+        double,
+        I8,
+        I16,
+        I32,
+        I64,
+        U8,
+        U16,
+        U32,
+        U64,
     }
     record tensor-numeric {
         buffer: list<u8>,
@@ -24,7 +24,7 @@ interface types {
     }
     variant tensor {
         numeric(tensor-numeric),
-        str(tensor-string),
+        %string(tensor-string),
     }
 }
 

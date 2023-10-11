@@ -7,7 +7,10 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-color-eyre = "0.6.2"
 wit-bindgen = "0.12.0"
 
 [workspace]
+
+[profile.release]
+lto = true
+opt-level = 'z'
