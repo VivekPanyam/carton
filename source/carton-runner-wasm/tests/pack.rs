@@ -84,7 +84,7 @@ async fn test_pack() {
         .await
         .unwrap();
 
-    let mut s = match out.get("out1").unwrap() {
+    let s = match out.get("out1").unwrap() {
         Tensor::Float(s) => s,
         _ => panic!("Invalid tensor type"),
     };

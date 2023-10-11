@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Result};
-use wasmtime::component::*;
 use wasmtime::{Engine, Store};
+use wasmtime::component::{Component, Linker};
 
 use carton_runner_interface::types::Tensor as CartonTensor;
 
@@ -12,7 +12,6 @@ mod component;
 mod types;
 
 pub struct WASMModelInstance {
-    instance: Instance,
     store: Store<HostImpl>,
     model: Model,
 }
@@ -29,16 +28,13 @@ impl WASMModelInstance {
         - Model is the loaded and linked interface, i.e. the API we expect the
           user to implement. (Non stateful)
           TODO: rename to ModelInterface
-        - Instance is the state of the actual WASM module, we actually don't need
-          to store it if we don't need to access any resources from the module.
          */
         let comp = Component::from_binary(&engine, bytes).unwrap();
         let mut linker = Linker::<HostImpl>::new(&engine);
         Model::add_to_linker(&mut linker, |state: &mut HostImpl| state).unwrap();
         let mut store = Store::new(&engine, HostImpl);
-        let (model, instance) = Model::instantiate(&mut store, &comp, &linker).unwrap();
+        let (model, _) = Model::instantiate(&mut store, &comp, &linker).unwrap();
         Ok(Self {
-            instance,
             store,
             model,
         })
