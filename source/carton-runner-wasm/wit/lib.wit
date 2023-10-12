@@ -1,0 +1,34 @@
+package carton-wasm:lib
+
+interface types {
+    enum dtype {
+        float,
+        double,
+        I8,
+        I16,
+        I32,
+        I64,
+        U8,
+        U16,
+        U32,
+        U64,
+    }
+    record tensor-numeric {
+        buffer: list<u8>,
+        dtype: dtype,
+        shape: list<u64>,
+    }
+    record tensor-string {
+        buffer: list<string>,
+        shape: list<u64>,
+    }
+    variant tensor {
+        numeric(tensor-numeric),
+        %string(tensor-string),
+    }
+}
+
+world model {
+    use types.{tensor};
+    export infer: func(in: list<tuple<string, tensor>>) -> list<tuple<string, tensor>>;
+}
