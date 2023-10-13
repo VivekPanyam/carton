@@ -366,10 +366,9 @@ pub async fn init_runner() -> Server {
     // NOTE: this technically shuts down if the thread that forked this process dies, but since
     // the parent should be running in tokio, this should be okay because if the parent's tokio
     // runtime goes down, we should go down.
+    // We can't log here because we haven't set up logging yet so just store that it failed
     #[cfg(not(target_os = "macos"))]
-    if unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } != 0 {
-        panic!("prctl failed")
-    }
+    let prctl_failed = unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) } != 0;
 
     // Watchdog on macos where we can't use PR_SET_PDEATHSIG
     #[cfg(target_os = "macos")]
@@ -414,6 +413,11 @@ pub async fn init_runner() -> Server {
 
     if let Some(ka) = keepalive {
         s._keepalive.push(Box::new(Mutex::new(ka)));
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    if prctl_failed {
+        log::info!("prctl with `PR_SET_PDEATHSIG` failed in the runner process. This can happen when running in a restricted environment. Continuing without it...");
     }
 
     s
