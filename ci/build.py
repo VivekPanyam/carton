@@ -94,10 +94,10 @@ if __name__ == "__main__":
         os.environ["LIBTORCH_CXX11_ABI"] = "0"
 
     # Fetch deps (always in release mode)
-    run_command(["cargo", "run", "--timings", "--release", "-p", "fetch-deps", "--target", TARGET])
+    run_command(["cargo", "run", "--locked", "--timings", "--release", "-p", "fetch-deps", "--target", TARGET])
 
     # Build everything
-    run_command(["cargo", "build", RELEASE_FLAG, "--verbose", "--timings", "--target", TARGET])
+    run_command(["cargo", "build", "--locked", RELEASE_FLAG, "--verbose", "--timings", "--target", TARGET])
 
     # Build wheels for the python bindings
     # TODO: store timing info
