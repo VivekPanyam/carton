@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// libtorch
+
 // x86 linux
 #[cfg(all(not(target_os = "macos"), target_arch = "x86_64"))]
 pub mod libtorch {
@@ -41,3 +43,36 @@ pub mod libtorch {
 }
 
 pub const LIBTORCH_VERSION: semver::Version = semver::Version::new(2, 0, 1);
+
+// XLA
+
+// x86 linux
+#[cfg(all(not(target_os = "macos"), target_arch = "x86_64"))]
+pub mod xla {
+    pub const URL: &str = "https://github.com/elixir-nx/xla/releases/download/v0.5.1/xla_extension-x86_64-linux-gnu-cuda120.tar.gz";
+    pub const SHA256: &str = "7fb09643285ab85facba52a021c421188549fa0193a58feb52a6b9a129e7920c";
+}
+
+// aarch64 linux
+#[cfg(all(not(target_os = "macos"), target_arch = "aarch64"))]
+pub mod xla {
+    pub const URL: &str = "https://github.com/elixir-nx/xla/releases/download/v0.5.1/xla_extension-aarch64-linux-gnu-cpu.tar.gz";
+    pub const SHA256: &str = "6580deebdd44b345bbdb48eb1450eaad96ccdc85c41dd6c7034ee838cb1d78b6";
+}
+
+// x86 mac
+#[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+pub mod xla {
+    pub const URL: &str = "https://github.com/elixir-nx/xla/releases/download/v0.5.1/xla_extension-x86_64-darwin-cpu.tar.gz";
+    pub const SHA256: &str = "734ee140c9521505bc3182954095e461042de0af63236d8d63681ed4339d6ac9";
+}
+
+// aarch64 mac
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+pub mod xla {
+    pub const URL: &str = "https://github.com/elixir-nx/xla/releases/download/v0.5.1/xla_extension-aarch64-darwin-cpu.tar.gz";
+    pub const SHA256: &str = "975cde36e94835139ca5d6e5232a0e4d9131b3e17df05a7fbbce09c2a2e4695e";
+}
+
+// TODO: this is not the actual version of XLA, but the version of the elixir xla prebuilts
+pub const XLA_VERSION: semver::Version = semver::Version::new(0, 5, 1);
