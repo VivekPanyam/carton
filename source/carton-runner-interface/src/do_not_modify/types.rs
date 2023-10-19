@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use carton_macros::for_each_carton_type;
+pub use carton_macros::{for_each_carton_type, for_each_numeric_carton_type};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::{alloc_inline::InlineTensorStorage, comms::Comms};
+use super::{
+    alloc::AllocatableBy,
+    alloc_inline::{InlineAllocator, InlineTensorStorage},
+    comms::Comms,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct RPCRequest {
@@ -246,6 +250,9 @@ for_each_carton_type! {
 }
 
 pub type TensorStorage<T> = super::storage::TensorStorage<T, InlineTensorStorage>;
+
+pub trait Allocatable: AllocatableBy<InlineAllocator> {}
+impl<T> Allocatable for T where T: AllocatableBy<InlineAllocator> {}
 
 for_each_carton_type! {
     $(

@@ -25,7 +25,7 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
 use super::{
-    alloc::{AsPtr, NumericTensorType, TypedAlloc},
+    alloc::{AsPtr, NumericTensorType, TypedAlloc, Allocator, AllocatableBy},
     alloc_pool::{AllocItem, PoolAllocator, PoolItem},
     storage::TensorStorage,
 };
@@ -260,12 +260,14 @@ impl SHMAllocator {
     }
 }
 
+impl Allocator for SHMAllocator {
+    type Output = SHMTensorStorage;
+}
+
 for_each_numeric_carton_type! {
     $(
         /// We're using a macro here instead of a generic impl because rust gives misleading error messages otherwise.
         impl TypedAlloc<$RustType> for SHMAllocator {
-            type Output = SHMTensorStorage;
-
             fn alloc(&self, numel: usize) -> Self::Output {
                 // We need to convert to size_bytes
                 let size_bytes = numel * std::mem::size_of::<$RustType>();
@@ -282,8 +284,6 @@ for_each_numeric_carton_type! {
 }
 
 impl TypedAlloc<String> for SHMAllocator {
-    type Output = SHMTensorStorage;
-
     fn alloc(&self, numel: usize) -> Self::Output {
         let out = if !self.use_pool {
             vec![String::default(); numel].into()
@@ -384,17 +384,15 @@ impl From<ndarray::ArrayViewD<'_, String>> for TensorStorage<String, SHMTensorSt
 
 // Allocates a contiguous tensor with a shape and type
 #[cfg(feature = "benchmark")]
-pub fn alloc_tensor_no_pool<T: Default + Clone>(
+pub fn alloc_tensor_no_pool<T: Default + Clone + AllocatableBy<SHMAllocator>>(
     shape: Vec<u64>,
 ) -> TensorStorage<T, SHMTensorStorage>
-where
-    SHMAllocator: TypedAlloc<T, Output = SHMTensorStorage>,
 {
     static POOL_ALLOCATOR: Lazy<SHMAllocator> = Lazy::new(|| SHMAllocator::without_pool());
 
     let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = <SHMAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
+    let data = T::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,
@@ -404,20 +402,28 @@ where
     }
 }
 
-pub fn alloc_tensor<T: Default + Clone>(shape: Vec<u64>) -> TensorStorage<T, SHMTensorStorage>
-where
-    SHMAllocator: TypedAlloc<T, Output = SHMTensorStorage>,
+pub fn alloc_tensor<T: Default + Clone + AllocatableBy<SHMAllocator>>(shape: Vec<u64>) -> TensorStorage<T, SHMTensorStorage>
 {
     static POOL_ALLOCATOR: Lazy<SHMAllocator> = Lazy::new(|| SHMAllocator::new());
 
     let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = <SHMAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
+    let data = T::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,
         shape,
         strides: None,
         pd: PhantomData,
+    }
+}
+
+
+impl<T> AllocatableBy<SHMAllocator> for T
+where
+    SHMAllocator: TypedAlloc<T, Output = SHMTensorStorage>,
+{
+    fn alloc(allocator: &SHMAllocator, numel: usize) -> SHMTensorStorage {
+        <SHMAllocator as TypedAlloc<T>>::alloc(allocator, numel)
     }
 }
