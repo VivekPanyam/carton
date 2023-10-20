@@ -21,7 +21,7 @@ fn test_cpp_examples() {
     // Build the bindings
     let bindings_dir = tempfile::tempdir().unwrap();
     let bindings_path = bindings_dir.path().join("libcarton_cpp.so");
-    build_utils::build_cpp_bindings(&bindings_path);
+    build_utils::build_cpp_bindings(&bindings_dir.path());
 
     // For each cc file in the tests dir
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -55,7 +55,6 @@ fn test_cpp_examples() {
             command.arg(bindings_path.as_path());
             command.args(compiler.args());
             command.arg("-o").arg(tempdir.path().join("test"));
-            command.arg("-lm");
 
             let mut compiler_output = command.spawn().unwrap();
             assert!(compiler_output.wait().unwrap().success());
