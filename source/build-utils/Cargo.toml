@@ -8,3 +8,10 @@ publish = false
 escargot = "0.5.8"
 log = "0.4"
 cc = "1.0"
+clap = { version = "4.0.29", features = ["derive"] }
+env_logger = "0.9"
+tempfile = "3.3.0"
+
+# Required by the bindings upload code
+rust-s3 = { version = "0.32.3", features = ["tokio-rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["full"] }

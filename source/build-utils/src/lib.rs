@@ -17,8 +17,13 @@ use std::{
     process::Command,
 };
 
+pub struct CBindings {
+    pub shared_lib: PathBuf,
+    pub static_lib: PathBuf,
+}
+
 /// Build the Carton C bindings
-pub fn build_c_bindings() -> PathBuf {
+pub fn build_c_bindings() -> CBindings {
     // Build the bindings
     log::info!("Building C bindings...");
     let mut cargo_messages = escargot::CargoBuild::new()
@@ -34,14 +39,49 @@ pub fn build_c_bindings() -> PathBuf {
         .find_map(|ref message| {
             let message = message.as_ref().unwrap();
             let decoded = message.decode().unwrap();
-            extract_lib(&decoded, "staticlib")
+
+            match decoded {
+                escargot::format::Message::CompilerArtifact(art) => {
+                    if !art.profile.test
+                        && art.target.name == "carton-bindings-c"
+                        && art.target.crate_types == ["staticlib", "cdylib"]
+                        && art.target.kind == ["staticlib", "cdylib"]
+                    {
+                        if art
+                            .filenames
+                            .get(0)
+                            .unwrap()
+                            .extension()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            == "so"
+                        {
+                            // Shared lib first
+                            Some(CBindings {
+                                shared_lib: art.filenames.get(0).unwrap().to_path_buf(),
+                                static_lib: art.filenames.get(1).unwrap().to_path_buf(),
+                            })
+                        } else {
+                            // Static lib first
+                            Some(CBindings {
+                                shared_lib: art.filenames.get(1).unwrap().to_path_buf(),
+                                static_lib: art.filenames.get(0).unwrap().to_path_buf(),
+                            })
+                        }
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            }
         })
         .unwrap()
 }
 
 /// Build the Carton C++ bindings
-pub fn build_cpp_bindings(output_path: &Path) {
-    let c_bindings_path = build_c_bindings();
+pub fn build_cpp_bindings(output_folder: &Path) {
+    let c_bindings_path = build_c_bindings().static_lib;
     log::info!("Building C++ bindings...");
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
 
@@ -55,15 +95,46 @@ pub fn build_cpp_bindings(output_path: &Path) {
         .try_get_compiler()
         .unwrap();
 
+    // Build a .o file
+    let tempdir = tempfile::tempdir().unwrap();
     let mut command = Command::new(compiler.path());
-    command.arg(manifest_dir.join("../carton-bindings-cpp/src/carton.cc"));
-    command.arg(c_bindings_path);
-    command.args(compiler.args());
-    command.arg("-std=c++20");
     command
+        .arg(manifest_dir.join("../carton-bindings-cpp/src/carton.cc"))
+        .args(compiler.args())
+        .arg("-std=c++20")
         .arg("-I")
-        .arg(manifest_dir.join("../carton-bindings-c"));
-    command.arg("-shared");
+        .arg(manifest_dir.join("../carton-bindings-c"))
+        .arg("-c")
+        .arg("-o")
+        .arg(tempdir.path().join("cartoncpp.o"));
+
+    log::info!("Running command {command:?}");
+
+    let mut compiler_output = command.spawn().unwrap();
+    assert!(compiler_output.wait().unwrap().success());
+
+    // Build a static library
+    // TODO: this isn't ideal because it requires ar on the path
+    std::fs::copy(&c_bindings_path, output_folder.join("libcarton_cpp.a")).unwrap();
+    let mut command = Command::new("ar");
+    command
+        .arg("-rv")
+        .arg(output_folder.join("libcarton_cpp.a"))
+        .arg(tempdir.path().join("cartoncpp.o"));
+
+    log::info!("Running command {command:?}");
+
+    let mut ar_output = command.spawn().unwrap();
+    assert!(ar_output.wait().unwrap().success());
+
+    // Build a shared library
+    let mut command = Command::new(compiler.path());
+    command
+        .arg("-shared")
+        .arg("-o")
+        .arg(output_folder.join("libcarton_cpp.so"))
+        .arg(tempdir.path().join("cartoncpp.o"))
+        .arg(c_bindings_path);
 
     #[cfg(not(target_os = "macos"))]
     command.arg("-pthread").arg("-ldl");
@@ -75,32 +146,8 @@ pub fn build_cpp_bindings(output_path: &Path) {
         .arg("-framework")
         .arg("Security");
 
-    command.arg("-o").arg(output_path);
-
     log::info!("Running command {command:?}");
 
     let mut compiler_output = command.spawn().unwrap();
     assert!(compiler_output.wait().unwrap().success());
-}
-
-/// Based on `extract_bin` within escargot
-fn extract_lib(msg: &escargot::format::Message, desired_kind: &str) -> Option<PathBuf> {
-    match msg {
-        escargot::format::Message::CompilerArtifact(art) => {
-            if !art.profile.test
-                && art.target.crate_types == [desired_kind]
-                && art.target.kind == [desired_kind]
-            {
-                Some(
-                    art.filenames
-                        .get(0)
-                        .expect("files must exist")
-                        .to_path_buf(),
-                )
-            } else {
-                None
-            }
-        }
-        _ => None,
-    }
 }

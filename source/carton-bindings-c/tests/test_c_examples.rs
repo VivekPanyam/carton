@@ -20,7 +20,7 @@ fn test_c_examples() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     // Build the bindings
-    let lib_path = build_utils::build_c_bindings();
+    let lib_path = build_utils::build_c_bindings().shared_lib;
 
     // For each c file in the tests dir
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -52,17 +52,6 @@ fn test_c_examples() {
             command.arg(lib_path.as_path());
             command.args(compiler.args());
             command.arg("-o").arg(tempdir.path().join("test"));
-            command.arg("-lm");
-
-            #[cfg(not(target_os = "macos"))]
-            command.arg("-pthread").arg("-ldl");
-
-            #[cfg(target_os = "macos")]
-            command
-                .arg("-framework")
-                .arg("CoreFoundation")
-                .arg("-framework")
-                .arg("Security");
 
             let mut compiler_output = command.spawn().unwrap();
             assert!(compiler_output.wait().unwrap().success());

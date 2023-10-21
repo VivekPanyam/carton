@@ -434,8 +434,13 @@ name = "build-utils"
 version = "0.0.1"
 dependencies = [
  "cc",
+ "clap 4.4.6",
+ "env_logger 0.9.3",
  "escargot",
  "log",
+ "rust-s3",
+ "tempfile",
+ "tokio",
 ]
 
 [[package]]

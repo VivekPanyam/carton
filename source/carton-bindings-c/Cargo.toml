@@ -11,7 +11,7 @@ keywords = []
 categories = []
 
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
 cxx = "1.0"
