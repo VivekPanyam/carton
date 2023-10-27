@@ -134,7 +134,7 @@ export default function Home() {
               // Display each language twice
               [1, 2].flatMap((idx) => LANGUAGES.map((lang) => <span key={`${lang}-${idx}`} className={`${roboto_mono.className} select-none uppercase px-20 text-slate-500`}>
                 {lang}
-                {["python", "rust"].indexOf(lang.toLowerCase()) == -1 && <span className='text-sky-400'>*</span>}
+                {["python", "rust", "c", "c++"].indexOf(lang.toLowerCase()) == -1 && <span className='text-sky-400'>*</span>}
               </span>))
             }
           </div>
