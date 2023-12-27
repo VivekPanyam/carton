@@ -31,8 +31,17 @@ pub trait AsPtr<T> {
     fn as_mut_ptr(&mut self) -> *mut T;
 }
 
-pub trait TypedAlloc<T> {
-    type Output: AsPtr<T>;
+pub trait Allocator {
+    type Output;
+}
 
+pub trait TypedAlloc<T>: Allocator
+where
+    Self::Output: AsPtr<T>,
+{
     fn alloc(&self, numel: usize) -> Self::Output;
+}
+
+pub trait AllocatableBy<A: Allocator>: Sized {
+    fn alloc(allocator: &A, numel: usize) -> A::Output;
 }

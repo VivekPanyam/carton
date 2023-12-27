@@ -1,8 +1,9 @@
 use color_eyre::eyre::{ensure, eyre};
 use color_eyre::{Report, Result};
 
-use carton::types::for_each_numeric_carton_type;
-use carton_runner_interface::types::{Tensor as CartonTensor, TensorStorage as CartonStorage};
+use carton_runner_interface::types::{
+    for_each_numeric_carton_type, Tensor as CartonTensor, TensorStorage as CartonStorage,
+};
 
 use crate::component::{Dtype, Tensor as WasmTensor, TensorNumeric, TensorString};
 

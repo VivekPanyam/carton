@@ -23,7 +23,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    alloc::{AsPtr, NumericTensorType, TypedAlloc},
+    alloc::{AllocatableBy, Allocator, AsPtr, NumericTensorType, TypedAlloc},
     alloc_pool::{PoolAllocator, PoolItem},
     storage::TensorStorage,
 };
@@ -79,12 +79,14 @@ impl<T> AsPtr<T> for InlineTensorStorage {
     }
 }
 
+impl Allocator for InlineAllocator {
+    type Output = InlineTensorStorage;
+}
+
 for_each_numeric_carton_type! {
     $(
         /// We're using a macro here instead of a generic impl because rust gives misleading error messages otherwise.
         impl TypedAlloc<$RustType> for InlineAllocator {
-            type Output = InlineTensorStorage;
-
             fn alloc(&self, numel: usize) -> Self::Output {
                 // We need to convert to size_bytes since we always use a Vec<u8>
                 let size_bytes = numel * std::mem::size_of::<$RustType>();
@@ -101,8 +103,6 @@ for_each_numeric_carton_type! {
 }
 
 impl TypedAlloc<String> for InlineAllocator {
-    type Output = InlineTensorStorage;
-
     fn alloc(&self, numel: usize) -> Self::Output {
         let out = if !self.use_pool {
             vec![String::default(); numel].into()
@@ -115,10 +115,8 @@ impl TypedAlloc<String> for InlineAllocator {
 }
 
 // Copy the data
-impl<T: NumericTensorType + Default + Copy> From<ndarray::ArrayViewD<'_, T>>
-    for TensorStorage<T, InlineTensorStorage>
-where
-    InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
+impl<T: NumericTensorType + Default + Copy + AllocatableBy<InlineAllocator>>
+    From<ndarray::ArrayViewD<'_, T>> for TensorStorage<T, InlineTensorStorage>
 {
     fn from(view: ndarray::ArrayViewD<'_, T>) -> Self {
         // Alloc a tensor
@@ -152,17 +150,14 @@ impl From<ndarray::ArrayViewD<'_, String>> for TensorStorage<String, InlineTenso
 
 // Allocates a contiguous tensor with a shape and type
 #[cfg(feature = "benchmark")]
-pub fn alloc_tensor_no_pool<T: Default + Clone>(
+pub fn alloc_tensor_no_pool<T: Default + Clone + AllocatableBy<InlineAllocator>>(
     shape: Vec<u64>,
-) -> TensorStorage<T, InlineTensorStorage>
-where
-    InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
-{
+) -> TensorStorage<T, InlineTensorStorage> {
     static POOL_ALLOCATOR: Lazy<InlineAllocator> = Lazy::new(|| InlineAllocator::without_pool());
 
     let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = <InlineAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
+    let data = T::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,
@@ -172,15 +167,14 @@ where
     }
 }
 
-pub fn alloc_tensor<T: Default + Clone>(shape: Vec<u64>) -> TensorStorage<T, InlineTensorStorage>
-where
-    InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
-{
+pub fn alloc_tensor<T: Default + Clone + AllocatableBy<InlineAllocator>>(
+    shape: Vec<u64>,
+) -> TensorStorage<T, InlineTensorStorage> {
     static POOL_ALLOCATOR: Lazy<InlineAllocator> = Lazy::new(|| InlineAllocator::new());
 
     let numel = shape.iter().product::<u64>().max(1) as usize;
 
-    let data = <InlineAllocator as TypedAlloc<T>>::alloc(&POOL_ALLOCATOR, numel);
+    let data = T::alloc(&POOL_ALLOCATOR, numel);
 
     TensorStorage {
         data,
@@ -190,11 +184,17 @@ where
     }
 }
 
-impl<T: Default + Clone> TensorStorage<T, InlineTensorStorage>
+impl<T: Default + Clone + AllocatableBy<InlineAllocator>> TensorStorage<T, InlineTensorStorage> {
+    pub fn new(shape: Vec<u64>) -> TensorStorage<T, InlineTensorStorage> {
+        alloc_tensor(shape)
+    }
+}
+
+impl<T> AllocatableBy<InlineAllocator> for T
 where
     InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
 {
-    pub fn new(shape: Vec<u64>) -> TensorStorage<T, InlineTensorStorage> {
-        alloc_tensor(shape)
+    fn alloc(allocator: &InlineAllocator, numel: usize) -> InlineTensorStorage {
+        <InlineAllocator as TypedAlloc<T>>::alloc(allocator, numel)
     }
 }

@@ -17,12 +17,8 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{
     client::Client,
     do_not_modify::comms::OwnedComms,
-    do_not_modify::{
-        alloc::TypedAlloc,
-        alloc_inline::{InlineAllocator, InlineTensorStorage},
-        types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
-    },
-    types::{Handle, RunnerOpt, TensorStorage},
+    do_not_modify::types::{Device, RPCRequestData, RPCResponseData, SealHandle, Tensor},
+    types::{Allocatable, Handle, RunnerOpt, TensorStorage},
 };
 
 use futures::Stream;
@@ -299,9 +295,11 @@ impl Runner {
         }
     }
 
-    pub fn alloc_tensor<T: Clone + Default>(&self, shape: Vec<u64>) -> Result<Tensor, String>
+    pub fn alloc_tensor<T: Clone + Default + Allocatable>(
+        &self,
+        shape: Vec<u64>,
+    ) -> Result<Tensor, String>
     where
-        InlineAllocator: TypedAlloc<T, Output = InlineTensorStorage>,
         Tensor: From<TensorStorage<T>>,
     {
         Ok(TensorStorage::new(shape).into())
