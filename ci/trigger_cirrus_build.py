@@ -71,6 +71,8 @@ query = gql(
 CIRRUS_BUILD_CONFIG = """
 env:
   CARGO_TERM_COLOR: always
+  CI_NODE_INDEX: 0
+  CI_NODE_TOTAL: 1
 
 # Nightly release builds
 # nightly_linux_task:
@@ -107,6 +109,7 @@ nightly_macos_task:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
   build_and_test_script:
     - source $HOME/.cargo/env
+    - npm install -g yarn@1.22
     - pip3 install toml maturin==0.14.13
     - python3 ci/build.py --target aarch64-apple-darwin --release --nightly --runner_release_dir $CIRRUS_WORKING_DIR/runner_releases  --c_cpp_bindings_release_dir $CIRRUS_WORKING_DIR/bindings_releases
   binaries_artifacts:

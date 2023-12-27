@@ -1,0 +1,9 @@
+build/
+node_modules/
+out/
+
+# Build output
+index.cjs
+index.d.ts
+
+*.node

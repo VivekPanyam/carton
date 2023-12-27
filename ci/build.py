@@ -116,8 +116,15 @@ if __name__ == "__main__":
 
     run_command(py_bindings_cmd, cwd=os.path.join(os.getcwd(), "source/carton-bindings-py"))
 
+    # Build nodejs bindings
+    run_command(["yarn", "install", "--ignore-engines"], cwd=os.path.join(os.getcwd(), "source/carton-bindings-napi"))
+    run_command(["yarn", "build", RELEASE_FLAG, "--target", TARGET], cwd=os.path.join(os.getcwd(), "source/carton-bindings-napi"))
+
     # Run tests
     run_command(["cargo", "test", RELEASE_FLAG, "--verbose", "--timings", "--target", TARGET], env=dict(os.environ, RUST_LOG="info,carton=trace"))
+
+    # Run nodejs tests
+    run_command(["yarn", "test"], cwd=os.path.join(os.getcwd(), "source/carton-bindings-napi"))
 
     # Build the runner releases
     if args.runner_release_dir is not None:

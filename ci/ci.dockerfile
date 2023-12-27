@@ -27,3 +27,12 @@ RUN mkdir -p /sccache && \
     wget https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-${BUILD_TARGET}-unknown-linux-musl.tar.gz -O sccache.tar.gz && \
     tar -xvf sccache.tar.gz && \
     mv sccache-v0.5.4-${BUILD_TARGET}-unknown-linux-musl/sccache .
+
+# Install nvm and node
+ENV NVM_DIR /usr/local/nvm
+ENV NODE_VERSION v18.16.1
+RUN mkdir -p $NVM_DIR
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+RUN source $NVM_DIR/nvm.sh && nvm install $NODE_VERSION && npm install -g yarn@1.22
+ENV NODE_PATH $NVM_DIR/versions/node/$NODE_VERSION/lib/node_modules
+ENV PATH      $NVM_DIR/versions/node/$NODE_VERSION/bin:$PATH
