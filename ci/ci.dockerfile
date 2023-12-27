@@ -9,8 +9,8 @@ ARG BUILD_TARGET
 # Install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
 
-# Get python 3.10 (+ libs)
-RUN yum install -y wget && \
+# Get python 3.10 (+ other deps)
+RUN yum install -y wget clang && \
     wget https://github.com/indygreg/python-build-standalone/releases/download/20230116/cpython-3.10.9+20230116-${BUILD_TARGET}-unknown-linux-gnu-install_only.tar.gz -O python.tar.gz && \
     tar -xvf python.tar.gz && \
     yum clean all
