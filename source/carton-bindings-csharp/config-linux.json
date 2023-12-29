@@ -1,0 +1,10 @@
+{
+    "inputFilePath": "../carton-bindings-c/carton.h",
+    "userIncludeDirectories": [
+        "/usr/lib/clang/16/include/"
+    ],
+    "platforms": {
+        "aarch64-unknown-linux-gnu": {},
+        "x86_64-unknown-linux-gnu": {}
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "inputFilePath": "./cross-platform-ast.json",
+    "outputFileDirectory": "./csharp/Carton/Native",
+    "namespaceName": "Carton.Native",
+    "className": "CartonBindings",
+    "libraryName": "./libcarton_bindings_c",
+    "isEnabledFileScopedNamespace": false,
+    "isEnabledLibraryImport": true
+}
