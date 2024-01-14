@@ -82,6 +82,121 @@ namespace carton
         }
     }
 
+    // Utility to let us read and write strings more easily
+    // This is returned by `TensorAccessor` when indexing string tensors
+    template <typename T>
+    class TensorStringValue
+    {
+    private:
+        T &tensor_;
+
+        uint64_t index_;
+
+    public:
+        TensorStringValue(T &tensor, uint64_t index) : tensor_(tensor), index_(index) {}
+
+        // Assignment of a string type
+        void operator=(std::string_view val)
+        {
+            tensor_.set_string(index_, val);
+        }
+
+        // Reading of a string type
+        operator std::string_view() const
+        {
+            return tensor_.get_string(index_);
+        }
+    };
+
+    template <typename T>
+    std::ostream &operator<<(std::ostream &os, const TensorStringValue<T> &v)
+    {
+        os << std::string_view(v);
+        return os;
+    }
+
+    // Impl for Tensor
+    // Using the accessor methods can be faster when accessing many elements because
+    // they avoid making function calls on each element access
+    template <typename T, size_t NumDims>
+    auto Tensor::accessor()
+    {
+        // TODO: assert N == ndims
+        // TODO: assert data type
+        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, std::string>)
+        {
+            return TensorAccessor<std::string_view, NumDims, Tensor &>(*this, strides());
+        }
+        else
+        {
+            return TensorAccessor<T, NumDims, void *>(data(), strides());
+        }
+    }
+
+    // Using the accessor methods can be faster when accessing many elements because
+    // they avoid making function calls on each element access
+    template <typename T, size_t NumDims>
+    auto Tensor::accessor() const
+    {
+        // TODO: assert N == ndims
+        // TODO: assert data type
+        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, std::string>)
+        {
+            return TensorAccessor<std::string_view, NumDims, const Tensor &>(*this, strides());
+        }
+        else
+        {
+            return TensorAccessor<T, NumDims, const void *>(data(), strides());
+        }
+    }
+
+    template <typename T, typename... Index>
+    auto Tensor::at(Index... index) const
+    {
+        constexpr auto N = sizeof...(Index);
+        auto acc = accessor<T, N>();
+        return acc.operator[](std::forward<Index>(index)...);
+    }
+
+    template <typename T, typename... Index>
+    auto Tensor::at(Index... index)
+    {
+        constexpr auto N = sizeof...(Index);
+        auto acc = accessor<T, N>();
+        return acc.operator[](std::forward<Index>(index)...);
+    }
+
+    // Impl for TensorAccessor
+    template <typename T, size_t NumDims, typename DataContainer>
+    template <typename... Index>
+    auto TensorAccessor<T, NumDims, DataContainer>::operator[](Index... index) const
+    {
+        constexpr auto num_indices = sizeof...(Index);
+        static_assert(NumDims == num_indices, "Incorrect number of indices");
+
+        // Compute the index. This all gets flattened out at compile time
+        int i = 0;
+
+        // Basically sets up a dot product of `index` and `strides`
+        auto offset = ([&]
+                       { return index * strides_[i++]; }() +
+                       ...);
+
+        if constexpr (std::is_same_v<T, std::string_view> || std::is_same_v<T, std::string>)
+        {
+            // Handle string tensors separately
+            // For convenience, we allow T to be std::string, but we always use `std::string_view`
+            // to avoid unnecessary copies.
+            return TensorStringValue(data_, offset);
+        }
+        else
+        {
+            // Numeric tensors
+            static_assert(std::is_arithmetic_v<T>, "accessor() only supports string and numeric tensors");
+            return static_cast<const T *>(data_)[offset * sizeof(T)];
+        }
+    }
+
     // Impl for AsyncNotifier
     template <typename T>
     AsyncNotifier<T>::AsyncNotifier() : AsyncNotifierBase() {}

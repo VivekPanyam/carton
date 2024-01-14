@@ -185,8 +185,9 @@ impl CartonTensor {
         }
     }
 
-    /// For a string tensor, get a string at a particular (flattened) index into the tensor.
+    /// For a string tensor, get a string at a particular flattened index into the tensor.
     /// Note: any returned pointers are only valid until the tensor is modified.
+    /// Note: `index` should take strides into account.
     #[no_mangle]
     pub extern "C" fn carton_tensor_get_string(
         &self,
@@ -196,7 +197,10 @@ impl CartonTensor {
     ) {
         if let carton_core::types::Tensor::String(v) = &self.inner {
             let view = v.view();
-            let item = view.iter().nth(index as _).unwrap();
+            let ptr = view.as_ptr();
+
+            // TODO: assert that the index is in bounds
+            let item = unsafe { &*ptr.add(index as _) };
             unsafe {
                 *string_out = item.as_ptr() as *const _;
                 *strlen_out = item.len() as _;
@@ -206,13 +210,18 @@ impl CartonTensor {
         }
     }
 
-    /// For a string tensor, set a string at a particular (flattened) index.
+    /// For a string tensor, set a string at a particular flattened index.
+    /// Copies the null-terminated string `string` into the tensor at the specified index.
+    /// Note: `index` should take strides into account.
     #[no_mangle]
     pub extern "C" fn carton_tensor_set_string(&mut self, index: u64, string: *const c_char) {
         let new = unsafe { CStr::from_ptr(string).to_str().unwrap().to_owned() };
         self.carton_tensor_set_string_inner(index, new);
     }
 
+    /// For a string tensor, set a string at a particular flattened index.
+    /// Copies `strlen` bytes of `string` into the tensor at the specified index.
+    /// Note: `index` should take strides into account.
     #[no_mangle]
     pub extern "C" fn carton_tensor_set_string_with_strlen(
         &mut self,
@@ -232,7 +241,10 @@ impl CartonTensor {
     fn carton_tensor_set_string_inner(&mut self, index: u64, string: String) {
         if let carton_core::types::Tensor::String(v) = &mut self.inner {
             let mut view = v.view_mut();
-            let item = view.iter_mut().nth(index as _).unwrap();
+            let ptr = view.as_mut_ptr();
+
+            // TODO: assert that the index is in bounds
+            let item = unsafe { &mut *ptr.add(index as _) };
             *item = string;
         } else {
             panic!("Tried to call `set_string` on a non-string tensor")

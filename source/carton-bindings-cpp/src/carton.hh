@@ -93,6 +93,19 @@ namespace carton
 
         friend class TensorMap;
 
+        template <typename T>
+        friend class TensorStringValue;
+
+        // For a string tensor, set a string at a particular flattened index
+        // This will copy data from the provided string_view.
+        // Note: `index` should take strides into account.
+        void set_string(uint64_t index, std::string_view string);
+
+        // For a string tensor, get a string at a particular flattened index
+        // Note: the returned view is only valid until the tensor is modified.
+        // Note: `index` should take strides into account.
+        std::string_view get_string(uint64_t index) const;
+
     public:
         // Create a tensor with dtype `dtype` and shape `shape`
         Tensor(DataType dtype, std::span<uint64_t> shape);
@@ -131,15 +144,57 @@ namespace carton
         // Note: the returned span is only valid while this Tensor is in scope
         std::span<const int64_t> strides() const;
 
-        // For a string tensor, set a string at a particular (flattened) index
-        // This will copy data from the provided string_view.
-        // TODO: do some template magic to make this easy to use
-        void set_string(uint64_t index, std::string_view string);
+        // Using the accessor methods can be faster than `at` when accessing many elements
+        // because they avoid making function calls on each element access.
+        // See `TensorAccessor` below for usage.
+        template <typename T, size_t NumDims>
+        auto accessor();
 
-        // For a string tensor, get a string at a particular (flattened) index
-        // Note: the returned view is only valid until the tensor is modified.
-        // TODO: do some template magic to make this easy to use
-        std::string_view get_string(uint64_t index) const;
+        // Using the accessor methods can be faster than `at` when accessing many elements
+        // because they avoid making function calls on each element access.
+        // See `TensorAccessor` below for usage.
+        template <typename T, size_t NumDims>
+        auto accessor() const;
+
+        // Get an element at an index
+        // This is a convenience wrapper that creates an `accessor` and uses it
+        // Consider explicitly creating an accessor if you need to access many elements
+        template <typename T, typename... Index>
+        auto at(Index... index) const;
+
+        // Get an element at an index
+        // This is a convenience wrapper that creates an `accessor` and uses it
+        // Consider explicitly creating an accessor if you need to access many elements
+        template <typename T, typename... Index>
+        auto at(Index... index);
+    };
+
+    // The return type of the `accessor` methods of `Tensor`
+    template <typename T, size_t NumDims, typename DataContainer>
+    class TensorAccessor
+    {
+    private:
+        DataContainer data_;
+
+        // The strides of the tensor
+        const std::span<const int64_t> strides_;
+
+        friend class Tensor;
+        TensorAccessor(DataContainer data, std::span<const int64_t> strides) : data_(data), strides_(strides) {}
+
+    public:
+        // Return the element at `index`
+        // One value of `index` must be provided for each dimension.
+        //
+        // ```
+        // auto acc = t.accessor<float, 3>();
+        // auto val = acc[1, 2, 3];
+        // ```
+        //
+        // Note: For string values, the returned view is only valid until the tensor is modified. Users
+        // should make a copy if they need to both persist the value and modify the tensor.
+        template <typename... Index>
+        auto operator[](Index... index) const;
     };
 
     template <typename T>

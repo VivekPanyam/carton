@@ -38,7 +38,7 @@ int main()
 
     uint64_t shape[]{1};
     auto tensor = Tensor(DataType::kString, shape);
-    tensor.set_string(0, "Today is a good [MASK].");
+    tensor.at<std::string_view>(0) = "Today is a good [MASK].";
 
     std::unordered_map<std::string, Tensor> inputs;
     inputs.insert(std::make_pair("input", std::move(tensor)));
@@ -56,6 +56,13 @@ int main()
 
     const auto scores_data = static_cast<const float *>(scores.data());
 
-    std::cout << "Got output token: " << tokens.get_string(0) << std::endl;
+    // If you're accessing a few elements, you can just use `.at`, but we'll use
+    // an accessor here for testing
+    const auto token_accessor = tokens.accessor<std::string_view, 1>();
+
+    std::cout << "Got output token: " << token_accessor[0] << std::endl;
     std::cout << "Got output scores: " << scores_data[0] << std::endl;
+
+    assert(token_accessor[0] == std::string_view("day"));
+    assert(std::abs(scores_data[0] - 14.5513) < 0.0001);
 }
