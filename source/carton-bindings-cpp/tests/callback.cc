@@ -32,10 +32,12 @@ void infer_callback(Result<TensorMap> infer_result, void *arg)
     const auto tokens = out.get_and_remove("tokens");
     const auto scores = out.get_and_remove("scores");
 
-    const auto scores_data = static_cast<const float *>(scores.data());
+    // Can use a template arg of `std::string` or `std::string_view`
+    std::cout << "Got output token: " << tokens.at<std::string>(0) << std::endl;
+    std::cout << "Got output scores: " << scores.at<float>(0) << std::endl;
 
-    std::cout << "Got output token: " << tokens.get_string(0) << std::endl;
-    std::cout << "Got output scores: " << scores_data[0] << std::endl;
+    assert(tokens.at<std::string_view>(0) == std::string_view("day"));
+    assert(std::abs(scores.at<float>(0) - 14.5513) < 0.0001);
 
     exit(0);
 }
@@ -47,7 +49,7 @@ void load_callback(Result<Carton> model_result, void *arg)
 
     uint64_t shape[]{1};
     auto tensor = Tensor(DataType::kString, shape);
-    tensor.set_string(0, "Today is a good [MASK].");
+    tensor.at<std::string_view>(0) = "Today is a good [MASK].";
 
     std::unordered_map<std::string, Tensor> inputs;
     inputs.insert(std::make_pair("input", std::move(tensor)));

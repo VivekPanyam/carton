@@ -63,7 +63,7 @@ int main()
     // Create an input tensor
     uint64_t shape[]{1};
     auto tensor = carton::Tensor(carton::DataType::kString, shape);
-    tensor.set_string(0, "Today is a good [MASK].");
+    tensor.at<std::string_view>(0) = "Today is a good [MASK].";
 
     // Create a map of inputs
     std::unordered_map<std::string, carton::Tensor> inputs;
@@ -78,7 +78,7 @@ int main()
 
     const auto scores_data = static_cast<const float *>(scores.data());
 
-    std::cout << "Got output token: " << tokens.get_string(0) << std::endl;
+    std::cout << "Got output token: " << tokens.at<std::string_view>(0) << std::endl;
     std::cout << "Got output scores: " << scores_data[0] << std::endl;
 }
 ```

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cassert>
 #include <iostream>
 
 #include "../src/carton.hh"
@@ -28,7 +29,9 @@ int main()
 
     uint64_t shape[]{1};
     auto tensor = Tensor(DataType::kString, shape);
-    tensor.set_string(0, "Today is a good [MASK].");
+
+    // Can use a template arg of `std::string` or `std::string_view`
+    tensor.at<std::string>(0) = "Today is a good [MASK].";
 
     std::unordered_map<std::string, Tensor> inputs;
     inputs.insert(std::make_pair("input", std::move(tensor)));
@@ -41,6 +44,9 @@ int main()
 
     const auto scores_data = static_cast<const float *>(scores.data());
 
-    std::cout << "Got output token: " << tokens.get_string(0) << std::endl;
+    std::cout << "Got output token: " << tokens.at<std::string_view>(0) << std::endl;
     std::cout << "Got output scores: " << scores_data[0] << std::endl;
+
+    assert(tokens.at<std::string_view>(0) == std::string_view("day"));
+    assert(std::abs(scores_data[0] - 14.5513) < 0.0001);
 }
