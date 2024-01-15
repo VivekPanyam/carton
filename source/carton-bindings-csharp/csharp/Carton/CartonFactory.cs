@@ -80,7 +80,7 @@ public class CartonFactory : ICartonFactory
 
         foreach(var tensor in inferResult.InnerTensors)
         {
-            carton_tensor_destroy((CartonTensor*)tensor);
+            carton_tensor_destroy((CartonTensor*)tensor.Value);
         }
     }
 }

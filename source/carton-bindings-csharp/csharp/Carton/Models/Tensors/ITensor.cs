@@ -5,13 +5,18 @@ namespace Carton.Models.Tensors;
 public interface ITensor
 {
     /// <summary>
-    /// Gets the Tensor key.
+    ///     Gets the amount of elements.
     /// </summary>
-    /// <returns></returns>
-    string GetKey();
+    ulong Elements { get; }
 
     /// <summary>
-    /// Converts the ITensor to a CartonTensor*.
+    ///     Gets the Tensor key.
+    /// </summary>
+    /// <returns></returns>
+    string Key { get; }
+
+    /// <summary>
+    ///     Converts the ITensor to a CartonTensor*.
     /// </summary>
     /// <returns></returns>
     unsafe CartonBindings.CartonTensor* ToCartonTensor();

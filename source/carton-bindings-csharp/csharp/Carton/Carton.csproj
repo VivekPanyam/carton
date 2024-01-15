@@ -25,7 +25,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Models/Tensors/" />
+	  <PackageReference Include="Tensor.NET" Version="0.1.2" />
 	</ItemGroup>
 
 	<Target Name="BuildCBindings" BeforeTargets="PrepareForBuild">

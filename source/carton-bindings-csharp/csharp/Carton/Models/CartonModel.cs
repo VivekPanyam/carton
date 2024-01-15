@@ -1,23 +1,20 @@
-﻿using System.Runtime.CompilerServices;
-using bottlenoselabs.C2CS.Runtime;
-using Carton.Models.Tensors;
-using Carton.Native;
-using static Carton.Native.CartonBindings;
+﻿using static Carton.Native.CartonBindings;
 
 namespace Carton.Models;
 
+using System.Runtime.CompilerServices;
+using bottlenoselabs.C2CS.Runtime;
+using Native;
+using Tensors;
+
 public class CartonModel
 {
-    public CartonModel()
-    {
-    }
-
     internal unsafe CartonBindings.Carton* InnerCarton;
 
     internal IList<InferResult> InnerInferResults = new List<InferResult>();
 
     /// <summary>
-    /// Infer a model with a list of tensors.
+    ///     Infer a model with a list of tensors.
     /// </summary>
     /// <param name="tensors">The tensors to pass to the model.</param>
     /// <returns></returns>
@@ -29,10 +26,7 @@ public class CartonModel
             {
                 CartonAsyncNotifier* notifier;
                 CartonNotifierCallback callback;
-                var callbackArg = new CallbackArg
-                {
-                    Data = (void*)null
-                };
+                var callbackArg = new CallbackArg { Data = null };
                 carton_async_notifier_create(&notifier);
                 carton_async_notifier_register(notifier, &callback, &callbackArg);
 
@@ -40,11 +34,11 @@ public class CartonModel
                 CartonTensorMap* tensorMap;
                 carton_tensormap_create(&tensorMap);
 
-                foreach(var tensor in tensors)
+                foreach (var tensor in tensors)
                 {
                     var cartonTensor = tensor.ToCartonTensor();
 
-                    carton_tensormap_insert(tensorMap, CString.FromString("input"), cartonTensor);
+                    carton_tensormap_insert(tensorMap, CString.FromString(tensor.Key), cartonTensor);
                 }
 
                 // Run inference
@@ -59,17 +53,12 @@ public class CartonModel
                 carton_async_notifier_wait(notifier, (void**)&outputs, &status, &callbackArgOut);
                 carton_async_notifier_destroy(notifier);
 
-                var callback_arg_out_infer_result = (nint)callbackArgOut.Data;
-
                 if (status != CartonStatus.CARTON_STATUS_SUCCESS)
                 {
                     return new InferResult();
                 }
 
-                return new InferResult()
-                {
-                    InnerTensorMap = outputs
-                };
+                return new InferResult { InnerTensorMap = outputs };
             }
         });
 
