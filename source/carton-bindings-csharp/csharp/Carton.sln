@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# 
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Carton", "Carton\Carton.csproj", "{1DD725A8-0A51-4D4B-9244-B0D78DDCF3CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Carton.Tests", "Carton.Tests\Carton.Tests.csproj", "{CA22D78C-9581-4049-9D7F-0C78477BC300}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Carton.IntegrationTests", "Carton.IntegrationTests\Carton.IntegrationTests.csproj", "{E10BF392-B3A6-4C22-8E1D-686CCD8C9CB2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1DD725A8-0A51-4D4B-9244-B0D78DDCF3CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DD725A8-0A51-4D4B-9244-B0D78DDCF3CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DD725A8-0A51-4D4B-9244-B0D78DDCF3CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DD725A8-0A51-4D4B-9244-B0D78DDCF3CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA22D78C-9581-4049-9D7F-0C78477BC300}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA22D78C-9581-4049-9D7F-0C78477BC300}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA22D78C-9581-4049-9D7F-0C78477BC300}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA22D78C-9581-4049-9D7F-0C78477BC300}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E10BF392-B3A6-4C22-8E1D-686CCD8C9CB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E10BF392-B3A6-4C22-8E1D-686CCD8C9CB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E10BF392-B3A6-4C22-8E1D-686CCD8C9CB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E10BF392-B3A6-4C22-8E1D-686CCD8C9CB2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,5 +1,8 @@
 target/
 .vscode/
 libtorch/
+
 .idea/
 *.DS_Store
+bin/
+obj/
